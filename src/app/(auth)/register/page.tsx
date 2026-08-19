@@ -312,7 +312,7 @@ export default function RegisterPage() {
               <p>
                 Are you an agricultural expert?{" "}
                 <Link
-                  href="/expert-apply"
+                  href="/register/expert"
                   className="inline-flex items-center gap-1 font-semibold text-slate-900 hover:underline"
                 >
                   Apply as an Expert <ExternalLink className="h-3 w-3" />
