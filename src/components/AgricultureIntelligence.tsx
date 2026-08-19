@@ -111,7 +111,7 @@ export default function AgricultureIntelligence() {
           </div>
           <div className="relative mt-auto h-56 w-full sm:h-64">
             <Image
-              src="/lapto-bnner.jpeg"
+              src="/lapto-banner.jpeg"
               alt="Live market intelligence dashboard on a tablet"
               fill
               className="object-cover"
