@@ -134,3 +134,14 @@ type SocialButtonProps = {
   ariaLabel: string;
 };
 
+function SocialButton({ children, ariaLabel }: SocialButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-950 text-white transition hover:bg-emerald-800"
+    >
+      {children}
+    </button>
+  );
+}
