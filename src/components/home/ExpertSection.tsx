@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { experts } from "../data/mockData";
+import { experts } from "@/data/mockData";
 
 export default function ExpertSection() {
   return (
