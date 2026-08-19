@@ -1,7 +1,11 @@
 @import "tailwindcss";
+<<<<<<< HEAD
 @import "@heroui/styles";
 
 <<<<<<< HEAD
+=======
+@import "@heroui/styles"; 
+>>>>>>> origin/main
 :root {
   --background: #eaf6f5;
   --foreground: #063a2b;
