@@ -4,7 +4,7 @@ const navLinks = [
   { label: "MarketPlace", href: "/" },
   { label: "Consultant", href: "/" },
   { label: "Blog", href: "/" },
-  { label: "Contact", href: "/contact" },
+  { label: "Contact", href: "/" },
 ];
 
 export default function Navbar() {
