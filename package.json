@@ -9,12 +9,19 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@better-auth/mongo-adapter": "^1.7.0",
     "@heroui/react": "^3.2.4",
     "@heroui/styles": "^3.2.4",
+    "@hookform/resolvers": "^5.9.1",
+    "better-auth": "^1.7.0",
+    "lucide-react": "^1.31.0",
+    "mongodb": "^7.5.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-icons": "^5.7.0"
+    "react-hook-form": "^7.85.0",
+    "react-icons": "^5.7.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -26,7 +33,5 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "allowScripts": {
-    "unrs-resolver@1.12.2": true
-  }
+  "allowScripts": {}
 }
