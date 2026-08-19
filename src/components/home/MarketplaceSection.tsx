@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { products } from "../data/mockData";
+import { products } from "../../data/mockData";
 
 export default function MarketplaceSection() {
   return (
