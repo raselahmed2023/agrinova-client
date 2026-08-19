@@ -108,3 +108,29 @@ type FooterColumnProps = {
   }[];
 };
 
+function FooterColumn({ title, links }: FooterColumnProps) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-emerald-950">{title}</h3>
+
+      <ul className="mt-5 space-y-4">
+        {links.map((link) => (
+          <li key={link.label}>
+            <Link
+              href={link.href}
+              className="text-sm text-slate-600 transition-colors hover:text-emerald-950"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+type SocialButtonProps = {
+  children: React.ReactNode;
+  ariaLabel: string;
+};
+
