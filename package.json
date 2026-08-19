@@ -9,6 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+<<<<<<< HEAD
+    "@heroui/react": "^3.2.4",
+    "@heroui/styles": "^3.2.4",
+    "lucide-react": "^1.32.0",
+=======
     "@better-auth/mongo-adapter": "^1.7.0",
     "@heroui/react": "^3.2.4",
     "@heroui/styles": "^3.2.4",
@@ -16,6 +21,7 @@
     "better-auth": "^1.7.0",
     "lucide-react": "^1.31.0",
     "mongodb": "^7.5.0",
+>>>>>>> origin/main
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -33,5 +39,12 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
+<<<<<<< HEAD
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
+  }
+}
+=======
   "allowScripts": {}
 }
+>>>>>>> origin/main
