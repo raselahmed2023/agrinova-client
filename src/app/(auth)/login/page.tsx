@@ -35,8 +35,20 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setAuthError(error.message || "Incorrect email or password. Please try again.");
+      setAuthError(
+        error.message || "Incorrect email or password. Please try again.",
+      );
     } else {
+      const user = resData?.user as typeof resData.user & { status?: string };
+
+      if (user?.status === "PENDING") {
+        await authClient.signOut();
+        setAuthError(
+          "Your expert account is currently under review by an admin. Please wait for approval.",
+        );
+        return;
+      }
+
       console.log("Login successful:", resData);
       router.push("/dashboard");
     }
@@ -62,8 +74,9 @@ export default function LoginPage() {
             Farm Better.
           </h1>
           <p className="text-base font-normal leading-relaxed text-emerald-100/80">
-            Join the next generation of precision agriculture. Manage your fields,
-            analyze data, and connect with experts all in one intelligent platform.
+            Join the next generation of precision agriculture. Manage your
+            fields, analyze data, and connect with experts all in one
+            intelligent platform.
           </p>
         </div>
 
@@ -161,7 +174,9 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs text-red-500">{errors.password.message}</p>
+                <p className="text-xs text-red-500">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
