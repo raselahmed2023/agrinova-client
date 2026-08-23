@@ -50,7 +50,7 @@ export default function LoginPage() {
       }
 
       console.log("Login successful:", resData);
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 
