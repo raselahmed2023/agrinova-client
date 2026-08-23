@@ -1,10 +1,30 @@
-import UnderConstruction from "@/components/shared/UnderConstruction";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
-export default function DashboardPage() {
-  return (
-    <UnderConstruction
-      title="Dashboard"
-      description="The AgriNova farmer dashboard is currently under development. This is where you'll manage your crops, farming activities, insights, and more."
-    />
-  );
+import { auth } from "@/lib/auth";
+
+export default async function DashboardPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const role = session.user.role;
+
+  if (role === "FARMER") {
+    redirect("/dashboard/farmer");
+  }
+
+  if (role === "EXPERT") {
+    redirect("/dashboard/expert");
+  }
+
+  if (role === "ADMIN") {
+    redirect("/dashboard/admin");
+  }
+
+  redirect("/");
 }
