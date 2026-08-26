@@ -1,10 +1,237 @@
-export default function FarmsPage() {
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { 
+  Sun, 
+  CloudSun, 
+  CloudRain, 
+  CloudLightning,
+  CloudFog,
+  Cloud,
+  Droplets, 
+  Wind, 
+  AlertTriangle, 
+  Lightbulb, 
+  Loader2,
+  MapPin,
+  RefreshCw
+} from 'lucide-react';
+import { BD_DISTRICTS } from '@/constants/districts';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
+// Types & Interfaces
+export interface CurrentWeather {
+  code: number;
+  temperature: number;
+  condition: string;
+  humidity: number;
+  windSpeed: number;
+  rainProb: number;
+}
+
+export interface RiskAdvisory {
+  title: string;
+  description: string;
+}
+
+export interface ForecastItem {
+  day: string;
+  code: number;
+  temp: string;
+  risk: string;
+}
+
+export interface WeatherData {
+  current: CurrentWeather;
+  recommendation: string;
+  advisories: RiskAdvisory[];
+  forecast: ForecastItem[];
+}
+
+export default function WeatherPage() {
+  const [selectedDistrict, setSelectedDistrict] = useState(BD_DISTRICTS[0]);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchWeather = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BACKEND_URL}/weather?lat=${selectedDistrict.lat}&lon=${selectedDistrict.lon}`);
+      const data = await res.json();
+      if (data.success) setWeatherData(data.data as WeatherData);
+    } catch (err) {
+      console.error('Weather fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather();
+  }, [selectedDistrict]);
+
+  // Precise WMO Weather Code Mapper
+  const getWeatherIcon = (code: number, className: string = "w-10 h-10") => {
+    if (code === 0) return <Sun className={`${className} text-amber-500`} />;
+    if (code >= 1 && code <= 2) return <CloudSun className={`${className} text-amber-400`} />;
+    if (code === 3) return <Cloud className={`${className} text-slate-400`} />;
+    if (code >= 45 && code <= 48) return <CloudFog className={`${className} text-slate-400`} />;
+    if (code >= 51 && code <= 67) return <CloudRain className={`${className} text-blue-500`} />;
+    if (code >= 80 && code <= 82) return <CloudRain className={`${className} text-indigo-500`} />;
+    if (code >= 95) return <CloudLightning className={`${className} text-purple-600`} />;
+    return <CloudSun className={`${className} text-slate-500`} />;
+  };
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-900">My Farms</h1>
-      <p className="mt-2 text-slate-500">
-        Farm management feature will be developed here.
-      </p>
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 bg-slate-50/50 min-h-screen text-slate-800">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Agricultural Weather Advisory</h1>
+          <p className="text-slate-500 mt-1">Real-time localized meteorological telemetry across Bangladesh districts.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
+            <MapPin className="w-4 h-4 text-emerald-600 mr-2 shrink-0" />
+            <select
+              value={selectedDistrict.name}
+              onChange={(e) => {
+                const target = BD_DISTRICTS.find((d) => d.name === e.target.value);
+                if (target) setSelectedDistrict(target);
+              }}
+              className="bg-transparent text-sm font-semibold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              {BD_DISTRICTS.map((d) => (
+                <option key={d.name} value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={fetchWeather}
+            disabled={loading}
+            className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-sm transition text-slate-600 disabled:opacity-50"
+            title="Refresh Telemetry"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-16 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <span className="text-sm font-medium text-slate-500">Fetching live weather metrics for {selectedDistrict.name}...</span>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Current Weather Card */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+              <div className="flex items-center gap-5">
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl shrink-0">
+                  {getWeatherIcon(weatherData?.current?.code ?? 0, "w-16 h-16")}
+                </div>
+                <div>
+                  <span className="text-6xl font-extrabold text-slate-900 tracking-tight">
+                    {weatherData?.current?.temperature}°C
+                  </span>
+                  <p className="text-xl font-semibold text-slate-600 mt-1">
+                    {weatherData?.current?.condition}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-xl p-4 grid grid-cols-3 gap-2 text-center border border-slate-100">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center text-slate-500 gap-1">
+                    <Droplets className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-medium">Humidity</span>
+                  </div>
+                  <p className="text-xl font-bold text-slate-800">{weatherData?.current?.humidity}%</p>
+                </div>
+
+                <div className="space-y-1 border-x border-slate-200/60">
+                  <div className="flex items-center justify-center text-slate-500 gap-1">
+                    <Wind className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-medium">Wind Speed</span>
+                  </div>
+                  <p className="text-xl font-bold text-slate-800">{weatherData?.current?.windSpeed} km/h</p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center text-slate-500 gap-1">
+                    <CloudRain className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-medium">Rain Risk</span>
+                  </div>
+                  <p className="text-xl font-bold text-slate-800">{weatherData?.current?.rainProb}%</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-4 flex gap-3 items-start">
+              <div className="bg-white p-2 rounded-full border border-emerald-100 shadow-sm text-emerald-600 shrink-0">
+                <Lightbulb className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold tracking-wider text-emerald-900 uppercase">
+                  Agronomic Recommendation for {selectedDistrict.name}
+                </h4>
+                <p className="text-sm text-emerald-800/90 mt-1 leading-relaxed">
+                  {weatherData?.recommendation}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Active Risk Advisories */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-lg">Active Risk Advisories</h3>
+              <div className="space-y-3">
+                {weatherData && weatherData.advisories.length > 0 ? (
+                  weatherData.advisories.map((adv: RiskAdvisory, index: number) => (
+                    <div key={index} className="bg-red-50/50 rounded-xl p-4 border-l-4 border-l-red-500 border border-red-100 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                        <h4 className="font-bold text-slate-900 text-sm">{adv.title}</h4>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed pl-6">{adv.description}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
+                    Optimal weather parameters. No active agricultural alerts.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 3-Day Forecast */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-lg">3-Day Forecast & Crop Risk</h3>
+              <div className="grid grid-cols-3 gap-3 text-center divide-x divide-slate-100">
+                {weatherData?.forecast?.map((item: ForecastItem, idx: number) => (
+                  <div key={idx} className="space-y-3 px-2">
+                    <p className="text-xs font-semibold text-slate-500">{item.day}</p>
+                    <div className="flex justify-center">
+                      {getWeatherIcon(item.code, "w-8 h-8")}
+                    </div>
+                    <p className="text-lg font-bold text-slate-900">{item.temp}</p>
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      item.risk === 'High Risk' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {item.risk}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
