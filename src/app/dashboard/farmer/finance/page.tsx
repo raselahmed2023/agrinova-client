@@ -15,6 +15,7 @@ export default function FinancePage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 1. Fetch Transactions
   const fetchTransactions = useCallback(async () => {
     if (!userId) return;
 
@@ -26,7 +27,6 @@ export default function FinancePage() {
         `${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/finance/transactions/${userId}`
       );
 
-
       let data: any = null;
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
@@ -36,7 +36,6 @@ export default function FinancePage() {
       if (response.ok && data) {
         setTransactions(data.data || data || []);
       } else {
-       
         setTransactions([]);
         setError(data?.message || `Failed to fetch transactions (Status: ${response.status})`);
       }
@@ -49,19 +48,43 @@ export default function FinancePage() {
     }
   }, [userId]);
 
+  // 2. Transaction Delete Handler
+  const handleDeleteTransaction = async (transactionId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this transaction?");
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/finance/transactions/${transactionId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+    
+        fetchTransactions();
+      } else {
+        alert(data.message || "Failed to delete transaction");
+      }
+    } catch (err) {
+      console.error("Error deleting transaction:", err);
+      alert("Server error. Could not delete transaction.");
+    }
+  };
+
   useEffect(() => {
     if (userId) {
       fetchTransactions();
     } else if (!isSessionLoading && !userId) {
-
       setLoading(false);
       setError("User authentication required");
     }
   }, [userId, isSessionLoading, fetchTransactions]);
 
-
   const isPageLoading = loading || isSessionLoading;
-  console.log('transactions', transactions)
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 bg-slate-50 min-h-screen text-slate-800">
@@ -116,7 +139,10 @@ export default function FinancePage() {
               <FinanceOverviewChart transactions={transactions} />
             </div>
             <div className="lg:col-span-8">
-              <TransactionList transactions={transactions} />
+              <TransactionList 
+                transactions={transactions} 
+                onDelete={handleDeleteTransaction}
+              />
             </div>
           </div>
         </>
