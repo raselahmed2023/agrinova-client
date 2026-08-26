@@ -74,7 +74,32 @@ export default function FinancePage() {
       alert("Server error. Could not delete transaction.");
     }
   };
+// Transaction Update Handler
+const handleUpdateTransaction = async (transactionId: string, updatedData: any) => {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/finance/transactions/${transactionId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedData),
+      }
+    );
 
+    const data = await response.json();
+
+    if (response.ok) {
+      fetchTransactions(); // ডাটা আপডেট শেষে রিফ্রেশ করবে
+    } else {
+      alert(data.message || "Failed to update transaction");
+    }
+  } catch (err) {
+    console.error("Error updating transaction:", err);
+    alert("Server error. Could not update transaction.");
+  }
+};
   useEffect(() => {
     if (userId) {
       fetchTransactions();
@@ -142,6 +167,7 @@ export default function FinancePage() {
               <TransactionList 
                 transactions={transactions} 
                 onDelete={handleDeleteTransaction}
+                onEdit={handleUpdateTransaction}
               />
             </div>
           </div>

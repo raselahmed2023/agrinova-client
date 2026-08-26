@@ -78,7 +78,6 @@ export default function TransactionForm({ onAdd }: { onAdd?: (data: any) => void
 
         if (onAdd) onAdd(data || payload);
 
-        // 1.5 সেকেন্ড পর মডাল অটো বন্ধ হবে
         setTimeout(() => {
           handleClose();
         }, 1500);
