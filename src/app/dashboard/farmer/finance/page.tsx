@@ -15,7 +15,6 @@ export default function FinancePage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // API Params-এ userId পাঠিয়ে ট্রানজ্যাকশন আনার ফাংশন
   const fetchTransactions = useCallback(async () => {
     if (!userId) return;
 
@@ -23,12 +22,11 @@ export default function FinancePage() {
       setLoading(true);
       setError(null);
 
-      // Path Parameter হিসেবে userId পাঠানো হচ্ছে
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/finance/transactions/${userId}`
       );
 
-      // Safe JSON parsing handling
+
       let data: any = null;
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
@@ -55,13 +53,13 @@ export default function FinancePage() {
     if (userId) {
       fetchTransactions();
     } else if (!isSessionLoading && !userId) {
-      // যদি User Session না থাকে
+
       setLoading(false);
       setError("User authentication required");
     }
   }, [userId, isSessionLoading, fetchTransactions]);
 
-  // Session চেক করা এবং API ফেচ করা পর্যন্ত ফুল লোডিং থাকবে
+
   const isPageLoading = loading || isSessionLoading;
   console.log('transactions', transactions)
 
