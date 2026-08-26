@@ -80,17 +80,17 @@ const marketplaceLinks = [
   },
   {
     label: "Sell Product",
-    href: "/dashboard/farmer/marketplace/sell",
+    href: "/dashboard/farmer/marketplace/sell-product",
     icon: PlusCircle,
   },
   {
     label: "My Listings",
-    href: "/dashboard/farmer/marketplace/listings",
+    href: "/dashboard/farmer/marketplace/my-listings",
     icon: ShoppingBag,
   },
   {
     label: "Purchase Requests",
-    href: "/dashboard/farmer/marketplace/requests",
+    href: "/dashboard/farmer/marketplace/purchase-requests",
     icon: PackageSearch,
   },
 ];
