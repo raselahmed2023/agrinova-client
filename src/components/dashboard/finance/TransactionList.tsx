@@ -5,10 +5,10 @@ import { Search, Filter, MoreVertical, ChevronDown } from "lucide-react";
 
 export default function TransactionList({ transactions }: { transactions: any[] }) {
   const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredData = transactions.filter((t) =>
-    t.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+console.log('transactions', transactions)
+  // const filteredData = transactions.filter((t) =>
+  //   t?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
 
   return (
     <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between h-full">
@@ -52,8 +52,8 @@ export default function TransactionList({ transactions }: { transactions: any[] 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredData.map((item) => (
-                <tr key={item.id} className="text-xs text-slate-700">
+              {transactions.map((item) => (
+                <tr key={item._id} className="text-xs text-slate-700">
                   <td className="py-3.5 px-2">
                     <p className="font-bold text-slate-800">{item.title}</p>
                     <p className="text-[11px] text-slate-400">{item.subtitle}</p>
