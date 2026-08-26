@@ -1,13 +1,16 @@
 "use client";
 
+import React, { useState } from "react";
 import FinanceSummary, { FinanceOverviewChart } from "@/components/dashboard/finance/FinanceSummary";
 import TransactionForm from "@/components/dashboard/finance/TransactionForm";
 import TransactionList from "@/components/dashboard/finance/TransactionList";
-import React, { useState } from "react";
-
+import { authClient } from "@/lib/auth-client";
 
 export default function FinancePage() {
-  const [transactions, setTransactions] = useState([
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id;
+
+  const transactions = [
     {
       id: 1,
       title: "Vegetable Sale",
@@ -16,6 +19,7 @@ export default function FinancePage() {
       type: "Income",
       date: "Oct 24, 2023",
       amount: 18000,
+      description: "hi"
     },
     {
       id: 2,
@@ -35,10 +39,11 @@ export default function FinancePage() {
       date: "Oct 20, 2023",
       amount: 2000,
     },
-  ]);
+  ];
 
   return (
     <div className="w-full max-w-7xl mx-auto p-6 bg-slate-50 min-h-screen text-slate-800">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#063928]">Finance</h1>
@@ -51,17 +56,16 @@ export default function FinancePage() {
         </div>
       </div>
 
-      {/* FinanceSummary-তে ডেটা পাঠানো হচ্ছে */}
+      {/* Summary Cards */}
       <div className="mb-6">
         <FinanceSummary transactions={transactions} />
       </div>
 
+      {/* Main Content (Chart & Table) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-4">
           <FinanceOverviewChart />
         </div>
-        
-        {/* TransactionList-এ ডেটা পাঠানো হচ্ছে */}
         <div className="lg:col-span-8">
           <TransactionList transactions={transactions} />
         </div>
