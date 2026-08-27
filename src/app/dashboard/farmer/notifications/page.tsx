@@ -1,10 +1,10 @@
-export default function FarmsPage() {
+import UnderConstruction from "@/components/shared/UnderConstruction";
+
+export default function ConsultationPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-900">My Farms</h1>
-      <p className="mt-2 text-slate-500">
-        Farm management feature will be developed here.
-      </p>
-    </div>
+    <UnderConstruction
+      title="Contact Us"
+      description="Our contact and support system is currently under development. We'll be ready to hear from you soon."
+    />
   );
 }
