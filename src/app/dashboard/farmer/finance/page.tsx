@@ -8,6 +8,7 @@ import React, {
 
 import FinanceSummary, {
   FinanceOverviewChart,
+  type FinanceTransaction,
 } from "@/components/dashboard/finance/FinanceSummary";
 
 import TransactionForm from "@/components/dashboard/finance/TransactionForm";
@@ -30,9 +31,9 @@ export default function FinancePage() {
 
   const userId = session?.user?.id;
 
-  const [transactions, setTransactions] = useState<any[]>(
-    []
-  );
+  const [transactions, setTransactions] = useState<
+    FinanceTransaction[]
+  >([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -74,13 +75,10 @@ export default function FinancePage() {
       const contentType =
         response.headers.get("content-type");
 
-      let data: any = null;
-
-      if (
+      const data =
         contentType?.includes("application/json")
-      ) {
-        data = await response.json();
-      }
+          ? await response.json()
+          : null;
 
       if (!response.ok) {
         throw new Error(
@@ -89,12 +87,13 @@ export default function FinancePage() {
         );
       }
 
+      const transactionData =
+        data?.data ?? data ?? [];
+
       setTransactions(
-        Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data)
-            ? data
-            : []
+        Array.isArray(transactionData)
+          ? transactionData
+          : []
       );
     } catch (err) {
       console.error(
@@ -117,58 +116,34 @@ export default function FinancePage() {
   const handleDeleteTransaction = async (
     transactionId: string
   ) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this transaction?"
+    const baseUrl = getApiUrl();
+
+    const response = await fetch(
+      `${baseUrl}/finance/transactions/${transactionId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+        },
+      }
     );
 
-    if (!confirmDelete) {
-      return;
-    }
+    const contentType =
+      response.headers.get("content-type");
 
-    try {
-      const baseUrl = getApiUrl();
+    const data =
+      contentType?.includes("application/json")
+        ? await response.json()
+        : null;
 
-      const response = await fetch(
-        `${baseUrl}/finance/transactions/${transactionId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const contentType =
-        response.headers.get("content-type");
-
-      let data: any = null;
-
-      if (
-        contentType?.includes("application/json")
-      ) {
-        data = await response.json();
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            "Failed to delete transaction"
-        );
-      }
-
-      await fetchTransactions();
-    } catch (err) {
-      console.error(
-        "Error deleting transaction:",
-        err
-      );
-
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Unable to delete transaction."
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          "Failed to delete transaction"
       );
     }
+
+    await fetchTransactions();
   };
 
   useEffect(() => {
@@ -206,11 +181,9 @@ export default function FinancePage() {
             </p>
           </div>
 
-          <div>
-            <TransactionForm
-              onAdd={fetchTransactions}
-            />
-          </div>
+          <TransactionForm
+            onAdd={fetchTransactions}
+          />
         </div>
 
         {isPageLoading ? (
@@ -254,17 +227,17 @@ export default function FinancePage() {
           </div>
         ) : (
           <>
-            {/* Summary */}
             <div className="mb-6">
               <FinanceSummary
                 transactions={transactions}
               />
             </div>
 
-            {/* Chart + Transactions */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
               <div className="lg:col-span-4">
-                <FinanceOverviewChart />
+                <FinanceOverviewChart
+                  transactions={transactions}
+                />
               </div>
 
               <div className="lg:col-span-8">

@@ -1,300 +1,502 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, X, ChevronDown, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import {
+  Loader2,
+  Plus,
+  WalletCards,
+  X,
+} from "lucide-react";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
 
-export default function TransactionForm({ onAdd }: { onAdd?: (data: any) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL;
 
-  // Status message (success or error) modal er bhetore show korar jonno
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+interface TransactionFormProps {
+  onAdd: () => void | Promise<void>;
+}
 
-  // Form Field States
-  const [type, setType] = useState<"Income" | "Expense">("Income");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("Crop Sales");
-  const [farm, setFarm] = useState("North Field (Wheat)");
-  const [date, setDate] = useState("");
-  const [description, setDescription] = useState("");
+interface FarmOption {
+  _id?: string;
+  id?: string;
+  name?: string;
+  farmName?: string;
+  cropName?: string;
+}
 
-  const { data: session } = authClient.useSession();
+const incomeCategories = [
+  "Crop Sale",
+  "Marketplace Sale",
+  "Other Income",
+];
+
+const expenseCategories = [
+  "Seeds",
+  "Fertilizer",
+  "Irrigation",
+  "Pesticide",
+  "Labour",
+  "Equipment",
+  "Transportation",
+  "Other Expense",
+];
+
+export default function TransactionForm({
+  onAdd,
+}: TransactionFormProps) {
+  const { data: session } =
+    authClient.useSession();
+
   const userId = session?.user?.id;
 
+  const [open, setOpen] = useState(false);
+
+  const [type, setType] = useState<
+    "income" | "expense"
+  >("income");
+
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] =
+    useState("");
+  const [farmId, setFarmId] = useState("");
+  const [date, setDate] = useState("");
+  const [description, setDescription] =
+    useState("");
+
+  const [farms, setFarms] = useState<
+    FarmOption[]
+  >([]);
+
+  const [loadingFarms, setLoadingFarms] =
+    useState(false);
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [error, setError] = useState("");
+
+  const categories =
+    type === "income"
+      ? incomeCategories
+      : expenseCategories;
+
+  useEffect(() => {
+    setCategory("");
+  }, [type]);
+
+  useEffect(() => {
+    if (!open || !API_URL) return;
+
+    const fetchFarms = async () => {
+      try {
+        setLoadingFarms(true);
+
+        const response = await fetch(
+          `${API_URL}/farms`,
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          setFarms([]);
+          return;
+        }
+
+        const data = await response.json();
+
+        const farmData =
+          data?.data?.farms ||
+          data?.data ||
+          data ||
+          [];
+
+        setFarms(
+          Array.isArray(farmData)
+            ? farmData
+            : []
+        );
+      } catch {
+        setFarms([]);
+      } finally {
+        setLoadingFarms(false);
+      }
+    };
+
+    void fetchFarms();
+  }, [open]);
+
   const resetForm = () => {
+    setType("income");
     setAmount("");
+    setCategory("");
+    setFarmId("");
     setDate("");
     setDescription("");
-    setStatus(null);
+    setError("");
   };
 
-  const handleClose = () => {
+  const closeModal = () => {
+    if (submitting) return;
+
+    setOpen(false);
     resetForm();
-    setIsOpen(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus(null);
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
 
-    if (!userId) {
-      setStatus({ type: "error", message: "User session not found! Please login again." });
+    if (!API_URL) {
+      setError(
+        "API configuration is missing."
+      );
       return;
     }
 
-    const payload = {
-      type,
-      amount: Number(amount),
-      category,
-      date,
-      description,
-      userId,
-    };
+    if (!userId) {
+      setError(
+        "You must be logged in to add a transaction."
+      );
+      return;
+    }
+
+    if (
+      !amount ||
+      Number(amount) <= 0 ||
+      !category ||
+      !date
+    ) {
+      setError(
+        "Please complete all required fields."
+      );
+      return;
+    }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
+      setError("");
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/finance/transactions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const payload = {
+        userId,
+        type: type === "income" ? "Income" : "Expense",
+        amount: Number(amount),
+        category,
+        date,
+        description: description.trim() || undefined,
+        farm: farmId || undefined,
+      };
 
-      // Server theke JSON na asle safe handle korar jonno (Try-Catch Parsing)
-      let data: any = null;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
+      const response = await fetch(
+        `${API_URL}/finance/transactions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const contentType =
+        response.headers.get("content-type");
+
+      const data =
+        contentType?.includes(
+          "application/json"
+        )
+          ? await response.json()
+          : null;
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+          "Failed to add transaction."
+        );
       }
 
-      if (response.ok) {
-        setStatus({
-          type: "success",
-          message: data?.message || "Transaction added successfully!",
-        });
+      await onAdd();
 
-        if (onAdd) onAdd(data || payload);
-
-        setTimeout(() => {
-          handleClose();
-        }, 1500);
-      } else {
-        setStatus({
-          type: "error",
-          message: data?.message || `Server Error (${response.status}): Failed to save transaction`,
-        });
-      }
-    } catch (error: any) {
-      console.error("Error posting transaction:", error);
-      setStatus({
-        type: "error",
-        message: "Server is unreachable or returned invalid response!",
-      });
+      setOpen(false);
+      resetForm();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to add transaction."
+      );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
     <>
-      {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center gap-2 bg-[#063928] hover:bg-[#04281c] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors cursor-pointer"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0B513D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#084330]"
       >
-        <Plus size={16} /> Add Transaction
+        <Plus className="h-4 w-4" />
+        Add Transaction
       </button>
 
-      {/* Modal Overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-bold text-slate-800">Add Transaction</h3>
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[2px]">
+          <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF4ED] text-[#0B513D]">
+                  <WalletCards className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Add Transaction
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Record farm income or expense.
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={handleClose}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={closeModal}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               >
-                <X size={18} />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Status Alert Banner inside Modal */}
-            {status && (
-              <div
-                className={`mx-6 mt-4 p-3 rounded-lg flex items-center gap-2 text-xs font-medium ${
-                  status.type === "success"
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-rose-50 text-rose-700 border border-rose-200"
-                }`}
-              >
-                {status.type === "success" ? (
-                  <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-                ) : (
-                  <AlertCircle size={16} className="shrink-0 text-rose-600" />
-                )}
-                <span>{status.message}</span>
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-5 p-5 sm:p-6"
+            >
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Transaction Type
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      value:
+                        "income" as const,
+                      label: "Income",
+                    },
+                    {
+                      value:
+                        "expense" as const,
+                      label: "Expense",
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setType(option.value)
+                      }
+                      className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${type === option.value
+                        ? "border-[#0B513D] bg-[#EEF6F1] text-[#0B513D]"
+                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
 
-            {/* Modal Body / Form */}
-            <form onSubmit={handleSubmit}>
-              <div className="p-6 space-y-4 text-xs text-slate-700">
-                {/* Transaction Type Toggle */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Transaction Type
-                  </label>
-                  <div className="flex p-1 bg-slate-100 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setType("Income")}
-                      className={`flex-1 py-1.5 text-center font-semibold rounded-md transition-all ${
-                        type === "Income"
-                          ? "bg-white text-[#063928] shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      Income
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setType("Expense")}
-                      className={`flex-1 py-1.5 text-center font-semibold rounded-md transition-all ${
-                        type === "Expense"
-                          ? "bg-white text-[#063928] shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      Expense
-                    </button>
-                  </div>
-                </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Amount
+                  <span className="ml-1 text-rose-500">
+                    *
+                  </span>
+                </label>
 
-                {/* Amount Field */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Amount
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
-                      ৳
-                    </span>
-                    <input
-                      type="number"
-                      required
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 font-medium"
-                    />
-                  </div>
-                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
+                    ৳
+                  </span>
 
-                {/* Category Dropdown */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Category
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-800 pr-8 cursor-pointer"
-                    >
-                      <option value="Crop Sales">Crop Sales</option>
-                      <option value="Inputs & Supplies">Inputs & Supplies</option>
-                      <option value="Utilities">Utilities</option>
-                      <option value="Equipment">Equipment</option>
-                    </select>
-                    <ChevronDown
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Related Farm Dropdown */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Related Farm
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={farm}
-                      onChange={(e) => setFarm(e.target.value)}
-                      className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-800 pr-8 cursor-pointer"
-                    >
-                      <option value="North Field (Wheat)">North Field (Wheat)</option>
-                      <option value="South Field (Rice)">South Field (Rice)</option>
-                      <option value="East Plot">East Plot</option>
-                    </select>
-                    <ChevronDown
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Date Input */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Date
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      required
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-500 uppercase"
-                    />
-                  </div>
-                </div>
-
-                {/* Description Input */}
-                <div>
-                  <label className="block font-semibold mb-1.5 text-slate-700">
-                    Description <span className="font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Enter details about this transaction..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 resize-none"
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    value={amount}
+                    onChange={(event) =>
+                      setAmount(
+                        event.target.value
+                      )
+                    }
+                    placeholder="0"
+                    className="h-11 w-full rounded-xl border border-slate-200 pl-8 pr-3 text-sm outline-none transition focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
                   />
                 </div>
               </div>
 
-              {/* Modal Footer / Actions */}
-              <div className="flex items-center justify-between p-4 border-t border-gray-100 bg-white">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Category
+                  <span className="ml-1 text-rose-500">
+                    *
+                  </span>
+                </label>
+
+                <select
+                  required
+                  value={category}
+                  onChange={(event) =>
+                    setCategory(
+                      event.target.value
+                    )
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                >
+                  <option value="">
+                    Select category
+                  </option>
+
+                  {categories.map(
+                    (categoryOption) => (
+                      <option
+                        key={categoryOption}
+                        value={categoryOption}
+                      >
+                        {categoryOption}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Related Farm
+                  <span className="ml-1 text-xs font-normal text-slate-400">
+                    Optional
+                  </span>
+                </label>
+
+                <select
+                  value={farmId}
+                  onChange={(event) =>
+                    setFarmId(
+                      event.target.value
+                    )
+                  }
+                  disabled={loadingFarms}
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                >
+                  <option value="">
+                    {loadingFarms
+                      ? "Loading farms..."
+                      : "No specific farm"}
+                  </option>
+
+                  {farms.map((farm) => {
+                    const id =
+                      farm._id || farm.id;
+
+                    if (!id) return null;
+
+                    return (
+                      <option
+                        key={id}
+                        value={id}
+                      >
+                        {farm.name ||
+                          farm.farmName ||
+                          farm.cropName ||
+                          "Unnamed Farm"}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Date
+                  <span className="ml-1 text-rose-500">
+                    *
+                  </span>
+                </label>
+
+                <input
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(event) =>
+                    setDate(event.target.value)
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Description
+                  <span className="ml-1 text-xs font-normal text-slate-400">
+                    Optional
+                  </span>
+                </label>
+
+                <textarea
+                  rows={3}
+                  maxLength={500}
+                  value={description}
+                  onChange={(event) =>
+                    setDescription(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Add a short note..."
+                  className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm leading-6 outline-none placeholder:text-slate-400 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                />
+              </div>
+
+              {error && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-600">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
                 <button
                   type="button"
-                  onClick={handleClose}
-                  disabled={loading}
-                  className="px-5 py-2 text-xs font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  onClick={closeModal}
+                  disabled={submitting}
+                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-[#063928] hover:bg-[#04281c] rounded-lg transition-colors disabled:opacity-50 min-w-[120px]"
+                  disabled={submitting}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0B513D] px-5 text-sm font-semibold text-white transition hover:bg-[#084330] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    "Save Transaction"
+                  {submitting && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   )}
+
+                  {submitting
+                    ? "Saving..."
+                    : "Save Transaction"}
                 </button>
               </div>
             </form>
