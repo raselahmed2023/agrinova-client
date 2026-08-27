@@ -41,12 +41,15 @@ import type {
   PurchaseRequest,
 } from "@/types/marketplace";
 
+import type { IFarm } from "@/types/farm";
+
 import type { FinanceTransaction } from "@/components/dashboard/finance/FinanceSummary";
 
 import { BD_DISTRICTS } from "@/constants/districts";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:5000/api/v1";
 
 interface CurrentWeather {
   code: number;
@@ -77,9 +80,21 @@ export default function FarmerDashboardPage() {
   const dashboardDistrict =
     BD_DISTRICTS[0];
 
-  /* =========================
+  /* 
+     FARM STATE
+   */
+
+  const [farms, setFarms] =
+    useState<IFarm[]>([]);
+
+  const [
+    farmsLoading,
+    setFarmsLoading,
+  ] = useState(true);
+
+  /* 
      MARKETPLACE STATE
-  ========================= */
+   */
 
   const [listings, setListings] =
     useState<MarketplaceProduct[]>([]);
@@ -104,9 +119,9 @@ export default function FarmerDashboardPage() {
     setMarketplaceError,
   ] = useState("");
 
-  /* =========================
+  /* 
      FINANCE STATE
-  ========================= */
+   */
 
   const [
     transactions,
@@ -118,14 +133,16 @@ export default function FarmerDashboardPage() {
     setFinanceLoading,
   ] = useState(true);
 
-  /* =========================
+  /* 
      WEATHER STATE
-  ========================= */
+  */
 
   const [
     weatherData,
     setWeatherData,
-  ] = useState<WeatherData | null>(null);
+  ] = useState<WeatherData | null>(
+    null
+  );
 
   const [
     weatherLoading,
@@ -137,9 +154,61 @@ export default function FarmerDashboardPage() {
     setWeatherError,
   ] = useState("");
 
-  /* =========================
+  /* 
+     FARM FETCH
+   */
+
+  const fetchFarms =
+    useCallback(async () => {
+      try {
+        setFarmsLoading(true);
+
+        const response =
+          await fetch(
+            `${API_URL}/farms`,
+            {
+              method: "GET",
+              headers: {
+                Accept:
+                  "application/json",
+              },
+              cache: "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data?.success
+        ) {
+          throw new Error(
+            data?.message ||
+              "Failed to load farms."
+          );
+        }
+
+        setFarms(
+          Array.isArray(data.data)
+            ? data.data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Dashboard farms error:",
+          error
+        );
+
+        setFarms([]);
+      } finally {
+        setFarmsLoading(false);
+      }
+    }, []);
+
+  /* 
      MARKETPLACE FETCH
-  ========================= */
+   */
 
   const fetchMarketplaceData =
     useCallback(async () => {
@@ -205,19 +274,13 @@ export default function FarmerDashboardPage() {
       }
     }, [userEmail]);
 
-  /* =========================
+  /* 
      FINANCE FETCH
-  ========================= */
+   */
 
   const fetchFinanceData =
     useCallback(async () => {
       if (!userId) {
-        setTransactions([]);
-        setFinanceLoading(false);
-        return;
-      }
-
-      if (!API_URL) {
         setTransactions([]);
         setFinanceLoading(false);
         return;
@@ -280,22 +343,12 @@ export default function FarmerDashboardPage() {
       }
     }, [userId]);
 
-  /* =========================
+  /* 
      WEATHER FETCH
-  ========================= */
+  */
 
   const fetchWeather =
     useCallback(async () => {
-      if (!API_URL) {
-        setWeatherLoading(false);
-
-        setWeatherError(
-          "API URL is not configured."
-        );
-
-        return;
-      }
-
       try {
         setWeatherLoading(true);
         setWeatherError("");
@@ -345,26 +398,28 @@ export default function FarmerDashboardPage() {
       dashboardDistrict.lon,
     ]);
 
-  /* =========================
+  /* 
      INITIAL FETCH
-  ========================= */
+ */
 
   useEffect(() => {
     if (!sessionLoading) {
+      void fetchFarms();
       void fetchMarketplaceData();
       void fetchFinanceData();
       void fetchWeather();
     }
   }, [
     sessionLoading,
+    fetchFarms,
     fetchMarketplaceData,
     fetchFinanceData,
     fetchWeather,
   ]);
 
-  /* =========================
+  /* 
      MARKETPLACE CALCULATION
-  ========================= */
+   */
 
   const activeListingsCount =
     listings.filter(
@@ -384,9 +439,9 @@ export default function FarmerDashboardPage() {
         "PENDING"
     ).length;
 
-  /* =========================
+  /* 
      FINANCE CALCULATION
-  ========================= */
+   */
 
   const totalIncome =
     transactions
@@ -404,8 +459,7 @@ export default function FarmerDashboardPage() {
         ) =>
           total +
           Number(
-            transaction.amount ||
-              0
+            transaction.amount || 0
           ),
         0
       );
@@ -426,8 +480,7 @@ export default function FarmerDashboardPage() {
         ) =>
           total +
           Number(
-            transaction.amount ||
-              0
+            transaction.amount || 0
           ),
         0
       );
@@ -436,9 +489,9 @@ export default function FarmerDashboardPage() {
     totalIncome -
     totalExpense;
 
-  /* =========================
+  /* 
      WEATHER ICON
-  ========================= */
+  */
 
   const getWeatherIcon = (
     code: number
@@ -495,15 +548,17 @@ export default function FarmerDashboardPage() {
     );
   };
 
-  /* =========================
+  /* 
      TOP STATS
-  ========================= */
+   */
 
   const stats = [
     {
       title: "My Farms",
 
-      value: "0",
+      value: farmsLoading
+        ? "..."
+        : String(farms.length),
 
       description:
         "Registered farms",
@@ -581,6 +636,7 @@ export default function FarmerDashboardPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Welcome */}
+
       <section>
         <p className="text-sm font-medium text-[#477A5B]">
           Farmer Dashboard
@@ -594,24 +650,23 @@ export default function FarmerDashboardPage() {
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Manage your farms,
-          access smart agricultural
-          tools, monitor weather,
-          sell products and keep
-          track of your farming
-          activities from one place.
+          Manage your farms, access
+          smart agricultural tools,
+          monitor weather, sell
+          products and keep track of
+          your farming activities from
+          one place.
         </p>
       </section>
 
       {marketplaceError && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          {
-            marketplaceError
-          }
+          {marketplaceError}
         </div>
       )}
 
       {/* Stats */}
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => {
           const Icon =
@@ -626,15 +681,11 @@ export default function FarmerDashboardPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">
-                    {
-                      item.title
-                    }
+                    {item.title}
                   </p>
 
                   <p className="mt-2 text-3xl font-bold text-slate-900">
-                    {
-                      item.value
-                    }
+                    {item.value}
                   </p>
                 </div>
 
@@ -644,9 +695,7 @@ export default function FarmerDashboardPage() {
               </div>
 
               <p className="mt-3 text-xs text-slate-500">
-                {
-                  item.description
-                }
+                {item.description}
               </p>
             </Link>
           );
@@ -654,8 +703,10 @@ export default function FarmerDashboardPage() {
       </section>
 
       {/* Weather + Finance */}
+
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Weather */}
+
         <div className="rounded-2xl border border-slate-200 bg-white p-5 xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
@@ -664,9 +715,7 @@ export default function FarmerDashboardPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                {
-                  dashboardDistrict.name
-                }{" "}
+                {dashboardDistrict.name}{" "}
                 weather information
               </p>
             </div>
@@ -801,7 +850,8 @@ export default function FarmerDashboardPage() {
               {weatherData.recommendation && (
                 <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                   <p className="text-xs font-semibold text-emerald-800">
-                    Farming Recommendation
+                    Farming
+                    Recommendation
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-emerald-700">
@@ -821,15 +871,14 @@ export default function FarmerDashboardPage() {
               </p>
 
               <p className="mt-1 text-xs text-red-500">
-                {
-                  weatherError
-                }
+                {weatherError}
               </p>
             </div>
           )}
         </div>
 
         {/* Finance */}
+
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
