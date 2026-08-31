@@ -18,6 +18,8 @@ import {
 
 import PurchaseRequestModal from "./PurchaseRequestModal";
 
+import { authClient } from "@/lib/auth-client";
+
 import { getMarketplaceProduct } from "@/services/marketplace.service";
 
 import type { MarketplaceProduct } from "@/types/marketplace";
@@ -38,6 +40,7 @@ const formatCategory = (
 export default function ProductDetails({
   productId,
 }: ProductDetailsProps) {
+  const { data: session } = authClient.useSession();
   const [product, setProduct] =
     useState<MarketplaceProduct | null>(
       null
@@ -124,6 +127,18 @@ export default function ProductDetails({
     product.status ===
       "available" &&
     product.quantity > 0;
+
+  const isOwnProduct =
+    Boolean(
+      session?.user?.email &&
+        product.sellerEmail &&
+        session.user.email
+          .trim()
+          .toLowerCase() ===
+          product.sellerEmail
+            .trim()
+            .toLowerCase()
+    );
 
   return (
     <>
@@ -279,7 +294,7 @@ export default function ProductDetails({
 
               <button
                 type="button"
-                disabled={!isAvailable}
+                disabled={!isAvailable || isOwnProduct}
                 onClick={() =>
                   setRequestOpen(true)
                 }
@@ -287,9 +302,11 @@ export default function ProductDetails({
               >
                 <ShoppingBag className="h-5 w-5" />
 
-                {isAvailable
-                  ? "Send Purchase Request"
-                  : "Product Unavailable"}
+                {isOwnProduct
+                  ? "Your Own Listing"
+                  : isAvailable
+                    ? "Send Purchase Request"
+                    : "Product Unavailable"}
               </button>
 
               <p className="mt-3 text-center text-xs text-slate-400">

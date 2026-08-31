@@ -95,12 +95,24 @@ export default function TransactionForm({
       try {
         setLoadingFarms(true);
 
+        const {
+          data: tokenData,
+          error: tokenError,
+        } = await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          setFarms([]);
+          return;
+        }
+
         const response = await fetch(
           `${API_URL}/farms`,
           {
             headers: {
               Accept: "application/json",
+              Authorization: `Bearer ${tokenData.token}`,
             },
+            cache: "no-store",
           }
         );
 
@@ -184,8 +196,18 @@ export default function TransactionForm({
       setSubmitting(true);
       setError("");
 
+      const {
+        data: tokenData,
+        error: tokenError,
+      } = await authClient.token();
+
+      if (tokenError || !tokenData?.token) {
+        throw new Error(
+          "Authentication required"
+        );
+      }
+
       const payload = {
-        userId,
         type: type === "income" ? "Income" : "Expense",
         amount: Number(amount),
         category,
@@ -202,6 +224,7 @@ export default function TransactionForm({
             "Content-Type":
               "application/json",
             Accept: "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
           },
           body: JSON.stringify(payload),
         }
