@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -26,7 +26,7 @@ import type {
   ScheduleConsultationPayload,
 } from "@/types/consultation";
 
-export default function ExpertConsultationsPage() {
+function ExpertConsultationsContent() {
   const searchParams = useSearchParams();
   const initialStatus = (searchParams.get("status") as ConsultationStatus) || "ALL";
 
@@ -182,3 +182,12 @@ export default function ExpertConsultationsPage() {
     </div>
   );
 }
+
+export default function ExpertConsultationsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-slate-400">Loading consultations...</div>}>
+      <ExpertConsultationsContent />
+    </Suspense>
+  );
+}
+

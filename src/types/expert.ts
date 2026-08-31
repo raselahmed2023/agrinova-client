@@ -73,3 +73,22 @@ export interface ExpertAvailabilityResponse {
   message?: string;
   data: ExpertAvailability;
 }
+
+export interface ExpertDashboardData {
+  newRequests: number;
+  accepted: number;
+  scheduled: number;
+  ongoing: number;
+  completed: number;
+  recentRequests: any[];
+  upcomingConsultations: any[];
+  ongoingConsultations: any[];
+  availabilityStatus: string;
+}
+
+export interface ExpertDashboardResponse {
+  success: boolean;
+  message?: string;
+  data: ExpertDashboardData;
+}
+

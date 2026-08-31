@@ -7,7 +7,7 @@ import type {
 } from "@/types/expert";
 
 const getApiUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 };
 
 const getAuthToken = async (): Promise<string | null> => {
@@ -225,3 +225,27 @@ export const updateExpertAvailability = async (
   };
   return mockAvailability;
 };
+
+export const getExpertDashboard = async () => {
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(`${API_URL}/experts/me/dashboard`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          return result.data;
+        }
+      }
+    }
+  } catch {
+    // Fall back
+  }
+  return null;
+};
+

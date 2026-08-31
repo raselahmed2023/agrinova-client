@@ -18,6 +18,7 @@ export interface FarmerInfo {
   avatar?: string;
   location?: string;
   district?: string;
+  farmName?: string;
   farmType?: string;
   farmSize?: string;
 }
@@ -48,6 +49,8 @@ export interface Consultation {
   id?: string;
   farmerId: string;
   farmer: FarmerInfo;
+  farmName?: string;
+  district?: string;
   expertId?: string;
   expert?: ExpertInfo;
   cropType: string;
@@ -62,6 +65,7 @@ export interface Consultation {
   scheduledTime?: string;
   meetingLink?: string;
   rejectionReason?: string;
+  cancellationReason?: string;
   notes?: string;
   recommendations?: RecommendationData;
   createdAt: string;

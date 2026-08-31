@@ -10,7 +10,7 @@ import type {
 } from "@/types/consultation";
 
 const getApiUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 };
 
 const getAuthToken = async (): Promise<string | null> => {
@@ -30,12 +30,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-101",
     farmerId: "farm-001",
+    farmName: "Rahim Green Valley",
+    district: "Bogra",
     farmer: {
       name: "Rahim",
       email: "rahim.farmer@example.com",
       phone: "+880 1711-234567",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
       location: "Bogra, Rajshahi",
+      district: "Bogra",
+      farmName: "Rahim Green Valley",
       farmType: "Paddy & Vegetable Farm",
       farmSize: "3.5 Acres",
     },
@@ -56,12 +60,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-102",
     farmerId: "farm-002",
+    farmName: "Karim Agro Complex",
+    district: "Jessore",
     farmer: {
       name: "Karim",
       email: "karim.uddin@example.com",
       phone: "+880 1819-876543",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
       location: "Jessore, Khulna",
+      district: "Jessore",
+      farmName: "Karim Agro Complex",
       farmType: "Horticulture & Vegetables",
       farmSize: "2.0 Acres",
     },
@@ -83,12 +91,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-103",
     farmerId: "farm-003",
+    farmName: "Hasan Corn Agro",
+    district: "Mymensingh",
     farmer: {
       name: "Hasan",
       email: "hasan.ali@example.com",
       phone: "+880 1912-345678",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
       location: "Mymensingh",
+      district: "Mymensingh",
+      farmName: "Hasan Corn Agro",
       farmType: "Cereal Crops",
       farmSize: "5.0 Acres",
     },
@@ -110,12 +122,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-104",
     farmerId: "farm-004",
+    farmName: "Mazid Seed & Potato Farm",
+    district: "Rangpur",
     farmer: {
       name: "Abdul Mazid",
       email: "mazid.farm@example.com",
       phone: "+880 1611-998877",
       avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
       location: "Rangpur",
+      district: "Rangpur",
+      farmName: "Mazid Seed & Potato Farm",
       farmType: "Potato Farm",
       farmSize: "8.0 Acres",
     },
@@ -133,12 +149,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-105",
     farmerId: "farm-005",
+    farmName: "Tariqul Fruit Plantation",
+    district: "Comilla",
     farmer: {
       name: "Tariqul Islam",
       email: "tariqul.islam@example.com",
       phone: "+880 1515-443322",
       avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
       location: "Comilla",
+      district: "Comilla",
+      farmName: "Tariqul Fruit Plantation",
       farmType: "Fruit Orchard",
       farmSize: "4.2 Acres",
     },
@@ -175,12 +195,16 @@ let mockConsultations: Consultation[] = [
   {
     _id: "cons-106",
     farmerId: "farm-006",
+    farmName: "Nazrul Agro Estates",
+    district: "Dinajpur",
     farmer: {
       name: "Nazrul Islam",
       email: "nazrul.farm@example.com",
       phone: "+880 1712-887766",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
       location: "Dinajpur",
+      district: "Dinajpur",
+      farmName: "Nazrul Agro Estates",
       farmType: "Litchi & Wheat",
       farmSize: "6.0 Acres",
     },
