@@ -1,3 +1,5 @@
+import { authClient } from "@/lib/auth-client";
+
 import type {
   CreateProductPayload,
   MarketplaceProduct,
@@ -19,6 +21,17 @@ const getApiUrl = () => {
   }
 
   return API_URL;
+};
+
+
+const getAuthToken = async () => {
+  const { data, error } = await authClient.token();
+
+  if (error || !data?.token) {
+    throw new Error("Authentication required.");
+  }
+
+  return data.token;
 };
 
 interface GetProductsParams {
@@ -115,14 +128,15 @@ export const createMarketplaceProduct = async (
   payload: CreateProductPayload
 ) => {
   const API_URL = getApiUrl();
+  const token = await getAuthToken();
 
   const response = await fetch(
     `${API_URL}/marketplace/products`,
     {
       method: "POST",
       headers: {
-        "Content-Type":
-          "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     }
@@ -144,16 +158,17 @@ export const createMarketplaceProduct = async (
 };
 
 export const getMyListings = async (
-  sellerEmail: string
+  _sellerEmail?: string
 ): Promise<MarketplaceProduct[]> => {
   const API_URL = getApiUrl();
+  const token = await getAuthToken();
 
   const response = await fetch(
     `${API_URL}/marketplace/my-listings`,
     {
       method: "GET",
       headers: {
-        "x-seller-email": sellerEmail,
+        Authorization: `Bearer ${token}`,
       },
       cache: "no-store",
     }
@@ -162,10 +177,7 @@ export const getMyListings = async (
   const result: ProductsResponse =
     await response.json();
 
-  if (
-    !response.ok ||
-    !result.success
-  ) {
+  if (!response.ok || !result.success) {
     throw new Error(
       result.message ||
         "Failed to fetch your listings."
@@ -177,19 +189,23 @@ export const getMyListings = async (
 
 export const updateMarketplaceProduct = async (
   productId: string,
-  sellerEmail: string,
-  payload: Partial<MarketplaceProduct>
+  sellerEmailOrPayload: string | Partial<MarketplaceProduct>,
+  maybePayload?: Partial<MarketplaceProduct>
 ) => {
   const API_URL = getApiUrl();
+  const token = await getAuthToken();
+  const payload =
+    typeof sellerEmailOrPayload === "string"
+      ? maybePayload || {}
+      : sellerEmailOrPayload;
 
   const response = await fetch(
     `${API_URL}/marketplace/products/${productId}`,
     {
       method: "PATCH",
       headers: {
-        "Content-Type":
-          "application/json",
-        "x-seller-email": sellerEmail,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     }
@@ -197,10 +213,7 @@ export const updateMarketplaceProduct = async (
 
   const result = await response.json();
 
-  if (
-    !response.ok ||
-    !result.success
-  ) {
+  if (!response.ok || !result.success) {
     throw new Error(
       result.message ||
         "Failed to update product."
@@ -212,26 +225,24 @@ export const updateMarketplaceProduct = async (
 
 export const deleteMarketplaceProduct = async (
   productId: string,
-  sellerEmail: string
+  _sellerEmail?: string
 ) => {
   const API_URL = getApiUrl();
+  const token = await getAuthToken();
 
   const response = await fetch(
     `${API_URL}/marketplace/products/${productId}`,
     {
       method: "DELETE",
       headers: {
-        "x-seller-email": sellerEmail,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 
   const result = await response.json();
 
-  if (
-    !response.ok ||
-    !result.success
-  ) {
+  if (!response.ok || !result.success) {
     throw new Error(
       result.message ||
         "Failed to delete product."
@@ -248,30 +259,19 @@ interface CreatePurchaseRequestPayload {
   note?: string;
 }
 
-interface CurrentMarketplaceUser {
-  id?: string;
-  name?: string;
-  email: string;
-}
-
 export const createPurchaseRequest = async (
-  payload: CreatePurchaseRequestPayload,
-  user: CurrentMarketplaceUser
+  payload: CreatePurchaseRequestPayload
 ): Promise<PurchaseRequestResponse> => {
   const API_URL = getApiUrl();
+  const token = await getAuthToken();
 
   const response = await fetch(
     `${API_URL}/purchase-requests`,
     {
       method: "POST",
       headers: {
-        "Content-Type":
-          "application/json",
-        "x-user-email": user.email,
-        "x-user-name":
-          user.name || "",
-        "x-user-id":
-          user.id || "",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     }
@@ -294,16 +294,16 @@ export const createPurchaseRequest = async (
 };
 
 export const getSentPurchaseRequests =
-  async (
-    email: string
-  ): Promise<PurchaseRequestsResponse> => {
+  async (): Promise<PurchaseRequestsResponse> => {
     const API_URL = getApiUrl();
+    const token = await getAuthToken();
 
     const response = await fetch(
       `${API_URL}/purchase-requests/sent`,
       {
+        method: "GET",
         headers: {
-          "x-user-email": email,
+          Authorization: `Bearer ${token}`,
         },
         cache: "no-store",
       }
@@ -326,16 +326,16 @@ export const getSentPurchaseRequests =
   };
 
 export const getReceivedPurchaseRequests =
-  async (
-    email: string
-  ): Promise<PurchaseRequestsResponse> => {
+  async (): Promise<PurchaseRequestsResponse> => {
     const API_URL = getApiUrl();
+    const token = await getAuthToken();
 
     const response = await fetch(
       `${API_URL}/purchase-requests/received`,
       {
+        method: "GET",
         headers: {
-          "x-user-email": email,
+          Authorization: `Bearer ${token}`,
         },
         cache: "no-store",
       }
@@ -360,19 +360,18 @@ export const getReceivedPurchaseRequests =
 export const updatePurchaseRequestStatus =
   async (
     requestId: string,
-    status: PurchaseRequestStatus,
-    email: string
+    status: PurchaseRequestStatus
   ) => {
     const API_URL = getApiUrl();
+    const token = await getAuthToken();
 
     const response = await fetch(
       `${API_URL}/purchase-requests/${requestId}/status`,
       {
         method: "PATCH",
         headers: {
-          "Content-Type":
-            "application/json",
-          "x-user-email": email,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           status,

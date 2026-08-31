@@ -55,7 +55,7 @@ export default function PurchaseRequestModal({
       setError("");
       setSuccess("");
 
-      if (!session?.user?.email) {
+      if (!session?.user) {
         throw new Error(
           "Please login to send a purchase request."
         );
@@ -67,49 +67,27 @@ export default function PurchaseRequestModal({
         );
       }
 
-      if (
-        quantity >
-        product.quantity
-      ) {
+      if (quantity > product.quantity) {
         throw new Error(
           `Only ${product.quantity} ${product.unit} available.`
         );
       }
 
-      if (
-        !deliveryLocation.trim()
-      ) {
+      if (!deliveryLocation.trim()) {
         throw new Error(
           "Delivery location is required."
         );
       }
 
-      await createPurchaseRequest(
-        {
-          productId:
-            product._id,
-
-          quantity,
-
-          deliveryLocation:
-            deliveryLocation.trim(),
-
-          note:
-            note.trim() ||
-            undefined,
-        },
-        {
-          id:
-            session.user.id,
-
-          name:
-            session.user.name ||
-            "Farmer",
-
-          email:
-            session.user.email,
-        }
-      );
+      await createPurchaseRequest({
+        productId: product._id,
+        quantity,
+        deliveryLocation:
+          deliveryLocation.trim(),
+        note:
+          note.trim() ||
+          undefined,
+      });
 
       setSuccess(
         "Purchase request sent successfully."
@@ -117,13 +95,9 @@ export default function PurchaseRequestModal({
 
       setTimeout(() => {
         setQuantity(1);
-
         setDeliveryLocation("");
-
         setNote("");
-
         setSuccess("");
-
         onClose();
       }, 900);
     } catch (err) {
@@ -156,11 +130,9 @@ export default function PurchaseRequestModal({
 
           <button
             type="button"
-            disabled={
-              isSubmitting
-            }
+            disabled={isSubmitting}
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -174,15 +146,11 @@ export default function PurchaseRequestModal({
               </p>
 
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {session.user.name ||
-                  "Farmer"}
+                {session.user.name || "Farmer"}
               </p>
 
               <p className="text-xs text-slate-500">
-                {
-                  session.user
-                    .email
-                }
+                {session.user.email}
               </p>
             </div>
           )}
@@ -196,12 +164,8 @@ export default function PurchaseRequestModal({
               <button
                 type="button"
                 onClick={() =>
-                  setQuantity(
-                    (value) =>
-                      Math.max(
-                        1,
-                        value - 1
-                      )
+                  setQuantity((value) =>
+                    Math.max(1, value - 1)
                   )
                 }
                 className="h-12 w-12 bg-slate-50 text-xl font-semibold text-slate-600"
@@ -212,20 +176,14 @@ export default function PurchaseRequestModal({
               <input
                 type="number"
                 min={1}
-                max={
-                  product.quantity
-                }
+                max={product.quantity}
                 value={quantity}
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setQuantity(
                     Math.max(
                       1,
                       Number(
-                        event
-                          .target
-                          .value
+                        event.target.value
                       ) || 1
                     )
                   )
@@ -236,12 +194,11 @@ export default function PurchaseRequestModal({
               <button
                 type="button"
                 onClick={() =>
-                  setQuantity(
-                    (value) =>
-                      Math.min(
-                        product.quantity,
-                        value + 1
-                      )
+                  setQuantity((value) =>
+                    Math.min(
+                      product.quantity,
+                      value + 1
+                    )
                   )
                 }
                 className="h-12 w-12 bg-slate-50 text-xl font-semibold text-slate-600"
@@ -263,15 +220,10 @@ export default function PurchaseRequestModal({
             </label>
 
             <input
-              value={
-                deliveryLocation
-              }
-              onChange={(
-                event
-              ) =>
+              value={deliveryLocation}
+              onChange={(event) =>
                 setDeliveryLocation(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
               placeholder="e.g. Kushtia, Bangladesh"
@@ -290,13 +242,8 @@ export default function PurchaseRequestModal({
             <textarea
               rows={4}
               value={note}
-              onChange={(
-                event
-              ) =>
-                setNote(
-                  event.target
-                    .value
-                )
+              onChange={(event) =>
+                setNote(event.target.value)
               }
               placeholder="Additional information for the seller..."
               className="w-full resize-none rounded-xl border border-slate-200 p-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50"
@@ -342,39 +289,24 @@ export default function PurchaseRequestModal({
               {success}
             </div>
           )}
-        </div>
-
-        <div className="flex gap-3 border-t border-slate-100 p-6">
-          <button
-            type="button"
-            disabled={
-              isSubmitting
-            }
-            onClick={onClose}
-            className="h-11 flex-1 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600"
-          >
-            Cancel
-          </button>
 
           <button
             type="button"
             disabled={
-              isSubmitting
+              isSubmitting ||
+              !session?.user
             }
-            onClick={
-              handleSubmit
-            }
-            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white disabled:opacity-60"
+            onClick={handleSubmit}
+            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSubmitting && (
-              <Loader2 className="h-4 w-4 animate-spin" />
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Send Request"
             )}
-
-            {sessionLoading
-              ? "Loading..."
-              : loading
-                ? "Sending..."
-                : "Send Request"}
           </button>
         </div>
       </div>

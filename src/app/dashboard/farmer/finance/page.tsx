@@ -62,13 +62,26 @@ export default function FinancePage() {
 
       const baseUrl = getApiUrl();
 
+      const {
+        data: tokenData,
+        error: tokenError,
+      } = await authClient.token();
+
+      if (tokenError || !tokenData?.token) {
+        throw new Error(
+          "Authentication required"
+        );
+      }
+
       const response = await fetch(
-        `${baseUrl}/finance/transactions/${userId}`,
+        `${baseUrl}/finance/transactions/me`,
         {
           method: "GET",
           headers: {
             Accept: "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
           },
+          cache: "no-store",
         }
       );
 
@@ -118,12 +131,24 @@ export default function FinancePage() {
   ) => {
     const baseUrl = getApiUrl();
 
+    const {
+      data: tokenData,
+      error: tokenError,
+    } = await authClient.token();
+
+    if (tokenError || !tokenData?.token) {
+      throw new Error(
+        "Authentication required"
+      );
+    }
+
     const response = await fetch(
       `${baseUrl}/finance/transactions/${transactionId}`,
       {
         method: "DELETE",
         headers: {
           Accept: "application/json",
+          Authorization: `Bearer ${tokenData.token}`,
         },
       }
     );

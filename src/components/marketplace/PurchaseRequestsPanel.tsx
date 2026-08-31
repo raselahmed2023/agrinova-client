@@ -38,10 +38,6 @@ export default function PurchaseRequestsPanel() {
     isPending,
   } = authClient.useSession();
 
-  const userEmail =
-    session?.user?.email ||
-    "";
-
   const [tab, setTab] =
     useState<Tab>("sent");
 
@@ -74,11 +70,10 @@ export default function PurchaseRequestsPanel() {
 
   const fetchRequests =
     useCallback(async () => {
-      if (!userEmail) {
+      if (!session?.user) {
         setSentRequests([]);
         setReceivedRequests([]);
         setLoading(false);
-
         return;
       }
 
@@ -90,13 +85,8 @@ export default function PurchaseRequestsPanel() {
           sent,
           received,
         ] = await Promise.all([
-          getSentPurchaseRequests(
-            userEmail
-          ),
-
-          getReceivedPurchaseRequests(
-            userEmail
-          ),
+          getSentPurchaseRequests(),
+          getReceivedPurchaseRequests(),
         ]);
 
         setSentRequests(
@@ -115,7 +105,7 @@ export default function PurchaseRequestsPanel() {
       } finally {
         setLoading(false);
       }
-    }, [userEmail]);
+    }, [session?.user]);
 
   useEffect(() => {
     if (!isPending) {
@@ -131,7 +121,7 @@ export default function PurchaseRequestsPanel() {
       requestId: string,
       status: PurchaseRequestStatus
     ) => {
-      if (!userEmail) {
+      if (!session?.user) {
         setError(
           "Please login first."
         );
@@ -148,8 +138,7 @@ export default function PurchaseRequestsPanel() {
 
         await updatePurchaseRequestStatus(
           requestId,
-          status,
-          userEmail
+          status
         );
 
         await fetchRequests();
@@ -254,9 +243,7 @@ export default function PurchaseRequestsPanel() {
             }`}
           >
             <Send className="h-4 w-4" />
-
             Sent
-
             <span
               className={`rounded-full px-2 py-0.5 text-xs ${
                 tab === "sent"
@@ -264,9 +251,7 @@ export default function PurchaseRequestsPanel() {
                   : "bg-slate-100"
               }`}
             >
-              {
-                sentRequests.length
-              }
+              {sentRequests.length}
             </span>
           </button>
 
@@ -285,9 +270,7 @@ export default function PurchaseRequestsPanel() {
             }`}
           >
             <Inbox className="h-4 w-4" />
-
             Received
-
             <span
               className={`rounded-full px-2 py-0.5 text-xs ${
                 tab ===
@@ -296,9 +279,7 @@ export default function PurchaseRequestsPanel() {
                   : "bg-slate-100"
               }`}
             >
-              {
-                receivedRequests.length
-              }
+              {receivedRequests.length}
             </span>
           </button>
         </div>

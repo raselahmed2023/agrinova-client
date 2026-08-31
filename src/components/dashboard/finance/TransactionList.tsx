@@ -1,6 +1,7 @@
 "use client";
 
 import type { FinanceTransaction } from "./FinanceSummary";
+import { authClient } from "@/lib/auth-client";
 
 import {
   AlertTriangle,
@@ -881,6 +882,17 @@ function EditTransactionModal({
       setLoading(true);
       setError("");
 
+      const {
+        data: tokenData,
+        error: tokenError,
+      } = await authClient.token();
+
+      if (tokenError || !tokenData?.token) {
+        throw new Error(
+          "Authentication required"
+        );
+      }
+
       const response = await fetch(
         `${API_URL}/finance/transactions/${id}`,
         {
@@ -890,6 +902,7 @@ function EditTransactionModal({
             "Content-Type":
               "application/json",
             Accept: "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
           },
 
           body: JSON.stringify({

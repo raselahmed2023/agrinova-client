@@ -118,14 +118,20 @@ export default function MyListingsPage() {
           );
         }
 
+        const { data: tokenData, error: tokenError } =
+          await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          throw new Error("Authentication required.");
+        }
+
         const response =
           await fetch(
             `${API_URL}/marketplace/my-listings`,
             {
               method: "GET",
               headers: {
-                "x-seller-email":
-                  sellerEmail,
+                Authorization: `Bearer ${tokenData.token}`,
               },
               cache: "no-store",
             }
@@ -196,16 +202,21 @@ export default function MyListingsPage() {
           );
         }
 
+        const { data: tokenData, error: tokenError } =
+          await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          throw new Error("Authentication required.");
+        }
+
         const response =
           await fetch(
             `${API_URL}/marketplace/products/${editingProduct._id}`,
             {
               method: "PATCH",
               headers: {
-                "Content-Type":
-                  "application/json",
-                "x-seller-email":
-                  sellerEmail,
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${tokenData.token}`,
               },
               body: JSON.stringify({
                 title:
@@ -290,14 +301,20 @@ export default function MyListingsPage() {
           );
         }
 
+        const { data: tokenData, error: tokenError } =
+          await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          throw new Error("Authentication required.");
+        }
+
         const response =
           await fetch(
             `${API_URL}/marketplace/products/${deletingProduct._id}`,
             {
               method: "DELETE",
               headers: {
-                "x-seller-email":
-                  sellerEmail,
+                Authorization: `Bearer ${tokenData.token}`,
               },
             }
           );
