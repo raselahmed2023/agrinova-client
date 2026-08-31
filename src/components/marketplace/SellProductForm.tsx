@@ -286,13 +286,6 @@ export default function SellProductForm() {
           ? [imageUrl]
           : [],
 
-        sellerName:
-          session.user.name ||
-          "Farmer",
-
-        sellerEmail:
-          session.user.email,
-
         sellerContact:
           sellerContact.trim() ||
           undefined,
@@ -301,8 +294,6 @@ export default function SellProductForm() {
           location.trim(),
 
         status: "available",
-
-        isFeatured: false,
       });
 
       setSuccess(

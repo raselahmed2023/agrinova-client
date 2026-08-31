@@ -65,8 +65,8 @@ export interface CreateProductPayload {
 
   images?: string[];
 
-  sellerName: string;
-  sellerEmail: string;
+  sellerName?: string;
+  sellerEmail?: string;
   sellerContact?: string;
 
   location: string;

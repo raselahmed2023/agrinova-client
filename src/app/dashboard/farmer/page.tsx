@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import {
-  Bell,
   Cloud,
   CloudFog,
   CloudLightning,
@@ -45,7 +44,7 @@ import type { IFarm } from "@/types/farm";
 
 import type { FinanceTransaction } from "@/components/dashboard/finance/FinanceSummary";
 
-import { BD_DISTRICTS } from "@/constants/districts";
+import { findDistrictLocation } from "@/constants/districts";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -77,9 +76,6 @@ export default function FarmerDashboardPage() {
   const userEmail =
     session?.user?.email || "";
 
-  const dashboardDistrict =
-    BD_DISTRICTS[0];
-
   /* 
      FARM STATE
    */
@@ -91,6 +87,14 @@ export default function FarmerDashboardPage() {
     farmsLoading,
     setFarmsLoading,
   ] = useState(true);
+
+  const primaryFarm =
+    farms[0] || null;
+
+  const primaryFarmLocation =
+    findDistrictLocation(
+      primaryFarm?.district
+    );
 
   /* 
      MARKETPLACE STATE
@@ -163,6 +167,17 @@ export default function FarmerDashboardPage() {
       try {
         setFarmsLoading(true);
 
+        const {
+          data: tokenData,
+          error: tokenError,
+        } = await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          throw new Error(
+            "Authentication required"
+          );
+        }
+
         const response =
           await fetch(
             `${API_URL}/farms`,
@@ -171,6 +186,7 @@ export default function FarmerDashboardPage() {
               headers: {
                 Accept:
                   "application/json",
+                Authorization: `Bearer ${tokenData.token}`,
               },
               cache: "no-store",
             }
@@ -185,7 +201,7 @@ export default function FarmerDashboardPage() {
         ) {
           throw new Error(
             data?.message ||
-              "Failed to load farms."
+            "Failed to load farms."
           );
         }
 
@@ -229,15 +245,9 @@ export default function FarmerDashboardPage() {
           sentResponse,
           receivedResponse,
         ] = await Promise.all([
-          getMyListings(userEmail),
-
-          getSentPurchaseRequests(
-            userEmail
-          ),
-
-          getReceivedPurchaseRequests(
-            userEmail
-          ),
+          getMyListings(),
+          getSentPurchaseRequests(),
+          getReceivedPurchaseRequests(),
         ]);
 
         setListings(
@@ -289,14 +299,26 @@ export default function FarmerDashboardPage() {
       try {
         setFinanceLoading(true);
 
+        const {
+          data: tokenData,
+          error: tokenError,
+        } = await authClient.token();
+
+        if (tokenError || !tokenData?.token) {
+          throw new Error(
+            "Authentication required"
+          );
+        }
+
         const response =
           await fetch(
-            `${API_URL}/finance/transactions/${userId}`,
+            `${API_URL}/finance/transactions/me`,
             {
               method: "GET",
               headers: {
                 Accept:
                   "application/json",
+                Authorization: `Bearer ${tokenData.token}`,
               },
               cache: "no-store",
             }
@@ -317,7 +339,7 @@ export default function FarmerDashboardPage() {
         if (!response.ok) {
           throw new Error(
             data?.message ||
-              "Failed to fetch finance data."
+            "Failed to fetch finance data."
           );
         }
 
@@ -349,13 +371,24 @@ export default function FarmerDashboardPage() {
 
   const fetchWeather =
     useCallback(async () => {
+      if (!primaryFarmLocation) {
+        setWeatherData(null);
+        setWeatherLoading(false);
+        setWeatherError(
+          primaryFarm
+            ? `Weather location not found for ${primaryFarm.district}.`
+            : "Add a farm to see local weather."
+        );
+        return;
+      }
+
       try {
         setWeatherLoading(true);
         setWeatherError("");
 
         const response =
           await fetch(
-            `${API_URL}/weather?lat=${dashboardDistrict.lat}&lon=${dashboardDistrict.lon}`,
+            `${API_URL}/weather?lat=${primaryFarmLocation.lat}&lon=${primaryFarmLocation.lon}`,
             {
               cache: "no-store",
             }
@@ -370,7 +403,7 @@ export default function FarmerDashboardPage() {
         ) {
           throw new Error(
             data?.message ||
-              "Failed to load weather."
+            "Failed to load weather."
           );
         }
 
@@ -394,8 +427,9 @@ export default function FarmerDashboardPage() {
         setWeatherLoading(false);
       }
     }, [
-      dashboardDistrict.lat,
-      dashboardDistrict.lon,
+      primaryFarm?.district,
+      primaryFarmLocation?.lat,
+      primaryFarmLocation?.lon,
     ]);
 
   /* 
@@ -407,13 +441,20 @@ export default function FarmerDashboardPage() {
       void fetchFarms();
       void fetchMarketplaceData();
       void fetchFinanceData();
-      void fetchWeather();
     }
   }, [
     sessionLoading,
     fetchFarms,
     fetchMarketplaceData,
     fetchFinanceData,
+  ]);
+
+  useEffect(() => {
+    if (!farmsLoading) {
+      void fetchWeather();
+    }
+  }, [
+    farmsLoading,
     fetchWeather,
   ]);
 
@@ -426,7 +467,7 @@ export default function FarmerDashboardPage() {
       (product) =>
         !product.status ||
         product.status ===
-          "available"
+        "available"
     ).length;
 
   const pendingRequestsCount =
@@ -577,8 +618,8 @@ export default function FarmerDashboardPage() {
         marketplaceLoading
           ? "..."
           : String(
-              activeListingsCount
-            ),
+            activeListingsCount
+          ),
 
       description:
         "Marketplace products",
@@ -597,8 +638,8 @@ export default function FarmerDashboardPage() {
         marketplaceLoading
           ? "..."
           : String(
-              pendingRequestsCount
-            ),
+            pendingRequestsCount
+          ),
 
       description:
         "Pending requests",
@@ -610,18 +651,19 @@ export default function FarmerDashboardPage() {
     },
 
     {
-      title:
-        "Notifications",
+      title: "Net Profit",
 
-      value: "0",
+      value: financeLoading
+        ? "..."
+        : `৳${netProfit.toLocaleString()}`,
 
       description:
-        "Unread notifications",
+        "Income minus expense",
 
-      icon: Bell,
+      icon: WalletCards,
 
       href:
-        "/dashboard/farmer/notifications",
+        "/dashboard/farmer/finance",
     },
   ];
 
@@ -715,7 +757,9 @@ export default function FarmerDashboardPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                {dashboardDistrict.name}{" "}
+                {primaryFarmLocation?.name ||
+                  primaryFarm?.district ||
+                  "Farm location"}{" "}
                 weather information
               </p>
             </div>
@@ -727,16 +771,16 @@ export default function FarmerDashboardPage() {
                   void fetchWeather()
                 }
                 disabled={
-                  weatherLoading
+                  weatherLoading ||
+                  !primaryFarmLocation
                 }
                 className="text-slate-400 transition hover:text-[#0B6B4A]"
               >
                 <RefreshCw
-                  className={`h-4 w-4 ${
-                    weatherLoading
+                  className={`h-4 w-4 ${weatherLoading
                       ? "animate-spin"
                       : ""
-                  }`}
+                    }`}
                 />
               </button>
 
@@ -783,9 +827,9 @@ export default function FarmerDashboardPage() {
                     </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      {
-                        dashboardDistrict.name
-                      }
+                      {primaryFarmLocation?.name ||
+                        primaryFarm?.district ||
+                        "Farm location"}
                     </p>
                   </div>
                 </div>
