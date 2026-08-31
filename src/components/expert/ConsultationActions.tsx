@@ -1,0 +1,191 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  Check,
+  X,
+  Calendar,
+  Video,
+  FileCheck2,
+  AlertCircle,
+  Clock,
+  Sparkles,
+} from "lucide-react";
+import type { Consultation } from "@/types/consultation";
+
+interface ConsultationActionsProps {
+  consultation: Consultation;
+  onAccept?: () => Promise<void> | void;
+  onReject?: (reason: string) => Promise<void> | void;
+  onOpenSchedule?: () => void;
+  onStartCall?: () => void;
+  onOpenRecommendation?: () => void;
+  isProcessing?: boolean;
+}
+
+export default function ConsultationActions({
+  consultation,
+  onAccept,
+  onReject,
+  onOpenSchedule,
+  onStartCall,
+  onOpenRecommendation,
+  isProcessing = false,
+}: ConsultationActionsProps) {
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const handleConfirmReject = async () => {
+    if (onReject) {
+      await onReject(rejectReason || "Expert unavailable for this consultation.");
+      setShowRejectModal(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {/* PENDING State */}
+      {consultation.status === "PENDING" && (
+        <>
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={() => setShowRejectModal(true)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/60 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100/80 transition disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+            Reject Request
+          </button>
+
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onAccept}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+            Accept Consultation
+          </button>
+        </>
+      )}
+
+      {/* ACCEPTED State */}
+      {consultation.status === "ACCEPTED" && (
+        <button
+          type="button"
+          disabled={isProcessing}
+          onClick={onOpenSchedule}
+          className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition disabled:opacity-50"
+        >
+          <Calendar className="h-4 w-4" />
+          Schedule Date & Time
+        </button>
+      )}
+
+      {/* SCHEDULED State */}
+      {consultation.status === "SCHEDULED" && (
+        <>
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onOpenSchedule}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+          >
+            <Clock className="h-4 w-4 text-slate-500" />
+            Reschedule
+          </button>
+
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onStartCall}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
+          >
+            <Video className="h-4 w-4" />
+            Start Video Consultation
+          </button>
+        </>
+      )}
+
+      {/* ONGOING State */}
+      {consultation.status === "ONGOING" && (
+        <>
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onStartCall}
+            className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-rose-700 transition animate-pulse"
+          >
+            <Video className="h-4 w-4" />
+            Enter Live Call
+          </button>
+
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onOpenRecommendation}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
+          >
+            <Sparkles className="h-4 w-4" />
+            Complete & Write Prescription
+          </button>
+        </>
+      )}
+
+      {/* COMPLETED State */}
+      {consultation.status === "COMPLETED" && (
+        <button
+          type="button"
+          onClick={onOpenRecommendation}
+          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 transition"
+        >
+          <FileCheck2 className="h-4 w-4 text-emerald-600" />
+          {consultation.recommendations ? "Edit Recommendation" : "Add Recommendation"}
+        </button>
+      )}
+
+      {/* REJECT MODAL */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-700">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-slate-900">
+                Reject Consultation Request
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500">
+              Please provide a brief reason for the farmer.
+            </p>
+
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g., Outside my specialization, or fully booked this week."
+              className="w-full rounded-2xl border border-slate-200 p-3 text-sm focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={handleConfirmReject}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
