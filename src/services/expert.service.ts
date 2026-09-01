@@ -73,7 +73,7 @@ export const getExpertProfile = async (): Promise<ExpertProfile> => {
     const API_URL = getApiUrl();
     const token = await getAuthToken();
     if (token) {
-      const response = await fetch(`${API_URL}/experts/profile`, {
+      const response = await fetch(`${API_URL}/experts/me`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -98,8 +98,8 @@ export const updateExpertProfile = async (
     const API_URL = getApiUrl();
     const token = await getAuthToken();
     if (token) {
-      const response = await fetch(`${API_URL}/experts/profile`, {
-        method: "PUT",
+      const response = await fetch(`${API_URL}/experts/me`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -111,10 +111,17 @@ export const updateExpertProfile = async (
         if (result.success && result.data) {
           return result.data;
         }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
     }
-  } catch {
-    // Fall back to mock
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
   }
 
   mockProfile = {

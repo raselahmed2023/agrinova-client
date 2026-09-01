@@ -17,6 +17,9 @@ import {
   X,
   Star,
   ShieldCheck,
+  Lock,
+  Image as ImageIcon,
+  AlertCircle,
 } from "lucide-react";
 import type { ExpertProfile } from "@/types/expert";
 
@@ -33,6 +36,7 @@ export default function ExpertProfileForm({
   const [newTag, setNewTag] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleAddTag = () => {
     if (newTag.trim() && !profile.specialization.includes(newTag.trim())) {
@@ -53,11 +57,16 @@ export default function ExpertProfileForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setIsSaving(true);
     try {
-      await onSave(profile);
+      // Exclude email, role, status from payload to ensure they remain untouched
+      const { email, ...payloadToUpdate } = profile;
+      await onSave(payloadToUpdate);
       setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -65,7 +74,7 @@ export default function ExpertProfileForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Top Banner Card: Expert Identity */}
+      {/* Top Banner Card: Expert Identity & Profile Image */}
       <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="flex items-center gap-5">
@@ -78,7 +87,7 @@ export default function ExpertProfileForm({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <User className="h-10 w-10" />
+                <User className="h-10 w-10 text-emerald-700" />
               )}
             </div>
             <div>
@@ -94,26 +103,33 @@ export default function ExpertProfileForm({
                 )}
               </div>
               <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-                {profile.title}
+                {profile.title || "Agricultural Expert"}
               </p>
               <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
                 <span className="flex items-center gap-1 text-amber-500 font-semibold">
                   <Star className="h-3.5 w-3.5 fill-amber-400" />
-                  {profile.rating} ({profile.ratingCount} reviews)
+                  {profile.rating || 4.9} ({profile.ratingCount || 0} reviews)
                 </span>
                 <span>·</span>
-                <span>{profile.totalConsultations} Consultations Completed</span>
+                <span>{profile.totalConsultations || 0} Consultations Completed</span>
               </div>
             </div>
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-rose-50 p-4 border border-rose-200 text-rose-800 text-xs font-semibold">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Form Inputs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
           {/* Full Name */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Full Name
+              Full Name *
             </label>
             <input
               type="text"
@@ -122,42 +138,34 @@ export default function ExpertProfileForm({
               onChange={(e) =>
                 setProfile((prev) => ({ ...prev, name: e.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              placeholder="e.g., Dr. Rafiqul Islam"
+              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
             />
           </div>
 
-          {/* Title */}
+          {/* Email (Read-Only) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Professional Title / Designation
-            </label>
-            <input
-              type="text"
-              required
-              value={profile.title}
-              onChange={(e) =>
-                setProfile((prev) => ({ ...prev, title: e.target.value }))
-              }
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Email Address
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Email Address
+              </label>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                <Lock className="h-3 w-3" />
+                Read-Only
+              </span>
+            </div>
             <div className="relative">
               <input
                 type="email"
-                required
+                disabled
+                readOnly
                 value={profile.email}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, email: e.target.value }))
-                }
-                className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-100/80 py-3 px-4 text-sm text-slate-500 cursor-not-allowed font-medium shadow-inner"
               />
             </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Registered email associated with your Better Auth account.
+            </p>
           </div>
 
           {/* Phone */}
@@ -167,109 +175,90 @@ export default function ExpertProfileForm({
             </label>
             <input
               type="text"
-              required
-              value={profile.phone}
+              value={profile.phone || ""}
               onChange={(e) =>
                 setProfile((prev) => ({ ...prev, phone: e.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              placeholder="+880 1712-345678"
+              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
             />
+          </div>
+
+          {/* Profile Image URL */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              Profile Image URL
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                value={profile.avatar || ""}
+                onChange={(e) =>
+                  setProfile((prev) => ({ ...prev, avatar: e.target.value }))
+                }
+                placeholder="https://images.unsplash.com/..."
+                className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
+              />
+            </div>
           </div>
 
           {/* Qualifications */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Highest Educational Qualification
+              Qualification
             </label>
             <input
               type="text"
-              value={profile.qualification}
+              value={profile.qualification || ""}
               onChange={(e) =>
                 setProfile((prev) => ({
                   ...prev,
                   qualification: e.target.value,
                 }))
               }
-              placeholder="e.g., Ph.D. in Agronomy"
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          {/* Institution */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Current Institution / Organization
-            </label>
-            <input
-              type="text"
-              value={profile.institution || ""}
-              onChange={(e) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  institution: e.target.value,
-                }))
-              }
-              placeholder="e.g., Bangladesh Agricultural Research Institute (BARI)"
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              placeholder="e.g., Ph.D. in Plant Pathology (BAU), M.Sc. in Agriculture"
+              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
             />
           </div>
 
           {/* Experience Years */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Years of Field Experience
+              Experience Years
             </label>
             <input
               type="number"
               min={0}
-              value={profile.experienceYears}
+              max={60}
+              value={profile.experienceYears || 0}
               onChange={(e) =>
                 setProfile((prev) => ({
                   ...prev,
                   experienceYears: Number(e.target.value),
                 }))
               }
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          {/* Consultation Fee */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Consultation Fee (BDT per session)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={50}
-              value={profile.consultationFee}
-              onChange={(e) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  consultationFee: Number(e.target.value),
-                }))
-              }
-              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              placeholder="e.g., 14"
+              className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
             />
           </div>
         </div>
 
-        {/* Specialization tags */}
-        <div className="pt-6 border-t border-slate-100">
+        {/* Specialization Tags */}
+        <div className="pt-6 mt-6 border-t border-slate-100">
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-            Areas of Specialization & Crops
+            Specialization
           </label>
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            {profile.specialization.map((spec) => (
+            {profile.specialization?.map((spec) => (
               <span
                 key={spec}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-900 border border-emerald-200"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-900 border border-emerald-200 shadow-sm"
               >
                 {spec}
                 <button
                   type="button"
                   onClick={() => handleRemoveTag(spec)}
-                  className="rounded-full p-0.5 hover:bg-emerald-200/70 text-emerald-700"
+                  className="rounded-full p-0.5 hover:bg-emerald-200/70 text-emerald-700 transition"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -288,13 +277,13 @@ export default function ExpertProfileForm({
                   handleAddTag();
                 }
               }}
-              placeholder="Add tag (e.g., Soil Fertility, Rice Disease)..."
-              className="flex-1 rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-emerald-500 focus:outline-none"
+              placeholder="Add specialization (e.g. Crop Pathology, Soil Health)..."
+              className="flex-1 rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-emerald-500 focus:outline-none shadow-sm"
             />
             <button
               type="button"
               onClick={handleAddTag}
-              className="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+              className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 shadow-sm transition"
             >
               Add
             </button>
@@ -302,17 +291,18 @@ export default function ExpertProfileForm({
         </div>
 
         {/* Bio */}
-        <div className="pt-6 border-t border-slate-100">
+        <div className="pt-6 mt-6 border-t border-slate-100">
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-            Professional Biography
+            Bio
           </label>
           <textarea
             rows={4}
-            value={profile.bio}
+            value={profile.bio || ""}
             onChange={(e) =>
               setProfile((prev) => ({ ...prev, bio: e.target.value }))
             }
-            className="w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 leading-relaxed"
+            placeholder="Share your expertise, field research background, and consultation advisory approach..."
+            className="w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 leading-relaxed shadow-sm font-normal"
           />
         </div>
       </div>
@@ -321,13 +311,13 @@ export default function ExpertProfileForm({
       <div className="sticky bottom-4 z-20 flex items-center justify-between rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur shadow-lg">
         <div>
           {savedSuccess ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-fade-in">
               <Check className="h-4 w-4" />
               Profile updated successfully!
             </span>
           ) : (
             <span className="text-xs text-slate-500">
-              Changes will immediately reflect on the farmer directory.
+              Role and email are secured and managed via authentication settings.
             </span>
           )}
         </div>
@@ -338,7 +328,7 @@ export default function ExpertProfileForm({
           className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
-          {isSaving ? "Saving Changes..." : "Save Profile"}
+          {isSaving ? "Saving..." : "Save Profile"}
         </button>
       </div>
     </form>
