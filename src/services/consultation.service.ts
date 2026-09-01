@@ -437,10 +437,17 @@ export const scheduleConsultation = async (
         if (result.success && result.data) {
           return result.data;
         }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
     }
-  } catch {
-    // Fall back to mock update
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
   }
 
   const generatedLink =
@@ -536,9 +543,9 @@ export const submitRecommendation = async (
           ...c,
           status: "COMPLETED" as ConsultationStatus,
           recommendations: {
-            diagnosis: payload.diagnosis,
-            prescriptions: payload.prescriptions,
-            treatmentSteps: payload.treatmentSteps,
+            diagnosis: payload.diagnosis || payload.recommendation || "Follow prescribed treatment",
+            prescriptions: payload.prescriptions || [],
+            treatmentSteps: payload.treatmentSteps || [],
             followUpDate: payload.followUpDate,
             additionalNotes: payload.additionalNotes,
             createdAt: new Date().toISOString(),

@@ -1,3 +1,33 @@
+export type WeekDay =
+  | "SATURDAY"
+  | "SUNDAY"
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY";
+
+export interface IAvailabilitySlot {
+  day: WeekDay;
+  enabled: boolean;
+  startTime?: string; // "HH:mm" e.g., "18:00"
+  endTime?: string;   // "HH:mm" e.g., "21:00"
+}
+
+export interface IExpert {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  profileImage?: string;
+  specialization?: string;
+  qualification?: string;
+  experienceYears?: number;
+  bio?: string;
+  availabilityStatus: "AVAILABLE" | "UNAVAILABLE";
+  availabilitySlots?: IAvailabilitySlot[];
+}
+
 export type DayOfWeek =
   | "monday"
   | "tuesday"
@@ -22,10 +52,12 @@ export interface DayAvailability {
 
 export interface ExpertAvailability {
   expertId?: string;
-  isAcceptingConsultations: boolean;
-  timezone: string;
-  slotDurationMinutes: number;
-  weeklySchedule: DayAvailability[];
+  availabilityStatus: "AVAILABLE" | "UNAVAILABLE";
+  availabilitySlots: IAvailabilitySlot[];
+  isAcceptingConsultations?: boolean;
+  timezone?: string;
+  slotDurationMinutes?: number;
+  weeklySchedule?: DayAvailability[];
   customDatesOff?: string[];
 }
 
@@ -50,6 +82,8 @@ export interface ExpertProfile {
   languages: string[];
   location?: string;
   isVerified?: boolean;
+  availabilityStatus?: "AVAILABLE" | "UNAVAILABLE";
+  availabilitySlots?: IAvailabilitySlot[];
 }
 
 export interface ExpertStats {
@@ -83,7 +117,7 @@ export interface ExpertDashboardData {
   recentRequests: any[];
   upcomingConsultations: any[];
   ongoingConsultations: any[];
-  availabilityStatus: string;
+  availabilityStatus: "AVAILABLE" | "UNAVAILABLE" | string;
 }
 
 export interface ExpertDashboardResponse {
@@ -91,4 +125,3 @@ export interface ExpertDashboardResponse {
   message?: string;
   data: ExpertDashboardData;
 }
-

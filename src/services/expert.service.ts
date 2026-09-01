@@ -4,6 +4,7 @@ import type {
   ExpertAvailabilityResponse,
   ExpertProfile,
   ExpertProfileResponse,
+  IAvailabilitySlot,
 } from "@/types/expert";
 
 const getApiUrl = () => {
@@ -28,7 +29,8 @@ let mockProfile: ExpertProfile = {
   name: "Dr. Rafiqul Islam",
   email: "dr.rafiqul@agrinova.io",
   phone: "+880 1712-345678",
-  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+  avatar:
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
   title: "Senior Agronomist & Plant Pathologist",
   specialization: [
     "Plant Pathology",
@@ -40,7 +42,8 @@ let mockProfile: ExpertProfile = {
   bio: "Over 14 years of research and field advisory experience in cereal and horticulture crops across Bangladesh. Specializing in sustainable crop protection, fungal diagnostics, and integrated pest management (IPM).",
   experienceYears: 14,
   qualification: "Ph.D. in Plant Pathology (BAU), M.Sc. in Agriculture",
-  institution: "Bangladesh Agricultural University (BAU) / AgriNova Advisory Board",
+  institution:
+    "Bangladesh Agricultural University (BAU) / AgriNova Advisory Board",
   rating: 4.9,
   ratingCount: 128,
   totalConsultations: 342,
@@ -48,70 +51,21 @@ let mockProfile: ExpertProfile = {
   languages: ["Bengali", "English"],
   location: "Dhaka / Mymensingh, Bangladesh",
   isVerified: true,
+  availabilityStatus: "AVAILABLE",
 };
 
 let mockAvailability: ExpertAvailability = {
   expertId: "exp-001",
-  isAcceptingConsultations: true,
-  timezone: "Asia/Dhaka (GMT+6)",
-  slotDurationMinutes: 30,
-  weeklySchedule: [
-    {
-      day: "monday",
-      label: "Monday",
-      isAvailable: true,
-      slots: [
-        { id: "s1", start: "09:00", end: "12:00" },
-        { id: "s2", start: "15:00", end: "18:00" },
-      ],
-    },
-    {
-      day: "tuesday",
-      label: "Tuesday",
-      isAvailable: true,
-      slots: [
-        { id: "s3", start: "10:00", end: "13:00" },
-        { id: "s4", start: "16:00", end: "19:00" },
-      ],
-    },
-    {
-      day: "wednesday",
-      label: "Wednesday",
-      isAvailable: true,
-      slots: [
-        { id: "s5", start: "09:00", end: "12:00" },
-        { id: "s6", start: "14:00", end: "17:00" },
-      ],
-    },
-    {
-      day: "thursday",
-      label: "Thursday",
-      isAvailable: true,
-      slots: [{ id: "s7", start: "10:00", end: "14:00" }],
-    },
-    {
-      day: "friday",
-      label: "Friday",
-      isAvailable: false,
-      slots: [],
-    },
-    {
-      day: "saturday",
-      label: "Saturday",
-      isAvailable: true,
-      slots: [{ id: "s8", start: "15:00", end: "20:00" }],
-    },
-    {
-      day: "sunday",
-      label: "Sunday",
-      isAvailable: true,
-      slots: [
-        { id: "s9", start: "09:00", end: "12:00" },
-        { id: "s10", start: "14:00", end: "18:00" },
-      ],
-    },
+  availabilityStatus: "AVAILABLE",
+  availabilitySlots: [
+    { day: "SATURDAY", enabled: true, startTime: "18:00", endTime: "21:00" },
+    { day: "SUNDAY", enabled: true, startTime: "18:00", endTime: "21:00" },
+    { day: "MONDAY", enabled: false, startTime: "18:00", endTime: "21:00" },
+    { day: "TUESDAY", enabled: true, startTime: "17:00", endTime: "20:00" },
+    { day: "WEDNESDAY", enabled: false, startTime: "18:00", endTime: "21:00" },
+    { day: "THURSDAY", enabled: false, startTime: "18:00", endTime: "21:00" },
+    { day: "FRIDAY", enabled: false, startTime: "18:00", endTime: "21:00" },
   ],
-  customDatesOff: ["2026-10-15", "2026-12-16"],
 };
 
 export const getExpertProfile = async (): Promise<ExpertProfile> => {
@@ -175,7 +129,7 @@ export const getExpertAvailability = async (): Promise<ExpertAvailability> => {
     const API_URL = getApiUrl();
     const token = await getAuthToken();
     if (token) {
-      const response = await fetch(`${API_URL}/experts/availability`, {
+      const response = await fetch(`${API_URL}/experts/me/availability`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -194,14 +148,17 @@ export const getExpertAvailability = async (): Promise<ExpertAvailability> => {
 };
 
 export const updateExpertAvailability = async (
-  payload: Partial<ExpertAvailability>
+  payload: {
+    availabilityStatus: "AVAILABLE" | "UNAVAILABLE";
+    availabilitySlots: IAvailabilitySlot[];
+  }
 ): Promise<ExpertAvailability> => {
   try {
     const API_URL = getApiUrl();
     const token = await getAuthToken();
     if (token) {
-      const response = await fetch(`${API_URL}/experts/availability`, {
-        method: "PUT",
+      const response = await fetch(`${API_URL}/experts/me/availability`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -213,15 +170,23 @@ export const updateExpertAvailability = async (
         if (result.success && result.data) {
           return result.data;
         }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
     }
-  } catch {
-    // Fall back to mock
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
   }
 
   mockAvailability = {
     ...mockAvailability,
-    ...payload,
+    availabilityStatus: payload.availabilityStatus,
+    availabilitySlots: payload.availabilitySlots,
   };
   return mockAvailability;
 };
@@ -248,4 +213,3 @@ export const getExpertDashboard = async () => {
   }
   return null;
 };
-

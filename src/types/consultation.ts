@@ -48,17 +48,26 @@ export interface Consultation {
   _id: string;
   id?: string;
   farmerId: string;
+  farmerName?: string;
+  farmerEmail?: string;
   farmer: FarmerInfo;
+  farmId?: string;
   farmName?: string;
   district?: string;
   expertId?: string;
+  expertName?: string;
+  expertEmail?: string;
   expert?: ExpertInfo;
+  cropName?: string;
   cropType: string;
   problemTitle: string;
   problemDescription: string;
   images?: string[];
   status: ConsultationStatus;
   urgency?: ConsultationUrgency;
+  scheduledAt?: string | Date;
+  videoRoomId?: string;
+  recommendation?: string;
   preferredDate?: string;
   preferredTime?: string;
   scheduledDate?: string;
@@ -68,6 +77,10 @@ export interface Consultation {
   cancellationReason?: string;
   notes?: string;
   recommendations?: RecommendationData;
+  requestedAt?: string;
+  acceptedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -99,17 +112,19 @@ export interface ConsultationsResponse {
 
 export interface CreateRecommendationPayload {
   consultationId: string;
-  diagnosis: string;
-  prescriptions: string[];
-  treatmentSteps: string[];
+  diagnosis?: string;
+  recommendation?: string;
+  prescriptions?: string[];
+  treatmentSteps?: string[];
   followUpDate?: string;
   additionalNotes?: string;
 }
 
 export interface ScheduleConsultationPayload {
   consultationId: string;
-  scheduledDate: string;
-  scheduledTime: string;
+  scheduledAt?: string | Date;
+  scheduledDate?: string;
+  scheduledTime?: string;
   meetingLink?: string;
   notes?: string;
 }
