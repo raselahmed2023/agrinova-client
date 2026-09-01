@@ -1,14 +1,7 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
-
-import {
-  Loader2,
-  Plus,
-  WalletCards,
-  X,
-} from "lucide-react";
-
+import { Loader2, Plus, WalletCards, X } from "lucide-react";
 import {
   FormEvent,
   useEffect,
@@ -16,12 +9,7 @@ import {
   useState,
 } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
-
-/* =========================================
-   TYPES
-========================================= */
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 type FarmType =
   | "Crop"
@@ -37,18 +25,11 @@ interface TransactionFormProps {
 interface FarmOption {
   _id?: string;
   id?: string;
-
   name?: string;
   farmName?: string;
-
   farmType?: FarmType;
-
   status?: "Active" | "Inactive";
 }
-
-/* =========================================
-   GENERAL CATEGORIES
-========================================= */
 
 const generalIncomeCategories = [
   "Crop Sale",
@@ -78,41 +59,30 @@ const generalExpenseCategories = [
   "Other Expense",
 ];
 
-/* =========================================
-   FARM TYPE CATEGORIES
-========================================= */
-
-const farmIncomeCategories: Record<
-  FarmType,
-  string[]
-> = {
+const farmIncomeCategories: Record<FarmType, string[]> = {
   Crop: [
     "Crop Sale",
     "Marketplace Sale",
     "Other Income",
   ],
-
   Orchard: [
     "Fruit Sale",
     "Plant / Seedling Sale",
     "Marketplace Sale",
     "Other Income",
   ],
-
   Poultry: [
     "Poultry Sale",
     "Egg Sale",
     "Marketplace Sale",
     "Other Income",
   ],
-
   Livestock: [
     "Livestock Sale",
     "Milk Sale",
     "Marketplace Sale",
     "Other Income",
   ],
-
   Fishery: [
     "Fish Sale",
     "Marketplace Sale",
@@ -120,10 +90,7 @@ const farmIncomeCategories: Record<
   ],
 };
 
-const farmExpenseCategories: Record<
-  FarmType,
-  string[]
-> = {
+const farmExpenseCategories: Record<FarmType, string[]> = {
   Crop: [
     "Seeds",
     "Fertilizer",
@@ -135,7 +102,6 @@ const farmExpenseCategories: Record<
     "Farm Maintenance",
     "Other Expense",
   ],
-
   Orchard: [
     "Seedlings",
     "Fertilizer",
@@ -148,7 +114,6 @@ const farmExpenseCategories: Record<
     "Farm Maintenance",
     "Other Expense",
   ],
-
   Poultry: [
     "Chicks / Birds",
     "Feed",
@@ -161,7 +126,6 @@ const farmExpenseCategories: Record<
     "Farm Maintenance",
     "Other Expense",
   ],
-
   Livestock: [
     "Animal Purchase",
     "Feed",
@@ -173,7 +137,6 @@ const farmExpenseCategories: Record<
     "Farm Maintenance",
     "Other Expense",
   ],
-
   Fishery: [
     "Fish Fry / Fingerlings",
     "Feed",
@@ -187,238 +150,126 @@ const farmExpenseCategories: Record<
   ],
 };
 
-/* =========================================
-   COMPONENT
-========================================= */
-
 export default function TransactionForm({
   onAdd,
 }: TransactionFormProps) {
-  const { data: session } =
-    authClient.useSession();
-
-  const userId = session?.user?.id;
-
-  const [open, setOpen] =
+  const [open, setOpen] = useState(false);
+  const [type, setType] =
+    useState<"income" | "expense">("income");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [farmId, setFarmId] = useState("");
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [farms, setFarms] = useState<FarmOption[]>([]);
+  const [loadingFarms, setLoadingFarms] =
     useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const [type, setType] = useState<
-    "income" | "expense"
-  >("income");
+  const selectedFarm = useMemo(() => {
+    if (!farmId) return null;
 
-  const [amount, setAmount] =
-    useState("");
+    return (
+      farms.find(
+        (farm) => (farm._id || farm.id) === farmId
+      ) || null
+    );
+  }, [farmId, farms]);
 
-  const [category, setCategory] =
-    useState("");
+  const categories = useMemo(() => {
+    const farmType = selectedFarm?.farmType;
 
-  const [farmId, setFarmId] =
-    useState("");
-
-  const [date, setDate] =
-    useState("");
-
-  const [
-    description,
-    setDescription,
-  ] = useState("");
-
-  const [farms, setFarms] =
-    useState<FarmOption[]>([]);
-
-  const [
-    loadingFarms,
-    setLoadingFarms,
-  ] = useState(false);
-
-  const [
-    submitting,
-    setSubmitting,
-  ] = useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  /* =========================================
-     SELECTED FARM
-  ========================================= */
-
-  const selectedFarm =
-    useMemo(() => {
-      if (!farmId) {
-        return null;
-      }
-
-      return (
-        farms.find((farm) => {
-          const id =
-            farm._id || farm.id;
-
-          return id === farmId;
-        }) || null
-      );
-    }, [farmId, farms]);
-
-  /* =========================================
-     SMART CATEGORY
-  ========================================= */
-
-  const categories =
-    useMemo(() => {
-      const farmType =
-        selectedFarm?.farmType;
-
-      if (!farmType) {
-        return type === "income"
-          ? generalIncomeCategories
-          : generalExpenseCategories;
-      }
-
+    if (!farmType) {
       return type === "income"
-        ? farmIncomeCategories[
-            farmType
-          ]
-        : farmExpenseCategories[
-            farmType
-          ];
-    }, [
-      type,
-      selectedFarm,
-    ]);
+        ? generalIncomeCategories
+        : generalExpenseCategories;
+    }
 
-  /* =========================================
-     RESET CATEGORY
-  ========================================= */
+    return type === "income"
+      ? farmIncomeCategories[farmType]
+      : farmExpenseCategories[farmType];
+  }, [type, selectedFarm]);
 
   useEffect(() => {
     setCategory("");
   }, [type, farmId]);
 
-  /* =========================================
-     FETCH FARMS
-  ========================================= */
-
   useEffect(() => {
-    if (!open || !API_URL) {
-      return;
-    }
+    if (!open || !API_URL) return;
 
-    const fetchFarms =
-      async () => {
-        try {
-          setLoadingFarms(true);
+    const fetchFarms = async () => {
+      try {
+        setLoadingFarms(true);
 
-          const {
-            data: tokenData,
-            error: tokenError,
-          } =
-            await authClient.token();
+        const {
+          data: tokenData,
+          error: tokenError,
+        } = await authClient.token();
 
-          if (
-            tokenError ||
-            !tokenData?.token
-          ) {
-            setFarms([]);
-            return;
-          }
-
-          const response =
-            await fetch(
-              `${API_URL}/farms`,
-              {
-                headers: {
-                  Accept:
-                    "application/json",
-
-                  Authorization: `Bearer ${tokenData.token}`,
-                },
-
-                cache: "no-store",
-              }
-            );
-
-          if (!response.ok) {
-            setFarms([]);
-            return;
-          }
-
-          const data =
-            await response.json();
-
-          const farmData =
-            data?.data?.farms ||
-            data?.data ||
-            data ||
-            [];
-
-          const activeFarms =
-            Array.isArray(farmData)
-              ? farmData.filter(
-                  (
-                    farm: FarmOption
-                  ) =>
-                    farm.status ===
-                    "Active"
-                )
-              : [];
-
-          setFarms(
-            activeFarms
-          );
-        } catch (err) {
-          console.error(
-            "Failed to fetch farms:",
-            err
-          );
-
+        if (tokenError || !tokenData?.token) {
           setFarms([]);
-        } finally {
-          setLoadingFarms(
-            false
-          );
+          return;
         }
-      };
+
+        const response = await fetch(
+          `${API_URL}/farms`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${tokenData.token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          setFarms([]);
+          return;
+        }
+
+        const data = await response.json();
+
+        const farmData =
+          data?.data?.farms ||
+          data?.data ||
+          data ||
+          [];
+
+        const activeFarms = Array.isArray(farmData)
+          ? farmData.filter(
+              (farm: FarmOption) =>
+                farm.status === "Active"
+            )
+          : [];
+
+        setFarms(activeFarms);
+      } catch {
+        setFarms([]);
+      } finally {
+        setLoadingFarms(false);
+      }
+    };
 
     void fetchFarms();
   }, [open]);
 
-  /* =========================================
-     RESET FORM
-  ========================================= */
-
   const resetForm = () => {
     setType("income");
-
     setAmount("");
-
     setCategory("");
-
     setFarmId("");
-
     setDate("");
-
     setDescription("");
-
     setError("");
   };
 
-  /* =========================================
-     CLOSE MODAL
-  ========================================= */
-
   const closeModal = () => {
-    if (submitting) {
-      return;
-    }
+    if (submitting) return;
 
     setOpen(false);
-
     resetForm();
   };
-
-  /* =========================================
-     SUBMIT
-  ========================================= */
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -426,18 +277,7 @@ export default function TransactionForm({
     event.preventDefault();
 
     if (!API_URL) {
-      setError(
-        "API configuration is missing."
-      );
-
-      return;
-    }
-
-    if (!userId) {
-      setError(
-        "You must be logged in to add a transaction."
-      );
-
+      setError("API configuration is missing.");
       return;
     }
 
@@ -450,13 +290,11 @@ export default function TransactionForm({
       setError(
         "Please complete all required fields."
       );
-
       return;
     }
 
     try {
       setSubmitting(true);
-
       setError("");
 
       const {
@@ -464,68 +302,34 @@ export default function TransactionForm({
         error: tokenError,
       } = await authClient.token();
 
-      if (
-        tokenError ||
-        !tokenData?.token
-      ) {
-        throw new Error(
-          "Authentication required"
-        );
+      if (tokenError || !tokenData?.token) {
+        throw new Error("Authentication required");
       }
 
-      const payload = {
-        type:
-          type === "income"
-            ? "Income"
-            : "Expense",
+      const response = await fetch(
+        `${API_URL}/finance/transactions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
+          },
+          body: JSON.stringify({
+            type:
+              type === "income"
+                ? "Income"
+                : "Expense",
+            amount: Number(amount),
+            category,
+            farmId: farmId || "",
+            date,
+            description: description.trim() || "",
+          }),
+        }
+      );
 
-        amount: Number(amount),
-
-        category,
-
-        date,
-
-        description:
-          description.trim() ||
-          undefined,
-
-        farmId:
-          farmId || undefined,
-      };
-
-      const response =
-        await fetch(
-          `${API_URL}/finance/transactions`,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Accept:
-                "application/json",
-
-              Authorization: `Bearer ${tokenData.token}`,
-            },
-
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
-
-      const contentType =
-        response.headers.get(
-          "content-type"
-        );
-
-      const data =
-        contentType?.includes(
-          "application/json"
-        )
-          ? await response.json()
-          : null;
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -537,7 +341,6 @@ export default function TransactionForm({
       await onAdd();
 
       setOpen(false);
-
       resetForm();
     } catch (err) {
       setError(
@@ -550,30 +353,20 @@ export default function TransactionForm({
     }
   };
 
-  /* =========================================
-     JSX
-  ========================================= */
-
   return (
     <>
-      {/* ADD BUTTON */}
       <button
         type="button"
-        onClick={() =>
-          setOpen(true)
-        }
+        onClick={() => setOpen(true)}
         className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0B513D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#084330]"
       >
         <Plus className="h-4 w-4" />
-
         Add Transaction
       </button>
 
-      {/* MODAL */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[2px]">
           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            {/* HEADER */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF4ED] text-[#0B513D]">
@@ -586,34 +379,25 @@ export default function TransactionForm({
                   </h2>
 
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Record farm income
-                    or expense.
+                    Record farm income or expense.
                   </p>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={
-                  closeModal
-                }
-                disabled={
-                  submitting
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                onClick={closeModal}
+                disabled={submitting}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* FORM */}
             <form
-              onSubmit={
-                handleSubmit
-              }
+              onSubmit={handleSubmit}
               className="space-y-5 p-5 sm:p-6"
             >
-              {/* TYPE */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Transaction Type
@@ -622,16 +406,11 @@ export default function TransactionForm({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setType(
-                        "income"
-                      )
-                    }
-                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                      type ===
-                      "income"
+                    onClick={() => setType("income")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                      type === "income"
                         ? "border-[#0B513D] bg-[#EEF6F1] text-[#0B513D]"
-                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                        : "border-slate-200 text-slate-500"
                     }`}
                   >
                     Income
@@ -639,16 +418,11 @@ export default function TransactionForm({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setType(
-                        "expense"
-                      )
-                    }
-                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                      type ===
-                      "expense"
+                    onClick={() => setType("expense")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                      type === "expense"
                         ? "border-[#0B513D] bg-[#EEF6F1] text-[#0B513D]"
-                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                        : "border-slate-200 text-slate-500"
                     }`}
                   >
                     Expense
@@ -656,11 +430,9 @@ export default function TransactionForm({
                 </div>
               </div>
 
-              {/* FARM */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Related Farm
-
                   <span className="ml-1 text-xs font-normal text-slate-400">
                     Optional
                   </span>
@@ -668,18 +440,11 @@ export default function TransactionForm({
 
                 <select
                   value={farmId}
-                  onChange={(
-                    event
-                  ) =>
-                    setFarmId(
-                      event.target
-                        .value
-                    )
+                  onChange={(event) =>
+                    setFarmId(event.target.value)
                   }
-                  disabled={
-                    loadingFarms
-                  }
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  disabled={loadingFarms}
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
                 >
                   <option value="">
                     {loadingFarms
@@ -687,213 +452,120 @@ export default function TransactionForm({
                       : "No specific farm"}
                   </option>
 
-                  {farms.map(
-                    (farm) => {
-                      const id =
-                        farm._id ||
-                        farm.id;
+                  {farms.map((farm) => {
+                    const id = farm._id || farm.id;
 
-                      if (!id) {
-                        return null;
-                      }
+                    if (!id) return null;
 
-                      return (
-                        <option
-                          key={id}
-                          value={id}
-                        >
-                          {farm.name ||
-                            farm.farmName ||
-                            "Unnamed Farm"}
-                          {farm.farmType
-                            ? ` (${farm.farmType})`
-                            : ""}
-                        </option>
-                      );
-                    }
-                  )}
+                    return (
+                      <option key={id} value={id}>
+                        {farm.name ||
+                          farm.farmName ||
+                          "Unnamed Farm"}
+                        {farm.farmType
+                          ? ` (${farm.farmType})`
+                          : ""}
+                      </option>
+                    );
+                  })}
                 </select>
-
-                {selectedFarm?.farmType && (
-                  <p className="mt-1.5 text-xs text-slate-400">
-                    Categories are
-                    based on{" "}
-                    <span className="font-medium text-[#0B513D]">
-                      {
-                        selectedFarm.farmType
-                      }
-                    </span>{" "}
-                    farming.
-                  </p>
-                )}
               </div>
 
-              {/* AMOUNT */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Amount
-
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
                 </label>
 
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
-                    ৳
-                  </span>
-
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(
-                      event
-                    ) =>
-                      setAmount(
-                        event.target
-                          .value
-                      )
-                    }
-                    placeholder="0"
-                    className="h-11 w-full rounded-xl border border-slate-200 pl-8 pr-3 text-sm outline-none transition focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
-                  />
-                </div>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={amount}
+                  onChange={(event) =>
+                    setAmount(event.target.value)
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none"
+                />
               </div>
 
-              {/* CATEGORY */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Category
-
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
                 </label>
 
                 <select
                   required
                   value={category}
-                  onChange={(
-                    event
-                  ) =>
-                    setCategory(
-                      event.target
-                        .value
-                    )
+                  onChange={(event) =>
+                    setCategory(event.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none"
                 >
                   <option value="">
                     Select category
                   </option>
 
-                  {categories.map(
-                    (
-                      categoryOption
-                    ) => (
-                      <option
-                        key={
-                          categoryOption
-                        }
-                        value={
-                          categoryOption
-                        }
-                      >
-                        {
-                          categoryOption
-                        }
-                      </option>
-                    )
-                  )}
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {/* DATE */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Date
-
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
                 </label>
 
                 <input
                   type="date"
                   required
                   value={date}
-                  onChange={(
-                    event
-                  ) =>
-                    setDate(
-                      event.target
-                        .value
-                    )
+                  onChange={(event) =>
+                    setDate(event.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none"
                 />
               </div>
 
-              {/* DESCRIPTION */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Description
-
-                  <span className="ml-1 text-xs font-normal text-slate-400">
-                    Optional
-                  </span>
                 </label>
 
                 <textarea
                   rows={3}
                   maxLength={500}
-                  value={
-                    description
+                  value={description}
+                  onChange={(event) =>
+                    setDescription(event.target.value)
                   }
-                  onChange={(
-                    event
-                  ) =>
-                    setDescription(
-                      event.target
-                        .value
-                    )
-                  }
-                  placeholder="Add a short note..."
-                  className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm leading-6 outline-none placeholder:text-slate-400 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none"
                 />
               </div>
 
-              {/* ERROR */}
               {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-600">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-600">
                   {error}
                 </div>
               )}
 
-              {/* ACTIONS */}
               <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
                 <button
                   type="button"
-                  onClick={
-                    closeModal
-                  }
-                  disabled={
-                    submitting
-                  }
-                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                  onClick={closeModal}
+                  disabled={submitting}
+                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  disabled={
-                    submitting
-                  }
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0B513D] px-5 text-sm font-semibold text-white transition hover:bg-[#084330] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={submitting}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0B513D] px-5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {submitting && (
                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Loader2,
   Pencil,
-  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -72,8 +71,6 @@ export default function TransactionList({
   onRefresh,
   onDelete,
 }: TransactionListProps) {
-  const [search, setSearch] = useState("");
-
   const [typeFilter, setTypeFilter] =
     useState("all");
 
@@ -124,8 +121,6 @@ export default function TransactionList({
 
   const filteredTransactions =
     useMemo(() => {
-      const searchValue =
-        search.trim().toLowerCase();
 
       return [...transactions]
         .filter((transaction) => {
@@ -155,34 +150,28 @@ export default function TransactionList({
           ) {
             return false;
           }
+          return true;
+        })
+        .sort((a, b) => {
+          const aDate = new Date(a.date).getTime();
+          const bDate = new Date(b.date).getTime();
 
-          if (!searchValue) {
-            return true;
+          if (bDate !== aDate) {
+            return bDate - aDate;
           }
 
-          const searchable = [
-            transaction.category,
-            transaction.description,
-            transaction.note,
-            transaction.farm,
-            transaction.type,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
+          const aCreated = new Date(
+            a.createdAt || a.date
+          ).getTime();
 
-          return searchable.includes(
-            searchValue
-          );
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.date).getTime() -
-            new Date(a.date).getTime()
-        );
+          const bCreated = new Date(
+            b.createdAt || b.date
+          ).getTime();
+
+          return bCreated - aCreated;
+        });
     }, [
       transactions,
-      search,
       typeFilter,
       categoryFilter,
       dateFilter,
@@ -191,7 +180,6 @@ export default function TransactionList({
   useEffect(() => {
     setPage(1);
   }, [
-    search,
     typeFilter,
     categoryFilter,
     dateFilter,
@@ -274,19 +262,7 @@ export default function TransactionList({
             </p>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="relative sm:col-span-2 xl:col-span-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search transactions..."
-                className="h-10 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
-              />
-            </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
 
             <select
               value={typeFilter}
@@ -349,10 +325,6 @@ export default function TransactionList({
         {currentTransactions.length ===
         0 ? (
           <div className="flex min-h-[300px] flex-col items-center justify-center p-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-              <Search className="h-6 w-6" />
-            </div>
-
             <h3 className="mt-4 text-sm font-semibold text-slate-900">
               No transactions found
             </h3>
@@ -420,14 +392,6 @@ export default function TransactionList({
                                 transaction.note ||
                                 transaction.category}
                             </p>
-
-                            {transaction.farm && (
-                              <p className="mt-1 text-[11px] text-slate-400">
-                                {
-                                  transaction.farm
-                                }
-                              </p>
-                            )}
                           </td>
 
                           <td className="px-5 py-4 text-xs text-slate-600">
@@ -542,13 +506,14 @@ export default function TransactionList({
                           </p>
 
                           <p className="mt-1 text-xs text-slate-500">
-                            {
-                              transaction.category
-                            }{" "}
-                            ·{" "}
+                            {transaction.category} ·{" "}
                             {new Date(
                               transaction.date
-                            ).toLocaleDateString()}
+                            ).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </p>
                         </div>
 
@@ -913,6 +878,7 @@ function EditTransactionModal({
 
             amount: Number(amount),
             category,
+            farmId: transaction.farmId || undefined,
             date,
 
             description:
