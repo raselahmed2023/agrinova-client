@@ -414,6 +414,9 @@ export const rejectConsultationRequest = async (
   return getConsultationById(consultationId);
 };
 
+export const acceptConsultation = acceptConsultationRequest;
+export const rejectConsultation = rejectConsultationRequest;
+
 export const scheduleConsultation = async (
   payload: ScheduleConsultationPayload
 ): Promise<Consultation> => {
@@ -452,7 +455,7 @@ export const scheduleConsultation = async (
 
   const generatedLink =
     payload.meetingLink ||
-    `https://meet.agrinova.io/room/${payload.consultationId}`;
+    `https://meet.jit.si/agrinova-consultation-${payload.consultationId}`;
 
   mockConsultations = mockConsultations.map((c) =>
     c._id === payload.consultationId || c.id === payload.consultationId
@@ -461,6 +464,7 @@ export const scheduleConsultation = async (
           status: "SCHEDULED" as ConsultationStatus,
           scheduledDate: payload.scheduledDate,
           scheduledTime: payload.scheduledTime,
+          videoRoomId: `agrinova-consultation-${payload.consultationId}`,
           meetingLink: generatedLink,
           notes: payload.notes || c.notes,
           updatedAt: new Date().toISOString(),
@@ -468,6 +472,64 @@ export const scheduleConsultation = async (
       : c
   );
   return getConsultationById(payload.consultationId);
+};
+
+export const startVideoConsultation = async (
+  consultationId: string
+): Promise<{ status: ConsultationStatus; videoRoomId: string; meetingLink: string }> => {
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(
+        `${API_URL}/consultations/${consultationId}/start`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+  }
+
+  const roomId = `agrinova-consultation-${consultationId}`;
+  const link = `https://meet.jit.si/${roomId}`;
+
+  mockConsultations = mockConsultations.map((c) =>
+    c._id === consultationId || c.id === consultationId
+      ? {
+          ...c,
+          status: "ONGOING" as ConsultationStatus,
+          videoRoomId: roomId,
+          meetingLink: link,
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      : c
+  );
+
+  return {
+    status: "ONGOING",
+    videoRoomId: roomId,
+    meetingLink: link,
+  };
 };
 
 export const updateConsultationStatus = async (

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Clock,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 
@@ -20,6 +21,7 @@ interface ConsultationActionsProps {
   onOpenSchedule?: () => void;
   onStartCall?: () => void;
   onOpenRecommendation?: () => void;
+  onMarkCompleted?: () => Promise<void> | void;
   isProcessing?: boolean;
 }
 
@@ -30,6 +32,7 @@ export default function ConsultationActions({
   onOpenSchedule,
   onStartCall,
   onOpenRecommendation,
+  onMarkCompleted,
   isProcessing = false,
 }: ConsultationActionsProps) {
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -44,14 +47,14 @@ export default function ConsultationActions({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* PENDING State */}
+      {/* 1. PENDING State: Accept or Reject */}
       {consultation.status === "PENDING" && (
         <>
           <button
             type="button"
             disabled={isProcessing}
             onClick={() => setShowRejectModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/60 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100/80 transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/60 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100/80 transition disabled:opacity-50"
           >
             <X className="h-4 w-4" />
             Reject Request
@@ -61,7 +64,7 @@ export default function ConsultationActions({
             type="button"
             disabled={isProcessing}
             onClick={onAccept}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
             Accept Consultation
@@ -69,27 +72,27 @@ export default function ConsultationActions({
         </>
       )}
 
-      {/* ACCEPTED State */}
+      {/* 2. ACCEPTED State: Schedule Consultation */}
       {consultation.status === "ACCEPTED" && (
         <button
           type="button"
           disabled={isProcessing}
           onClick={onOpenSchedule}
-          className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
         >
           <Calendar className="h-4 w-4" />
-          Schedule Date & Time
+          Schedule Consultation
         </button>
       )}
 
-      {/* SCHEDULED State */}
+      {/* 3. SCHEDULED State: Reschedule & Start Video Call */}
       {consultation.status === "SCHEDULED" && (
         <>
           <button
             type="button"
             disabled={isProcessing}
             onClick={onOpenSchedule}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
           >
             <Clock className="h-4 w-4 text-slate-500" />
             Reschedule
@@ -99,49 +102,55 @@ export default function ConsultationActions({
             type="button"
             disabled={isProcessing}
             onClick={onStartCall}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
           >
             <Video className="h-4 w-4" />
-            Start Video Consultation
+            Start Video Call
           </button>
         </>
       )}
 
-      {/* ONGOING State */}
+      {/* 4. ONGOING State: Join Video Call, Add/Update Recommendation, Mark as Completed */}
       {consultation.status === "ONGOING" && (
         <>
           <button
             type="button"
             disabled={isProcessing}
             onClick={onStartCall}
-            className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-rose-700 transition animate-pulse"
+            className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition animate-pulse"
           >
             <Video className="h-4 w-4" />
-            Enter Live Call
+            Join Video Call
           </button>
 
           <button
             type="button"
             disabled={isProcessing}
             onClick={onOpenRecommendation}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
+            className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-sky-700 transition"
           >
             <Sparkles className="h-4 w-4" />
-            Complete & Write Prescription
+            Add / Update Recommendation
+          </button>
+
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onMarkCompleted || onOpenRecommendation}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 transition disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Mark as Completed
           </button>
         </>
       )}
 
-      {/* COMPLETED State */}
+      {/* 5. COMPLETED State: View Only */}
       {consultation.status === "COMPLETED" && (
-        <button
-          type="button"
-          onClick={onOpenRecommendation}
-          className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 transition"
-        >
-          <FileCheck2 className="h-4 w-4 text-emerald-600" />
-          {consultation.recommendations ? "Edit Recommendation" : "Add Recommendation"}
-        </button>
+        <span className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          Completed (Recommendation View-Only)
+        </span>
       )}
 
       {/* REJECT MODAL */}

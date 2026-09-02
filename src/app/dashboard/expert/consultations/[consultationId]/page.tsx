@@ -9,6 +9,8 @@ import {
   Calendar,
   Sparkles,
   CheckCircle2,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import ConsultationDetails from "@/components/expert/ConsultationDetails";
 import ConsultationActions from "@/components/expert/ConsultationActions";
@@ -20,6 +22,9 @@ import {
   updateConsultationStatus,
   submitRecommendation,
   scheduleConsultation,
+  acceptConsultation,
+  rejectConsultation,
+  startVideoConsultation,
 } from "@/services/consultation.service";
 import type {
   Consultation,
@@ -40,6 +45,8 @@ export default function ConsultationDetailPage({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [showRecommendationForm, setShowRecommendationForm] = useState(false);
+  const [isCallOpen, setIsCallOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -57,11 +64,62 @@ export default function ConsultationDetailPage({
     loadData();
   }, [consultationId]);
 
+  const handleAccept = async () => {
+    setIsProcessing(true);
+    setActionError(null);
+    try {
+      await acceptConsultation(consultationId);
+      await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to accept consultation");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async (reason: string) => {
+    setIsProcessing(true);
+    setActionError(null);
+    try {
+      await rejectConsultation(consultationId, reason);
+      await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to reject consultation");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleStartCall = async () => {
     setIsProcessing(true);
+    setActionError(null);
     try {
-      await updateConsultationStatus(consultationId, "ONGOING");
+      if (consultation?.status === "SCHEDULED") {
+        await startVideoConsultation(consultationId);
+      }
+      setIsCallOpen(true);
       await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to start video call");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!consultation?.recommendations && !consultation?.recommendation) {
+      // Prompt expert to write recommendation
+      setShowRecommendationForm(true);
+      return;
+    }
+
+    setIsProcessing(true);
+    setActionError(null);
+    try {
+      await updateConsultationStatus(consultationId, "COMPLETED");
+      await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to complete consultation");
     } finally {
       setIsProcessing(false);
     }
@@ -69,9 +127,13 @@ export default function ConsultationDetailPage({
 
   const handleSchedule = async (payload: ScheduleConsultationPayload) => {
     setIsProcessing(true);
+    setActionError(null);
     try {
       await scheduleConsultation(payload);
+      setIsScheduleOpen(false);
       await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to schedule consultation");
     } finally {
       setIsProcessing(false);
     }
@@ -81,10 +143,13 @@ export default function ConsultationDetailPage({
     payload: CreateRecommendationPayload
   ) => {
     setIsProcessing(true);
+    setActionError(null);
     try {
       await submitRecommendation(payload);
       setShowRecommendationForm(false);
       await loadData();
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to submit recommendation");
     } finally {
       setIsProcessing(false);
     }
@@ -92,8 +157,9 @@ export default function ConsultationDetailPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50/60 p-6 sm:p-8">
-        <div className="h-64 rounded-3xl bg-slate-200 animate-pulse" />
+      <div className="min-h-screen bg-slate-50/60 p-6 sm:p-8 max-w-6xl mx-auto space-y-6">
+        <div className="h-40 rounded-3xl bg-slate-200 animate-pulse" />
+        <div className="h-96 rounded-3xl bg-slate-200 animate-pulse" />
       </div>
     );
   }
@@ -114,7 +180,7 @@ export default function ConsultationDetailPage({
 
   return (
     <div className="min-h-screen bg-slate-50/60 p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
-      {/* Top Header & Navigation */}
+      {/* Top Header & Navigation Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
           href="/dashboard/expert/consultations"
@@ -124,31 +190,39 @@ export default function ConsultationDetailPage({
           Back to All Consultations
         </Link>
 
-        {/* Top interactive actions */}
+        {/* Top Interactive Actions by Status */}
         <div className="flex flex-wrap items-center gap-3">
-          {(consultation.status === "SCHEDULED" ||
-            consultation.status === "ONGOING") && (
-            <VideoCallButton
-              consultation={consultation}
-              onCallEnded={async () => {
-                await updateConsultationStatus(consultationId, "ONGOING");
-                setShowRecommendationForm(true);
-                await loadData();
-              }}
-            />
-          )}
+          <button
+            type="button"
+            onClick={loadData}
+            title="Refresh Consultation"
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
 
           <ConsultationActions
             consultation={consultation}
+            onAccept={handleAccept}
+            onReject={handleReject}
             onOpenSchedule={() => setIsScheduleOpen(true)}
             onStartCall={handleStartCall}
             onOpenRecommendation={() => setShowRecommendationForm(true)}
+            onMarkCompleted={handleMarkCompleted}
             isProcessing={isProcessing}
           />
         </div>
       </div>
 
-      {/* Write Prescription / Recommendation Section */}
+      {actionError && (
+        <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 p-4 border border-rose-200 text-rose-800 text-xs font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>{actionError}</span>
+        </div>
+      )}
+
+      {/* Write Prescription / Recommendation Modal */}
       {showRecommendationForm && (
         <RecommendationForm
           consultation={consultation}
@@ -159,7 +233,7 @@ export default function ConsultationDetailPage({
         />
       )}
 
-      {/* Consultation Details */}
+      {/* Consultation Details Components */}
       <ConsultationDetails consultation={consultation} />
 
       {/* Schedule Modal */}
@@ -170,6 +244,21 @@ export default function ConsultationDetailPage({
           onClose={() => setIsScheduleOpen(false)}
           onSchedule={handleSchedule}
           isSubmitting={isProcessing}
+        />
+      )}
+
+      {/* Jitsi Meet Video Call Modal */}
+      {isCallOpen && (
+        <VideoCallButton
+          consultation={consultation}
+          userName={consultation.expert?.name || "AgriNova Specialist"}
+          onCallEnded={async () => {
+            setIsCallOpen(false);
+            if (consultation.status === "ONGOING") {
+              setShowRecommendationForm(true);
+            }
+            await loadData();
+          }}
         />
       )}
     </div>
