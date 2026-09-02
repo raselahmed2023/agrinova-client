@@ -17,17 +17,6 @@ export default function UnderConstruction({
           <Construction className="h-10 w-10 text-[#063B2B]" />
         </div>
 
-        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-[#063B2B]">
-          AgriNova
-        </p>
-
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-          {title}
-        </h1>
-
-        <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-slate-600">
-          {description}
-        </p>
 
         <div className="mt-8">
           <Link
