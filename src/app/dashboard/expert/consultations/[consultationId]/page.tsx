@@ -15,7 +15,7 @@ import {
 import ConsultationDetails from "@/components/expert/ConsultationDetails";
 import ConsultationActions from "@/components/expert/ConsultationActions";
 import ScheduleConsultationForm from "@/components/expert/ScheduleConsultationForm";
-import VideoCallButton from "@/components/expert/VideoCallButton";
+import VideoCallButton, { VideoCallModal } from "@/components/expert/VideoCallButton";
 import RecommendationForm from "@/components/expert/RecommendationForm";
 import {
   getConsultationById,
@@ -234,7 +234,10 @@ export default function ConsultationDetailPage({
       )}
 
       {/* Consultation Details Components */}
-      <ConsultationDetails consultation={consultation} />
+      <ConsultationDetails
+        consultation={consultation}
+        onStartCall={handleStartCall}
+      />
 
       {/* Schedule Modal */}
       {isScheduleOpen && (
@@ -248,19 +251,18 @@ export default function ConsultationDetailPage({
       )}
 
       {/* Jitsi Meet Video Call Modal */}
-      {isCallOpen && (
-        <VideoCallButton
-          consultation={consultation}
-          userName={consultation.expert?.name || "AgriNova Specialist"}
-          onCallEnded={async () => {
-            setIsCallOpen(false);
-            if (consultation.status === "ONGOING") {
-              setShowRecommendationForm(true);
-            }
-            await loadData();
-          }}
-        />
-      )}
+      <VideoCallModal
+        isOpen={isCallOpen}
+        onClose={async () => {
+          setIsCallOpen(false);
+          if (consultation.status === "ONGOING") {
+            setShowRecommendationForm(true);
+          }
+          await loadData();
+        }}
+        consultation={consultation}
+        userName={consultation.expert?.name || "AgriNova Specialist"}
+      />
     </div>
   );
 }

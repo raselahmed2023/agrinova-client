@@ -570,6 +570,54 @@ export const updateConsultationStatus = async (
   return getConsultationById(consultationId);
 };
 
+export const completeConsultation = async (
+  consultationId: string
+): Promise<Consultation> => {
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(
+        `${API_URL}/consultations/${consultationId}/complete`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const result: ConsultationResponse = await response.json();
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+  }
+
+  mockConsultations = mockConsultations.map((c) =>
+    c._id === consultationId || c.id === consultationId
+      ? {
+          ...c,
+          status: "COMPLETED" as ConsultationStatus,
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      : c
+  );
+  return getConsultationById(consultationId);
+};
+
 export const submitRecommendation = async (
   payload: CreateRecommendationPayload
 ): Promise<Consultation> => {
@@ -580,7 +628,7 @@ export const submitRecommendation = async (
       const response = await fetch(
         `${API_URL}/consultations/${payload.consultationId}/recommendation`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -593,17 +641,23 @@ export const submitRecommendation = async (
         if (result.success && result.data) {
           return result.data;
         }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
     }
-  } catch {
-    // Fall back to mock update
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
   }
 
   mockConsultations = mockConsultations.map((c) =>
     c._id === payload.consultationId || c.id === payload.consultationId
       ? {
           ...c,
-          status: "COMPLETED" as ConsultationStatus,
           recommendations: {
             diagnosis: payload.diagnosis || payload.recommendation || "Follow prescribed treatment",
             prescriptions: payload.prescriptions || [],
@@ -612,9 +666,23 @@ export const submitRecommendation = async (
             additionalNotes: payload.additionalNotes,
             createdAt: new Date().toISOString(),
           },
+          recommendation: payload.recommendation || payload.diagnosis,
           updatedAt: new Date().toISOString(),
         }
       : c
   );
   return getConsultationById(payload.consultationId);
 };
+
+export const getExpertConsultations = getConsultations;
+
+export const getExpertRequests = async (params?: {
+  limit?: number;
+  page?: number;
+  search?: string;
+}): Promise<Consultation[]> => {
+  return getConsultations({ ...params, status: "PENDING" });
+};
+
+export const startConsultation = startVideoConsultation;
+export const saveRecommendation = submitRecommendation;

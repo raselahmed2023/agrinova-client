@@ -198,6 +198,9 @@ export const updateExpertAvailability = async (
   return mockAvailability;
 };
 
+export const getAvailability = getExpertAvailability;
+export const updateAvailability = updateExpertAvailability;
+
 export const getExpertDashboard = async () => {
   try {
     const API_URL = getApiUrl();

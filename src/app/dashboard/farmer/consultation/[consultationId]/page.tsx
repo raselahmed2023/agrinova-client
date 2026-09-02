@@ -153,14 +153,15 @@ export default function FarmerConsultationDetailPage({
                 userName={consultation.farmer?.name || "Farmer"}
               />
             ) : consultation.status === "SCHEDULED" ? (
-              <div className="text-right">
-                <span className="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 border border-emerald-200">
-                  <Clock className="h-4 w-4 text-emerald-600" />
-                  Starts at {consultation.scheduledTime || scheduledDisplay}
+              <div className="flex flex-col items-end gap-1">
+                <VideoCallButton
+                  consultation={consultation}
+                  isFarmer={true}
+                  userName={consultation.farmer?.name || "Farmer"}
+                />
+                <span className="text-[10px] text-slate-500 font-medium">
+                  Scheduled for {consultation.scheduledTime || scheduledDisplay}
                 </span>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Video join button activates when the specialist opens the room.
-                </p>
               </div>
             ) : (
               <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3.5 py-2 rounded-xl">

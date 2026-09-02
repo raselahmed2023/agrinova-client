@@ -25,12 +25,15 @@ import ConsultationStatusBadge, {
 
 interface ConsultationDetailsProps {
   consultation: Consultation;
+  onStartCall?: () => void;
 }
 
 export default function ConsultationDetails({
   consultation,
+  onStartCall,
 }: ConsultationDetailsProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const formattedCreatedDate = new Date(
     consultation.createdAt || consultation.requestedAt || Date.now()
@@ -66,6 +69,18 @@ export default function ConsultationDetails({
       : consultation.scheduledDate
       ? `${consultation.scheduledDate} · ${consultation.scheduledTime || ""}`
       : null;
+
+  const cleanId = consultation._id || consultation.id || "live";
+  const videoRoomId =
+    consultation.videoRoomId || `agrinova-consultation-${cleanId}`;
+  const directLink =
+    consultation.meetingLink || `https://meet.jit.si/${videoRoomId}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(directLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -220,28 +235,64 @@ export default function ConsultationDetails({
         consultation.status === "ONGOING" ||
         consultation.status === "COMPLETED") && (
         <div className="rounded-3xl border border-sky-200 bg-sky-50/40 p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-md">
                 <Video className="h-6 w-6" />
               </div>
               <div>
-                <h4 className="text-base font-black text-slate-900">
-                  Video Consultation Session
-                </h4>
-                <p className="text-xs text-slate-500">
-                  Room ID: <span className="font-mono font-bold text-slate-800">{consultation.videoRoomId || `room-${consultation._id}`}</span>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-base font-black text-slate-900">
+                    Video Consultation Session
+                  </h4>
+                  {consultation.status === "ONGOING" && (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 animate-pulse">
+                      <span className="h-2 w-2 rounded-full bg-rose-600" />
+                      Live Now
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Room: <span className="font-mono font-bold text-slate-800">{videoRoomId}</span>
                 </p>
               </div>
             </div>
 
-            {consultation.meetingLink && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-200 truncate max-w-xs">
-                  {consultation.meetingLink}
-                </span>
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {onStartCall && consultation.status !== "COMPLETED" && (
+                <button
+                  type="button"
+                  onClick={onStartCall}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm transition ${
+                    consultation.status === "ONGOING"
+                      ? "bg-rose-600 hover:bg-rose-700 animate-pulse"
+                      : "bg-emerald-600 hover:bg-emerald-700"
+                  }`}
+                >
+                  <Video className="h-4 w-4" />
+                  <span>{consultation.status === "ONGOING" ? "Join Video Call" : "Start Video Call"}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <CheckCircle2 className={`h-3.5 w-3.5 ${copied ? "text-emerald-600" : "text-slate-400"}`} />
+                <span>{copied ? "Link Copied!" : "Copy Link"}</span>
+              </button>
+
+              <a
+                href={directLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                <span>Open in Tab</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
