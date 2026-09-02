@@ -1,12 +1,14 @@
 import React from 'react'
 import  Navbar  from '@/components/shared/Navbar';
 import SupportHero from '@/components/support/SupportHero';
+import HowItWorks from '@/components/support/HowItWorks';
 
 export default function page() {
   return (
    <div>
      <Navbar/>
     <SupportHero/>
+    <HowItWorks/>
    </div>
   )
 }
