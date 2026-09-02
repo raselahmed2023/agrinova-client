@@ -2,9 +2,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
+interface SupportHeroProps {
+  onSubmitClick?: () => void;
+}
 
-
-export default function SupportHero() {
+export default function SupportHero({ onSubmitClick }: SupportHeroProps) {
   return (
     <section className="w-full bg-[#f8f9fa] py-16 md:py-24">
       <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -21,8 +23,8 @@ export default function SupportHero() {
           </p>
           <div className="flex flex-wrap gap-4 pt-2">
             <button
-            
-              className="bg-[#053225] hover:bg-[#032018] text-white font-medium px-6 py-3.5 rounded-md transition-colors duration-200"
+              onClick={onSubmitClick}
+              className="bg-[#053225] hover:bg-[#032018] text-white font-medium px-6 py-3.5 rounded-md transition-colors duration-200 cursor-pointer"
             >
               Submit Your Produce
             </button>
