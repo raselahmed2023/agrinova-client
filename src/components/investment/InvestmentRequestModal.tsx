@@ -5,10 +5,17 @@ import {
   FileImage,
   FileText,
   Upload,
+  X,
 } from "lucide-react";
 
 import { createInvestmentProject } from "@/services/investment.service";
 import type { CreateInvestmentProjectPayload } from "@/types/investment";
+
+type InvestmentRequestModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+};
 
 const initialForm: CreateInvestmentProjectPayload = {
   projectTitle: "",
@@ -50,7 +57,11 @@ const uploadToImgBB = async (file: File): Promise<string> => {
   return result.data.url;
 };
 
-export default function InvestmentPage() {
+export default function InvestmentRequestModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: InvestmentRequestModalProps) {
   const [formData, setFormData] =
     useState<CreateInvestmentProjectPayload>(initialForm);
 
@@ -63,10 +74,14 @@ export default function InvestmentPage() {
   const [projectImagePreview, setProjectImagePreview] =
     useState("");
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [uploadingText, setUploadingText] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  if (!isOpen) {
+    return null;
+  }
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -101,11 +116,15 @@ export default function InvestmentPage() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      throw new Error("Only JPG, JPEG or PNG files are allowed");
+      throw new Error(
+        "Only JPG, JPEG or PNG files are allowed"
+      );
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      throw new Error("File size must be less than 5MB");
+      throw new Error(
+        "File size must be less than 5MB"
+      );
     }
   };
 
@@ -125,7 +144,9 @@ export default function InvestmentPage() {
       }
 
       setProjectImageFile(file);
-      setProjectImagePreview(URL.createObjectURL(file));
+      setProjectImagePreview(
+        URL.createObjectURL(file)
+      );
     } catch (err) {
       setProjectImageFile(null);
 
@@ -168,16 +189,22 @@ export default function InvestmentPage() {
     setProjectImageFile(null);
     setSupportingDocumentFile(null);
     setProjectImagePreview("");
-    setSubmitStatus("");
+    setUploadingText("");
     setError("");
+    setSuccess("");
+  };
+
+  const handleClose = () => {
+    if (loading) return;
+
+    resetForm();
+    onClose();
   };
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
-
-    if (submitting) return;
 
     if (!projectImageFile) {
       setError("Project image is required");
@@ -190,21 +217,29 @@ export default function InvestmentPage() {
     }
 
     try {
-      setSubmitting(true);
+      setLoading(true);
       setError("");
       setSuccess("");
 
-      setSubmitStatus("Uploading project image...");
+      setUploadingText(
+        "Uploading project image..."
+      );
 
       const projectImage =
         await uploadToImgBB(projectImageFile);
 
-      setSubmitStatus("Uploading supporting document...");
+      setUploadingText(
+        "Uploading supporting document..."
+      );
 
       const supportingDocument =
-        await uploadToImgBB(supportingDocumentFile);
+        await uploadToImgBB(
+          supportingDocumentFile
+        );
 
-      setSubmitStatus("Submitting project...");
+      setUploadingText(
+        "Submitting project..."
+      );
 
       await createInvestmentProject({
         ...formData,
@@ -212,11 +247,16 @@ export default function InvestmentPage() {
         supportingDocument,
       });
 
-      resetForm();
-
       setSuccess(
-        "Your investment project has been submitted for admin review."
+        "Investment project submitted successfully for admin review."
       );
+
+      onSuccess?.();
+
+      setTimeout(() => {
+        resetForm();
+        onClose();
+      }, 1200);
     } catch (err) {
       setError(
         err instanceof Error
@@ -224,51 +264,41 @@ export default function InvestmentPage() {
           : "Failed to submit investment project"
       );
     } finally {
-      setSubmitting(false);
-      setSubmitStatus("");
+      setLoading(false);
+      setUploadingText("");
     }
   };
 
   return (
-    <div className="min-h-full bg-[#f6f8f7] px-6 py-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-950">
-            Need Investment
-          </h1>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-950">
+              Create Investment Project
+            </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Submit your farming project for AgriNova review.
-          </p>
-        </div>
-
-        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-950">
-                Create Investment Project
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Provide the project details below.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              form="investment-project-form"
-              className="rounded-xl bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
-            >
-              {submitting ? "Submitting..." : "Submit for Review"}
-            </button>
+            <p className="mt-1 text-sm text-gray-500">
+              Submit your farming project for AgriNova review.
+            </p>
           </div>
 
-          <form
-            id="investment-project-form"
-            onSubmit={handleSubmit}
-            className="p-6"
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="space-y-6">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="space-y-5">
               {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
@@ -281,7 +311,7 @@ export default function InvestmentPage() {
                 </div>
               )}
 
-              <div className="grid gap-5 lg:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Project Title
@@ -294,7 +324,7 @@ export default function InvestmentPage() {
                     onChange={handleChange}
                     required
                     placeholder="Tomato Cultivation Project"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
 
@@ -311,7 +341,7 @@ export default function InvestmentPage() {
                     required
                     inputMode="numeric"
                     placeholder="10, 13 or 17 digit NID"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
 
                   <p className="mt-1 text-xs text-gray-500">
@@ -329,15 +359,35 @@ export default function InvestmentPage() {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   >
-                    <option value="">Select category</option>
-                    <option value="Crop Farming">Crop Farming</option>
-                    <option value="Fish Farming">Fish Farming</option>
-                    <option value="Poultry">Poultry</option>
-                    <option value="Livestock">Livestock</option>
-                    <option value="Orchard">Orchard</option>
-                    <option value="Other">Other</option>
+                    <option value="">
+                      Select category
+                    </option>
+
+                    <option value="Crop Farming">
+                      Crop Farming
+                    </option>
+
+                    <option value="Fish Farming">
+                      Fish Farming
+                    </option>
+
+                    <option value="Poultry">
+                      Poultry
+                    </option>
+
+                    <option value="Livestock">
+                      Livestock
+                    </option>
+
+                    <option value="Orchard">
+                      Orchard
+                    </option>
+
+                    <option value="Other">
+                      Other
+                    </option>
                   </select>
                 </div>
 
@@ -358,7 +408,7 @@ export default function InvestmentPage() {
                     required
                     min={1}
                     placeholder="300000"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
 
@@ -379,7 +429,7 @@ export default function InvestmentPage() {
                     required
                     min={0}
                     placeholder="60000"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
 
@@ -395,11 +445,11 @@ export default function InvestmentPage() {
                     onChange={handleChange}
                     required
                     placeholder="5 Months"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Location
                   </label>
@@ -411,16 +461,16 @@ export default function InvestmentPage() {
                     onChange={handleChange}
                     required
                     placeholder="Chuadanga, Bangladesh"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Project Image
                   </label>
 
-                  <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 px-5 py-5 transition hover:bg-emerald-50">
+                  <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 px-4 py-4 transition hover:bg-emerald-50">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/jpg"
@@ -448,7 +498,7 @@ export default function InvestmentPage() {
                           <img
                             src={projectImagePreview}
                             alt="Project preview"
-                            className="h-20 w-24 rounded-xl object-cover"
+                            className="h-16 w-20 rounded-lg object-cover"
                           />
                         )}
 
@@ -466,12 +516,12 @@ export default function InvestmentPage() {
                   </label>
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Supporting Document
                   </label>
 
-                  <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-5 transition hover:border-emerald-300 hover:bg-emerald-50/40">
+                  <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-4 transition hover:border-emerald-300 hover:bg-emerald-50/40">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/jpg"
@@ -517,7 +567,7 @@ export default function InvestmentPage() {
                   </p>
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Short Description
                   </label>
@@ -527,32 +577,42 @@ export default function InvestmentPage() {
                     value={formData.description}
                     onChange={handleChange}
                     required
-                    rows={5}
+                    rows={4}
                     placeholder="Describe your farming project and investment need..."
-                    className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+                    className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-600"
                   />
                 </div>
               </div>
 
-              {submitting && submitStatus && (
+              {loading && uploadingText && (
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                  {submitStatus}
+                  {uploadingText}
                 </div>
               )}
-
-              <div className="flex justify-end border-t border-gray-200 pt-6">
-                <button
-                  type="submit"
-                  className="rounded-xl bg-emerald-700 px-8 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                >
-                  {submitting
-                    ? "Submitting..."
-                    : "Submit for Review"}
-                </button>
-              </div>
             </div>
-          </form>
-        </section>
+          </div>
+
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="min-w-[155px] rounded-xl bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Submitting..."
+                : "Submit for Review"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
