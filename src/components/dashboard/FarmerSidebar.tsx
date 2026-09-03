@@ -1,51 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+
 import {
-  Bell,
   Bot,
   BrainCircuit,
-  ChevronDown,
   CloudSun,
+  HandCoins,
   LayoutDashboard,
   Leaf,
-  LogOut,
   MessageSquareText,
-  PackageSearch,
-  PlusCircle,
-  ReceiptText,
   ShoppingBag,
-  Sparkles,
-  Sprout,
   Store,
+  Tags,
   WalletCards,
   X,
 } from "lucide-react";
 
-import { signOut } from "@/lib/auth-client";
-
 interface FarmerSidebarProps {
-  isOpen?: boolean;
-  onClose?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const simpleLinks = [
+const menuItems = [
   {
     label: "Dashboard",
     href: "/dashboard/farmer",
     icon: LayoutDashboard,
   },
   {
-    label: "Notifications",
-    href: "/dashboard/farmer/notifications",
-    icon: Bell,
-  },
-  {
     label: "My Farms",
     href: "/dashboard/farmer/farms",
-    icon: Sprout,
+    icon: Leaf,
   },
   {
     label: "Weather",
@@ -54,16 +41,16 @@ const simpleLinks = [
   },
 ];
 
-const aiLinks = [
+const aiItems = [
   {
     label: "Disease Detection",
     href: "/dashboard/farmer/ai/disease-detection",
-    icon: Leaf,
+    icon: BrainCircuit,
   },
   {
-    label: "Crop Recommendation",
-    href: "/dashboard/farmer/ai/crop-recommendation",
-    icon: Sparkles,
+    label: "Smart Farming Recommendation",
+    href: "/dashboard/farmer/ai/smart-farming-recommendation",
+    icon: Leaf,
   },
   {
     label: "Farming Assistant",
@@ -72,252 +59,200 @@ const aiLinks = [
   },
 ];
 
-const marketplaceLinks = [
+const marketplaceItems = [
   {
     label: "Browse",
     href: "/dashboard/farmer/marketplace",
-    icon: Store,
-  },
-  {
-    label: "Sell Product",
-    href: "/dashboard/farmer/marketplace/sell-product",
-    icon: PlusCircle,
-  },
-  {
-    label: "My Listings",
-    href: "/dashboard/farmer/marketplace/my-listings",
     icon: ShoppingBag,
   },
   {
+    label: "Sell Product",
+    href: "/dashboard/farmer/marketplace/sell",
+    icon: Store,
+  },
+  {
+    label: "My Listings",
+    href: "/dashboard/farmer/marketplace/listings",
+    icon: Tags,
+  },
+  {
     label: "Purchase Requests",
-    href: "/dashboard/farmer/marketplace/purchase-requests",
-    icon: PackageSearch,
+    href: "/dashboard/farmer/marketplace/requests",
+    icon: MessageSquareText,
+  },
+];
+
+const otherItems = [
+  {
+    label: "Finance",
+    href: "/dashboard/farmer/finance",
+    icon: WalletCards,
+  },
+  {
+    label: "Expert Consultation",
+    href: "/dashboard/farmer/consultation",
+    icon: MessageSquareText,
+  },
+  {
+    label: "Need Investment",
+    href: "/dashboard/farmer/investment",
+    icon: HandCoins,
   },
 ];
 
 export default function FarmerSidebar({
-  isOpen = true,
+  isOpen,
   onClose,
 }: FarmerSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const [aiOpen, setAiOpen] = useState(
-    pathname.startsWith("/dashboard/farmer/ai")
-  );
-
-  const [marketplaceOpen, setMarketplaceOpen] = useState(
-    pathname.startsWith("/dashboard/farmer/marketplace")
-  );
 
   const isActive = (href: string) => {
-    if (href === "/dashboard/farmer") {
+    if (
+      href === "/dashboard/farmer" ||
+      href === "/dashboard/farmer/marketplace"
+    ) {
       return pathname === href;
     }
 
-    return pathname.startsWith(href);
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    );
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    router.push("/login");
-    router.refresh();
-  };
+  const renderItem = (item: {
+    label: string;
+    href: string;
+    icon: React.ElementType;
+  }) => {
+    const Icon = item.icon;
+    const active = isActive(item.href);
 
-  const linkClasses = (href: string) =>
-    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-      isActive(href)
-        ? "bg-[#E8F3EC] text-[#0B513D]"
-        : "text-slate-600 hover:bg-slate-100 hover:text-[#0B513D]"
-    }`;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onClose}
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+          active
+            ? "bg-[#EAF4ED] text-[#0B513D]"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        }`}
+      >
+        <Icon
+          className={`h-[18px] w-[18px] shrink-0 ${
+            active
+              ? "text-[#0B513D]"
+              : "text-slate-400"
+          }`}
+        />
+
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
 
   return (
-    <aside
-      className={`
-        fixed inset-y-0 left-0 z-50 flex w-72 flex-col
-        border-r border-slate-200 bg-white
-        transition-transform duration-300
-        lg:static lg:translate-x-0
-        ${isOpen ? "translate-x-0" : "-translate-x-full"}
-      `}
-    >
-      {/* Header */}
-      <div className="flex h-20 items-center justify-between border-b border-slate-100 px-6">
-        <Link
-          href="/"
-          className="flex items-center gap-3"
-          onClick={onClose}
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B513D] text-white">
-            <Leaf className="h-5 w-5" />
-          </div>
-
-          <div>
-            <h2 className="text-lg font-bold text-[#063B2B]">AgriNova</h2>
-            <p className="text-xs text-slate-500">Farmer Dashboard</p>
-          </div>
-        </Link>
-
+    <>
+      {/* MOBILE OVERLAY */}
+      {isOpen && (
         <button
           type="button"
+          aria-label="Close sidebar overlay"
           onClick={onClose}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
-          aria-label="Close sidebar"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px] lg:hidden"
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="space-y-1">
-          {simpleLinks.map((item) => {
-            const Icon = item.icon;
+      {/* SIDEBAR */}
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${
+          isOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
+        }`}
+      >
+        {/* HEADER */}
+        <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
+          <Link
+            href="/dashboard/farmer"
+            onClick={onClose}
+            className="flex items-center gap-2.5"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B513D] text-white">
+              <Leaf className="h-5 w-5" />
+            </div>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={linkClasses(item.href)}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
+            <div>
+              <p className="text-sm font-bold text-slate-900">
+                AgriNova
+              </p>
 
-        {/* AI Tools */}
-        <div className="mt-6">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                Farmer
+              </p>
+            </div>
+          </Link>
+
+          {/* MOBILE CLOSE BUTTON */}
           <button
             type="button"
-            onClick={() => setAiOpen((prev) => !prev)}
-            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-              pathname.startsWith("/dashboard/farmer/ai")
-                ? "bg-[#F0F7F3] text-[#0B513D]"
-                : "text-slate-700 hover:bg-slate-100"
-            }`}
+            onClick={onClose}
+            aria-label="Close sidebar"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 lg:hidden"
           >
-            <span className="flex items-center gap-3">
-              <BrainCircuit className="h-5 w-5" />
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* NAVIGATION */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {/* MAIN */}
+          <div className="space-y-1">
+            {menuItems.map(renderItem)}
+          </div>
+
+          {/* AI TOOLS */}
+          <div className="mt-6">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               AI Tools
-            </span>
+            </p>
 
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${
-                aiOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {aiOpen && (
-            <div className="mt-1 space-y-1 pl-4">
-              {aiLinks.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={linkClasses(item.href)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+            <div className="space-y-1">
+              {aiItems.map(renderItem)}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Marketplace */}
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => setMarketplaceOpen((prev) => !prev)}
-            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-              pathname.startsWith("/dashboard/farmer/marketplace")
-                ? "bg-[#F0F7F3] text-[#0B513D]"
-                : "text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            <span className="flex items-center gap-3">
-              <Store className="h-5 w-5" />
+          {/* MARKETPLACE */}
+          <div className="mt-6">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Marketplace
-            </span>
+            </p>
 
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${
-                marketplaceOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {marketplaceOpen && (
-            <div className="mt-1 space-y-1 pl-4">
-              {marketplaceLinks.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={linkClasses(item.href)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+            <div className="space-y-1">
+              {marketplaceItems.map(renderItem)}
             </div>
-          )}
+          </div>
+
+          {/* OTHER MODULES */}
+          <div className="mt-6 space-y-1">
+            {otherItems.map(renderItem)}
+          </div>
+        </nav>
+
+        {/* BOTTOM */}
+        <div className="border-t border-slate-100 p-4">
+          <div className="rounded-xl bg-[#F5F8F6] p-3">
+            <p className="text-xs font-semibold text-[#0B513D]">
+              Grow Smarter
+            </p>
+
+            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+              Manage your farm with AgriNova.
+            </p>
+          </div>
         </div>
-
-        {/* Bottom main links */}
-        <div className="mt-6 space-y-1 border-t border-slate-100 pt-5">
-          <Link
-            href="/dashboard/farmer/finance"
-            onClick={onClose}
-            className={linkClasses("/dashboard/farmer/finance")}
-          >
-            <WalletCards className="h-5 w-5" />
-            <span>Finance</span>
-          </Link>
-
-          <Link
-            href="/dashboard/farmer/consultation"
-            onClick={onClose}
-            className={linkClasses("/dashboard/farmer/consultation")}
-          >
-            <MessageSquareText className="h-5 w-5" />
-            <span>Expert Consultation</span>
-          </Link>
-        </div>
-      </nav>
-
-      {/* Footer */}
-      <div className="border-t border-slate-100 p-4">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </button>
-
-        <div className="mt-4 rounded-xl bg-[#F4F8F5] p-3">
-          <p className="text-xs font-medium text-[#315B45]">
-            Grow Smarter, Farm Better
-          </p>
-          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-            Smart tools for better farming decisions.
-          </p>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

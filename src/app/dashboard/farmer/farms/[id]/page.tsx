@@ -1,228 +1,475 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Layers, Sprout, Calendar, Edit3, Trash2, Loader2, Info, User, Phone } from 'lucide-react';
-import { IFarm } from '@/types/farm';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import { useParams } from 'next/navigation';
+
+import {
+  CalendarDays,
+  Edit3,
+  LandPlot,
+  Loader2,
+  MapPin,
+  Sprout,
+} from 'lucide-react';
+
+import { authClient } from '@/lib/auth-client';
+
 import EditFarmDrawer from '@/components/farm/EditFarmDrawer';
-import Image from 'next/image';
-import DeleteConfirmationModal from '@/components/farm/DeleteConfirmationModal';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+import type { IFarm } from '@/types/farm';
 
-export default function FarmDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: farmId } = use(params);
-  const router = useRouter();
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:5000/api/v1';
 
-  const [farm, setFarm] = useState<IFarm | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  
-  // Modal State
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+const getFarmTypeLabel = (
+  farmType?: IFarm['farmType']
+) => {
+  switch (farmType) {
+    case 'Crop':
+      return 'Crop Farm';
 
-  const fetchFarmDetails = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${BACKEND_URL}/farms/${farmId}`);
-      const data = await res.json();
-      if (data.success) {
+    case 'Orchard':
+      return 'Orchard / Horticulture';
+
+    case 'Poultry':
+      return 'Poultry Farm';
+
+    case 'Livestock':
+      return 'Livestock Farm';
+
+    case 'Fishery':
+      return 'Fish Farm';
+
+    default:
+      return 'Farm';
+  }
+};
+
+export default function FarmDetailsPage() {
+  const params = useParams();
+
+  const farmId = params.id as string;
+
+  const [farm, setFarm] =
+    useState<IFarm | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [isEditOpen, setIsEditOpen] =
+    useState(false);
+
+  const [error, setError] =
+    useState('');
+
+  const fetchFarm =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const {
+          data: tokenData,
+          error: tokenError,
+        } = await authClient.token();
+
+        if (
+          tokenError ||
+          !tokenData?.token
+        ) {
+          throw new Error(
+            'Authentication required'
+          );
+        }
+
+        const res = await fetch(
+          `${BACKEND_URL}/farms/${farmId}`,
+          {
+            method: 'GET',
+
+            headers: {
+              Accept:
+                'application/json',
+
+              Authorization: `Bearer ${tokenData.token}`,
+            },
+
+            cache: 'no-store',
+          }
+        );
+
+        const data =
+          await res.json();
+
+        if (
+          !res.ok ||
+          !data?.success
+        ) {
+          throw new Error(
+            data?.message ||
+              'Failed to load farm'
+          );
+        }
+
         setFarm(data.data);
+      } catch (err) {
+        console.error(
+          'Failed to fetch farm:',
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load farm'
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Fetch Farm Details Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, [farmId]);
 
   useEffect(() => {
-    if (farmId) fetchFarmDetails();
-  }, [farmId]);
+    void fetchFarm();
+  }, [fetchFarm]);
 
-  const confirmDelete = async () => {
-    try {
-      setIsDeleting(true);
-      const res = await fetch(`${BACKEND_URL}/farms/${farmId}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setIsDeleteOpen(false);
-        router.push('/dashboard/farmer/farms');
+  const getFarmLocation = (
+    farmData: IFarm
+  ) => {
+    return [
+      farmData.upazila,
+      farmData.district,
+      farmData.division,
+    ]
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const formatDate = (
+    date: string
+  ) => {
+    if (!date) return 'Not available';
+
+    return new Intl.DateTimeFormat(
+      'en-US',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsDeleting(false);
-    }
+    ).format(new Date(date));
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="flex min-h-[500px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
       </div>
     );
   }
 
-  if (!farm) {
+  if (error || !farm) {
     return (
-      <div className="min-h-screen p-8 max-w-[1200px] mx-auto text-center space-y-3">
-        <h2 className="text-xl font-bold text-slate-800">Farm Not Found!</h2>
-        <Link href="/dashboard/farmer/farms" className="text-emerald-600 hover:underline inline-block text-sm font-semibold">
-          Back to Farms List
-        </Link>
+      <div className="px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1100px] rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
+          <h2 className="text-lg font-semibold text-red-700">
+            Unable to load farm
+          </h2>
+
+          <p className="mt-2 text-sm text-red-600">
+            {error ||
+              'Farm information is not available.'}
+          </p>
+        </div>
       </div>
     );
   }
+
+  const isCropBased =
+    farm.farmType === 'Crop' ||
+    farm.farmType === 'Orchard';
+
+  const isFishery =
+    farm.farmType === 'Fishery';
+
+  const hasArea =
+    isCropBased ||
+    isFishery;
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto space-y-6 bg-slate-50/50 min-h-screen text-slate-800">
-      {/* Top Header Controls */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/dashboard/farmer/farms"
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-medium transition"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Farms
-        </Link>
+    <>
+      <div className="min-h-screen bg-slate-50/50 px-4 py-6 text-slate-800 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1100px] space-y-6">
+          {/* HERO */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="relative h-[260px] bg-slate-100 sm:h-[320px]">
+              <img
+                src={
+                  farm.coverImage ||
+                  'https://images.unsplash.com/photo-1500382017468-9049fed747ef'
+                }
+                alt={farm.name}
+                className="h-full w-full object-cover"
+              />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsEditOpen(true)}
-            className="flex items-center gap-2 border border-slate-300 bg-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 text-slate-700 shadow-sm transition"
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
+
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#0B513D] backdrop-blur">
+                        {getFarmTypeLabel(
+                          farm.farmType
+                        )}
+                      </span>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          farm.status ===
+                          'Active'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {farm.status}
+                      </span>
+                    </div>
+
+                    <h1 className="text-2xl font-bold text-white sm:text-3xl">
+                      {farm.name}
+                    </h1>
+
+                    <p className="mt-2 flex items-center gap-1.5 text-sm text-white/80">
+                      <MapPin className="h-4 w-4" />
+
+                      {getFarmLocation(
+                        farm
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsEditOpen(true)
+                    }
+                    className="flex w-fit items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit Farm
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SUMMARY */}
+          <div
+            className={`grid gap-4 ${
+              hasArea
+                ? 'sm:grid-cols-2 lg:grid-cols-3'
+                : 'sm:grid-cols-2'
+            }`}
           >
-            <Edit3 className="w-4 h-4" /> Edit Farm
-          </button>
-          <button
-            onClick={() => setIsDeleteOpen(true)}
-            className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-100 shadow-sm transition"
-          >
-            <Trash2 className="w-4 h-4" /> Delete
-          </button>
+            {/* TYPE */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                <Sprout className="h-5 w-5 text-emerald-600" />
+              </div>
+
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Farm Type
+              </p>
+
+              <p className="mt-1 font-bold text-slate-900">
+                {getFarmTypeLabel(
+                  farm.farmType
+                )}
+              </p>
+            </div>
+
+            {/* AREA */}
+            {hasArea && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                  <LandPlot className="h-5 w-5 text-emerald-600" />
+                </div>
+
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {isFishery
+                    ? 'Pond / Water Area'
+                    : 'Land Area'}
+                </p>
+
+                <p className="mt-1 font-bold text-slate-900">
+                  {farm.landArea}{' '}
+                  {farm.unit}
+                </p>
+              </div>
+            )}
+
+            {/* ADDED ON */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                <CalendarDays className="h-5 w-5 text-emerald-600" />
+              </div>
+
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Added On
+              </p>
+
+              <p className="mt-1 font-bold text-slate-900">
+                {formatDate(
+                  farm.createdAt
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* DETAILS */}
+          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+            {/* OVERVIEW */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900">
+                Farm Overview
+              </h2>
+
+              <p className="mt-4 text-sm leading-7 text-slate-600">
+                {farm.description ||
+                  'No description has been added for this farm yet.'}
+              </p>
+            </div>
+
+            {/* FARM INFORMATION */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900">
+                Farm Information
+              </h2>
+
+              <div className="mt-5 divide-y divide-slate-100">
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-slate-500">
+                    Type
+                  </span>
+
+                  <span className="text-right text-sm font-semibold text-slate-800">
+                    {getFarmTypeLabel(
+                      farm.farmType
+                    )}
+                  </span>
+                </div>
+
+                {isCropBased && (
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <span className="text-sm text-slate-500">
+                      Soil Type
+                    </span>
+
+                    <span className="text-sm font-semibold text-slate-800">
+                      {farm.soilType ||
+                        'Not set'}
+                    </span>
+                  </div>
+                )}
+
+                {hasArea && (
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <span className="text-sm text-slate-500">
+                      {isFishery
+                        ? 'Water Area'
+                        : 'Land Area'}
+                    </span>
+
+                    <span className="text-sm font-semibold text-slate-800">
+                      {farm.landArea}{' '}
+                      {farm.unit}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-slate-500">
+                    Status
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      farm.status ===
+                      'Active'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {farm.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* LOCATION */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-[#0B513D]" />
+
+              <h2 className="text-lg font-bold text-slate-900">
+                Location Details
+              </h2>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Division
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-slate-800">
+                  {farm.division}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  District
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-slate-800">
+                  {farm.district}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Upazila
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-slate-800">
+                  {farm.upazila ||
+                    'Not set'}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Farm Container */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm space-y-6">
-        {/* Cover Hero Image */}
-        <div className="relative h-64 md:h-80 w-full">
-          <Image
-            src={farm.coverImage || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef'}
-            alt={farm.name}
-            fill
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent" />
-          <div className="absolute bottom-6 left-6 text-white space-y-1.5">
-            <span
-              className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                farm.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'
-              }`}
-            >
-              • {farm.status}
-            </span>
-            <h1 className="text-3xl font-bold">{farm.name}</h1>
-            <p className="text-sm text-slate-200 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-emerald-400" /> {farm.district}, {farm.division}
-            </p>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="px-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center gap-4">
-            <div className="p-3 bg-emerald-100 text-emerald-800 rounded-xl">
-              <Layers className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase">Land Area</p>
-              <h4 className="text-xl font-bold text-slate-900">{farm.landArea} {farm.unit}</h4>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center gap-4">
-            <div className="p-3 bg-amber-100 text-amber-800 rounded-xl">
-              <Sprout className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase">Soil Type</p>
-              <h4 className="text-xl font-bold text-slate-900">{farm.soilType}</h4>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 text-blue-800 rounded-xl">
-              <Sprout className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase">Active Crops</p>
-              <h4 className="text-xl font-bold text-slate-900">{farm.activeCropsCount || 0}</h4>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center gap-4">
-            <div className="p-3 bg-purple-100 text-purple-800 rounded-xl">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase">Created At</p>
-              <h4 className="text-sm font-bold text-slate-900">
-                {new Date(farm.createdAt).toLocaleDateString()}
-              </h4>
-            </div>
-          </div>
-        </div>
-
-        {/* Extended Details Section */}
-        <div className="px-8 pb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* About / Synopsis */}
-          <div className="md:col-span-2 bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-3">
-            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <Info className="w-4 h-4 text-emerald-600" /> Farm Overview
-            </h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              {farm.description || 'No additional details provided for this farm location. Update farm details using the edit button above.'}
-            </p>
-          </div>
-
-          {/* Quick Info Box */}
-          <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-4">
-            <h3 className="text-base font-semibold text-slate-900">Location Details</h3>
-            <div className="space-y-2 text-sm text-slate-600">
-              <div className="flex justify-between border-b border-slate-200/60 pb-2">
-                <span className="text-slate-400">Division</span>
-                <span className="font-semibold text-slate-800">{farm.division}</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-200/60 pb-2">
-                <span className="text-slate-400">District</span>
-                <span className="font-semibold text-slate-800">{farm.district}</span>
-              </div>
-              <div className="flex justify-between pt-1">
-                <span className="text-slate-400">Status</span>
-                <span className="font-semibold text-emerald-600">{farm.status}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Drawers & Modals */}
       <EditFarmDrawer
         isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        onSuccess={fetchFarmDetails}
+        onClose={() =>
+          setIsEditOpen(false)
+        }
+        onSuccess={() => {
+          setIsEditOpen(false);
+          void fetchFarm();
+        }}
         farmData={farm}
       />
-
-      <DeleteConfirmationModal
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onConfirm={confirmDelete}
-        title={farm.name}
-        isDeleting={isDeleting}
-      />
-    </div>
+    </>
   );
 }
