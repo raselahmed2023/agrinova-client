@@ -1,20 +1,22 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
-import {
-  Loader2,
-  Plus,
-  WalletCards,
-  X,
-} from "lucide-react";
+import { Loader2, Plus, WalletCards, X } from "lucide-react";
 import {
   FormEvent,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+type FarmType =
+  | "Crop"
+  | "Orchard"
+  | "Poultry"
+  | "Livestock"
+  | "Fishery";
 
 interface TransactionFormProps {
   onAdd: () => void | Promise<void>;
@@ -25,68 +27,173 @@ interface FarmOption {
   id?: string;
   name?: string;
   farmName?: string;
-  cropName?: string;
+  farmType?: FarmType;
+  status?: "Active" | "Inactive";
 }
 
-const incomeCategories = [
+const generalIncomeCategories = [
   "Crop Sale",
+  "Fruit Sale",
+  "Poultry Sale",
+  "Egg Sale",
+  "Livestock Sale",
+  "Milk Sale",
+  "Fish Sale",
   "Marketplace Sale",
   "Other Income",
 ];
 
-const expenseCategories = [
+const generalExpenseCategories = [
   "Seeds",
+  "Seedlings",
   "Fertilizer",
-  "Irrigation",
   "Pesticide",
+  "Irrigation",
+  "Feed",
+  "Medicine & Veterinary",
   "Labour",
   "Equipment",
   "Transportation",
+  "Farm Maintenance",
+  "Electricity & Utilities",
   "Other Expense",
 ];
+
+const farmIncomeCategories: Record<FarmType, string[]> = {
+  Crop: [
+    "Crop Sale",
+    "Marketplace Sale",
+    "Other Income",
+  ],
+  Orchard: [
+    "Fruit Sale",
+    "Plant / Seedling Sale",
+    "Marketplace Sale",
+    "Other Income",
+  ],
+  Poultry: [
+    "Poultry Sale",
+    "Egg Sale",
+    "Marketplace Sale",
+    "Other Income",
+  ],
+  Livestock: [
+    "Livestock Sale",
+    "Milk Sale",
+    "Marketplace Sale",
+    "Other Income",
+  ],
+  Fishery: [
+    "Fish Sale",
+    "Marketplace Sale",
+    "Other Income",
+  ],
+};
+
+const farmExpenseCategories: Record<FarmType, string[]> = {
+  Crop: [
+    "Seeds",
+    "Fertilizer",
+    "Pesticide",
+    "Irrigation",
+    "Labour",
+    "Equipment",
+    "Transportation",
+    "Farm Maintenance",
+    "Other Expense",
+  ],
+  Orchard: [
+    "Seedlings",
+    "Fertilizer",
+    "Pesticide",
+    "Irrigation",
+    "Pruning & Care",
+    "Labour",
+    "Equipment",
+    "Transportation",
+    "Farm Maintenance",
+    "Other Expense",
+  ],
+  Poultry: [
+    "Chicks / Birds",
+    "Feed",
+    "Medicine & Veterinary",
+    "Vaccination",
+    "Labour",
+    "Electricity & Utilities",
+    "Equipment",
+    "Transportation",
+    "Farm Maintenance",
+    "Other Expense",
+  ],
+  Livestock: [
+    "Animal Purchase",
+    "Feed",
+    "Medicine & Veterinary",
+    "Vaccination",
+    "Labour",
+    "Equipment",
+    "Transportation",
+    "Farm Maintenance",
+    "Other Expense",
+  ],
+  Fishery: [
+    "Fish Fry / Fingerlings",
+    "Feed",
+    "Medicine & Treatment",
+    "Pond Maintenance",
+    "Water Management",
+    "Labour",
+    "Equipment",
+    "Transportation",
+    "Other Expense",
+  ],
+};
 
 export default function TransactionForm({
   onAdd,
 }: TransactionFormProps) {
-  const { data: session } =
-    authClient.useSession();
-
-  const userId = session?.user?.id;
-
   const [open, setOpen] = useState(false);
-
-  const [type, setType] = useState<
-    "income" | "expense"
-  >("income");
-
+  const [type, setType] =
+    useState<"income" | "expense">("income");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] =
-    useState("");
+  const [category, setCategory] = useState("");
   const [farmId, setFarmId] = useState("");
   const [date, setDate] = useState("");
-  const [description, setDescription] =
-    useState("");
-
-  const [farms, setFarms] = useState<
-    FarmOption[]
-  >([]);
-
+  const [description, setDescription] = useState("");
+  const [farms, setFarms] = useState<FarmOption[]>([]);
   const [loadingFarms, setLoadingFarms] =
     useState(false);
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const categories =
-    type === "income"
-      ? incomeCategories
-      : expenseCategories;
+  const selectedFarm = useMemo(() => {
+    if (!farmId) return null;
+
+    return (
+      farms.find(
+        (farm) => (farm._id || farm.id) === farmId
+      ) || null
+    );
+  }, [farmId, farms]);
+
+  const categories = useMemo(() => {
+    const farmType = selectedFarm?.farmType;
+
+    if (!farmType) {
+      return type === "income"
+        ? generalIncomeCategories
+        : generalExpenseCategories;
+    }
+
+    return type === "income"
+      ? farmIncomeCategories[farmType]
+      : farmExpenseCategories[farmType];
+  }, [type, selectedFarm]);
 
   useEffect(() => {
     setCategory("");
-  }, [type]);
+  }, [type, farmId]);
 
   useEffect(() => {
     if (!open || !API_URL) return;
@@ -129,11 +236,14 @@ export default function TransactionForm({
           data ||
           [];
 
-        setFarms(
-          Array.isArray(farmData)
-            ? farmData
-            : []
-        );
+        const activeFarms = Array.isArray(farmData)
+          ? farmData.filter(
+              (farm: FarmOption) =>
+                farm.status === "Active"
+            )
+          : [];
+
+        setFarms(activeFarms);
       } catch {
         setFarms([]);
       } finally {
@@ -167,16 +277,7 @@ export default function TransactionForm({
     event.preventDefault();
 
     if (!API_URL) {
-      setError(
-        "API configuration is missing."
-      );
-      return;
-    }
-
-    if (!userId) {
-      setError(
-        "You must be logged in to add a transaction."
-      );
+      setError("API configuration is missing.");
       return;
     }
 
@@ -202,48 +303,38 @@ export default function TransactionForm({
       } = await authClient.token();
 
       if (tokenError || !tokenData?.token) {
-        throw new Error(
-          "Authentication required"
-        );
+        throw new Error("Authentication required");
       }
-
-      const payload = {
-        type: type === "income" ? "Income" : "Expense",
-        amount: Number(amount),
-        category,
-        date,
-        description: description.trim() || undefined,
-        farm: farmId || undefined,
-      };
 
       const response = await fetch(
         `${API_URL}/finance/transactions`,
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
             Accept: "application/json",
             Authorization: `Bearer ${tokenData.token}`,
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            type:
+              type === "income"
+                ? "Income"
+                : "Expense",
+            amount: Number(amount),
+            category,
+            farmId: farmId || "",
+            date,
+            description: description.trim() || "",
+          }),
         }
       );
 
-      const contentType =
-        response.headers.get("content-type");
-
-      const data =
-        contentType?.includes(
-          "application/json"
-        )
-          ? await response.json()
-          : null;
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
           data?.message ||
-          "Failed to add transaction."
+            "Failed to add transaction."
         );
       }
 
@@ -296,7 +387,8 @@ export default function TransactionForm({
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                disabled={submitting}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -312,98 +404,30 @@ export default function TransactionForm({
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    {
-                      value:
-                        "income" as const,
-                      label: "Income",
-                    },
-                    {
-                      value:
-                        "expense" as const,
-                      label: "Expense",
-                    },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        setType(option.value)
-                      }
-                      className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${type === option.value
+                  <button
+                    type="button"
+                    onClick={() => setType("income")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                      type === "income"
                         ? "border-[#0B513D] bg-[#EEF6F1] text-[#0B513D]"
-                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                        }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                        : "border-slate-200 text-slate-500"
+                    }`}
+                  >
+                    Income
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setType("expense")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                      type === "expense"
+                        ? "border-[#0B513D] bg-[#EEF6F1] text-[#0B513D]"
+                        : "border-slate-200 text-slate-500"
+                    }`}
+                  >
+                    Expense
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Amount
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
-                </label>
-
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
-                    ৳
-                  </span>
-
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(event) =>
-                      setAmount(
-                        event.target.value
-                      )
-                    }
-                    placeholder="0"
-                    className="h-11 w-full rounded-xl border border-slate-200 pl-8 pr-3 text-sm outline-none transition focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Category
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
-                </label>
-
-                <select
-                  required
-                  value={category}
-                  onChange={(event) =>
-                    setCategory(
-                      event.target.value
-                    )
-                  }
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
-                >
-                  <option value="">
-                    Select category
-                  </option>
-
-                  {categories.map(
-                    (categoryOption) => (
-                      <option
-                        key={categoryOption}
-                        value={categoryOption}
-                      >
-                        {categoryOption}
-                      </option>
-                    )
-                  )}
-                </select>
               </div>
 
               <div>
@@ -417,12 +441,10 @@ export default function TransactionForm({
                 <select
                   value={farmId}
                   onChange={(event) =>
-                    setFarmId(
-                      event.target.value
-                    )
+                    setFarmId(event.target.value)
                   }
                   disabled={loadingFarms}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
                 >
                   <option value="">
                     {loadingFarms
@@ -431,20 +453,18 @@ export default function TransactionForm({
                   </option>
 
                   {farms.map((farm) => {
-                    const id =
-                      farm._id || farm.id;
+                    const id = farm._id || farm.id;
 
                     if (!id) return null;
 
                     return (
-                      <option
-                        key={id}
-                        value={id}
-                      >
+                      <option key={id} value={id}>
                         {farm.name ||
                           farm.farmName ||
-                          farm.cropName ||
                           "Unnamed Farm"}
+                        {farm.farmType
+                          ? ` (${farm.farmType})`
+                          : ""}
                       </option>
                     );
                   })}
@@ -453,10 +473,50 @@ export default function TransactionForm({
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Amount
+                </label>
+
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={amount}
+                  onChange={(event) =>
+                    setAmount(event.target.value)
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Category
+                </label>
+
+                <select
+                  required
+                  value={category}
+                  onChange={(event) =>
+                    setCategory(event.target.value)
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none"
+                >
+                  <option value="">
+                    Select category
+                  </option>
+
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Date
-                  <span className="ml-1 text-rose-500">
-                    *
-                  </span>
                 </label>
 
                 <input
@@ -466,16 +526,13 @@ export default function TransactionForm({
                   onChange={(event) =>
                     setDate(event.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Description
-                  <span className="ml-1 text-xs font-normal text-slate-400">
-                    Optional
-                  </span>
                 </label>
 
                 <textarea
@@ -483,17 +540,14 @@ export default function TransactionForm({
                   maxLength={500}
                   value={description}
                   onChange={(event) =>
-                    setDescription(
-                      event.target.value
-                    )
+                    setDescription(event.target.value)
                   }
-                  placeholder="Add a short note..."
-                  className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm leading-6 outline-none placeholder:text-slate-400 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                  className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none"
                 />
               </div>
 
               {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-600">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-600">
                   {error}
                 </div>
               )}
@@ -503,7 +557,7 @@ export default function TransactionForm({
                   type="button"
                   onClick={closeModal}
                   disabled={submitting}
-                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600"
                 >
                   Cancel
                 </button>
@@ -511,7 +565,7 @@ export default function TransactionForm({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0B513D] px-5 text-sm font-semibold text-white transition hover:bg-[#084330] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0B513D] px-5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {submitting && (
                     <Loader2 className="h-4 w-4 animate-spin" />

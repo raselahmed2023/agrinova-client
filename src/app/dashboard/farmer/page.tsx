@@ -10,41 +10,27 @@ import {
   CloudSun,
   Droplets,
   Loader2,
+  MapPin,
   RefreshCw,
-  ShoppingBag,
   Sprout,
-  Store,
   Sun,
-  TrendingDown,
-  TrendingUp,
-  WalletCards,
   Wind,
 } from "lucide-react";
 
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
 import {
-  getMyListings,
-  getReceivedPurchaseRequests,
-  getSentPurchaseRequests,
-} from "@/services/marketplace.service";
-
-import type {
-  MarketplaceProduct,
-  PurchaseRequest,
-} from "@/types/marketplace";
+  findDistrictLocation,
+} from "@/constants/districts";
 
 import type { IFarm } from "@/types/farm";
-
-import type { FinanceTransaction } from "@/components/dashboard/finance/FinanceSummary";
-
-import { findDistrictLocation } from "@/constants/districts";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -70,15 +56,9 @@ export default function FarmerDashboardPage() {
     isPending: sessionLoading,
   } = authClient.useSession();
 
-  const userId =
-    session?.user?.id || "";
-
-  const userEmail =
-    session?.user?.email || "";
-
-  /* 
+  /* =========================
      FARM STATE
-   */
+  ========================= */
 
   const [farms, setFarms] =
     useState<IFarm[]>([]);
@@ -88,58 +68,19 @@ export default function FarmerDashboardPage() {
     setFarmsLoading,
   ] = useState(true);
 
-  const primaryFarm =
-    farms[0] || null;
-
-  const primaryFarmLocation =
-    findDistrictLocation(
-      primaryFarm?.district
-    );
-
-  /* 
-     MARKETPLACE STATE
-   */
-
-  const [listings, setListings] =
-    useState<MarketplaceProduct[]>([]);
-
   const [
-    sentRequests,
-    setSentRequests,
-  ] = useState<PurchaseRequest[]>([]);
-
-  const [
-    receivedRequests,
-    setReceivedRequests,
-  ] = useState<PurchaseRequest[]>([]);
-
-  const [
-    marketplaceLoading,
-    setMarketplaceLoading,
-  ] = useState(true);
-
-  const [
-    marketplaceError,
-    setMarketplaceError,
+    farmsError,
+    setFarmsError,
   ] = useState("");
 
-  /* 
-     FINANCE STATE
-   */
-
   const [
-    transactions,
-    setTransactions,
-  ] = useState<FinanceTransaction[]>([]);
+    selectedFarmId,
+    setSelectedFarmId,
+  ] = useState("");
 
-  const [
-    financeLoading,
-    setFinanceLoading,
-  ] = useState(true);
-
-  /* 
+  /* =========================
      WEATHER STATE
-  */
+  ========================= */
 
   const [
     weatherData,
@@ -151,28 +92,69 @@ export default function FarmerDashboardPage() {
   const [
     weatherLoading,
     setWeatherLoading,
-  ] = useState(true);
+  ] = useState(false);
 
   const [
     weatherError,
     setWeatherError,
   ] = useState("");
 
-  /* 
-     FARM FETCH
-   */
+  /* =========================
+     SELECTED FARM
+  ========================= */
+
+  const selectedFarm =
+    useMemo(() => {
+      if (!farms.length) {
+        return null;
+      }
+
+      return (
+        farms.find(
+          (farm) =>
+            farm._id ===
+            selectedFarmId
+        ) || farms[0]
+      );
+    }, [farms, selectedFarmId]);
+
+  const selectedFarmLocation =
+    useMemo(() => {
+      if (!selectedFarm) {
+        return null;
+      }
+
+      return findDistrictLocation(
+        selectedFarm.district
+      );
+    }, [selectedFarm]);
+
+  /* =========================
+     FETCH FARMS
+  ========================= */
 
   const fetchFarms =
     useCallback(async () => {
+      if (!session?.user?.id) {
+        setFarms([]);
+        setSelectedFarmId("");
+        setFarmsLoading(false);
+        return;
+      }
+
       try {
         setFarmsLoading(true);
+        setFarmsError("");
 
         const {
           data: tokenData,
           error: tokenError,
         } = await authClient.token();
 
-        if (tokenError || !tokenData?.token) {
+        if (
+          tokenError ||
+          !tokenData?.token
+        ) {
           throw new Error(
             "Authentication required"
           );
@@ -183,11 +165,15 @@ export default function FarmerDashboardPage() {
             `${API_URL}/farms`,
             {
               method: "GET",
+
               headers: {
                 Accept:
                   "application/json",
-                Authorization: `Bearer ${tokenData.token}`,
+
+                Authorization:
+                  `Bearer ${tokenData.token}`,
               },
+
               cache: "no-store",
             }
           );
@@ -201,14 +187,34 @@ export default function FarmerDashboardPage() {
         ) {
           throw new Error(
             data?.message ||
-            "Failed to load farms."
+              "Failed to load farms."
           );
         }
 
-        setFarms(
+        const farmData: IFarm[] =
           Array.isArray(data.data)
             ? data.data
-            : []
+            : [];
+
+        setFarms(farmData);
+
+        setSelectedFarmId(
+          (currentFarmId) => {
+            if (
+              currentFarmId &&
+              farmData.some(
+                (farm) =>
+                  farm._id ===
+                  currentFarmId
+              )
+            ) {
+              return currentFarmId;
+            }
+
+            return (
+              farmData[0]?._id || ""
+            );
+          }
         );
       } catch (error) {
         console.error(
@@ -217,168 +223,39 @@ export default function FarmerDashboardPage() {
         );
 
         setFarms([]);
+        setSelectedFarmId("");
+
+        setFarmsError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load farms."
+        );
       } finally {
         setFarmsLoading(false);
       }
-    }, []);
+    }, [session?.user?.id]);
 
-  /* 
-     MARKETPLACE FETCH
-   */
-
-  const fetchMarketplaceData =
-    useCallback(async () => {
-      if (!userEmail) {
-        setListings([]);
-        setSentRequests([]);
-        setReceivedRequests([]);
-        setMarketplaceLoading(false);
-        return;
-      }
-
-      try {
-        setMarketplaceLoading(true);
-        setMarketplaceError("");
-
-        const [
-          listingsResponse,
-          sentResponse,
-          receivedResponse,
-        ] = await Promise.all([
-          getMyListings(),
-          getSentPurchaseRequests(),
-          getReceivedPurchaseRequests(),
-        ]);
-
-        setListings(
-          Array.isArray(
-            listingsResponse
-          )
-            ? listingsResponse
-            : []
-        );
-
-        setSentRequests(
-          Array.isArray(
-            sentResponse.data
-          )
-            ? sentResponse.data
-            : []
-        );
-
-        setReceivedRequests(
-          Array.isArray(
-            receivedResponse.data
-          )
-            ? receivedResponse.data
-            : []
-        );
-      } catch (error) {
-        setMarketplaceError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load marketplace data."
-        );
-      } finally {
-        setMarketplaceLoading(false);
-      }
-    }, [userEmail]);
-
-  /* 
-     FINANCE FETCH
-   */
-
-  const fetchFinanceData =
-    useCallback(async () => {
-      if (!userId) {
-        setTransactions([]);
-        setFinanceLoading(false);
-        return;
-      }
-
-      try {
-        setFinanceLoading(true);
-
-        const {
-          data: tokenData,
-          error: tokenError,
-        } = await authClient.token();
-
-        if (tokenError || !tokenData?.token) {
-          throw new Error(
-            "Authentication required"
-          );
-        }
-
-        const response =
-          await fetch(
-            `${API_URL}/finance/transactions/me`,
-            {
-              method: "GET",
-              headers: {
-                Accept:
-                  "application/json",
-                Authorization: `Bearer ${tokenData.token}`,
-              },
-              cache: "no-store",
-            }
-          );
-
-        const contentType =
-          response.headers.get(
-            "content-type"
-          );
-
-        const data =
-          contentType?.includes(
-            "application/json"
-          )
-            ? await response.json()
-            : null;
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-            "Failed to fetch finance data."
-          );
-        }
-
-        const transactionData =
-          data?.data ?? data ?? [];
-
-        setTransactions(
-          Array.isArray(
-            transactionData
-          )
-            ? transactionData
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Dashboard finance error:",
-          error
-        );
-
-        setTransactions([]);
-      } finally {
-        setFinanceLoading(false);
-      }
-    }, [userId]);
-
-  /* 
-     WEATHER FETCH
-  */
+  /* =========================
+     FETCH WEATHER
+  ========================= */
 
   const fetchWeather =
     useCallback(async () => {
-      if (!primaryFarmLocation) {
+      if (
+        !selectedFarm ||
+        !selectedFarmLocation
+      ) {
         setWeatherData(null);
         setWeatherLoading(false);
-        setWeatherError(
-          primaryFarm
-            ? `Weather location not found for ${primaryFarm.district}.`
-            : "Add a farm to see local weather."
-        );
+
+        if (selectedFarm) {
+          setWeatherError(
+            `Weather location not found for ${selectedFarm.district}.`
+          );
+        } else {
+          setWeatherError("");
+        }
+
         return;
       }
 
@@ -388,7 +265,7 @@ export default function FarmerDashboardPage() {
 
         const response =
           await fetch(
-            `${API_URL}/weather?lat=${primaryFarmLocation.lat}&lon=${primaryFarmLocation.lon}`,
+            `${API_URL}/weather?lat=${selectedFarmLocation.lat}&lon=${selectedFarmLocation.lon}`,
             {
               cache: "no-store",
             }
@@ -403,7 +280,7 @@ export default function FarmerDashboardPage() {
         ) {
           throw new Error(
             data?.message ||
-            "Failed to load weather."
+              "Failed to load weather."
           );
         }
 
@@ -427,112 +304,52 @@ export default function FarmerDashboardPage() {
         setWeatherLoading(false);
       }
     }, [
-      primaryFarm?.district,
-      primaryFarmLocation?.lat,
-      primaryFarmLocation?.lon,
+      selectedFarm,
+      selectedFarmLocation,
     ]);
 
-  /* 
-     INITIAL FETCH
- */
+  /* =========================
+     INITIAL LOAD
+  ========================= */
 
   useEffect(() => {
-    if (!sessionLoading) {
-      void fetchFarms();
-      void fetchMarketplaceData();
-      void fetchFinanceData();
+    if (sessionLoading) {
+      return;
     }
+
+    if (!session?.user?.id) {
+      setFarms([]);
+      setSelectedFarmId("");
+      setWeatherData(null);
+      setFarmsLoading(false);
+      return;
+    }
+
+    void fetchFarms();
   }, [
     sessionLoading,
+    session?.user?.id,
     fetchFarms,
-    fetchMarketplaceData,
-    fetchFinanceData,
   ]);
 
   useEffect(() => {
-    if (!farmsLoading) {
-      void fetchWeather();
+    if (
+      farmsLoading ||
+      !selectedFarm
+    ) {
+      return;
     }
+
+    void fetchWeather();
   }, [
     farmsLoading,
+    selectedFarm,
     fetchWeather,
   ]);
 
-  /* 
-     MARKETPLACE CALCULATION
-   */
-
-  const activeListingsCount =
-    listings.filter(
-      (product) =>
-        !product.status ||
-        product.status ===
-        "available"
-    ).length;
-
-  const pendingRequestsCount =
-    [
-      ...sentRequests,
-      ...receivedRequests,
-    ].filter(
-      (request) =>
-        request.status ===
-        "PENDING"
-    ).length;
-
-  /* 
-     FINANCE CALCULATION
-   */
-
-  const totalIncome =
-    transactions
-      .filter(
-        (transaction) =>
-          String(
-            transaction.type
-          ).toLowerCase() ===
-          "income"
-      )
-      .reduce(
-        (
-          total,
-          transaction
-        ) =>
-          total +
-          Number(
-            transaction.amount || 0
-          ),
-        0
-      );
-
-  const totalExpense =
-    transactions
-      .filter(
-        (transaction) =>
-          String(
-            transaction.type
-          ).toLowerCase() ===
-          "expense"
-      )
-      .reduce(
-        (
-          total,
-          transaction
-        ) =>
-          total +
-          Number(
-            transaction.amount || 0
-          ),
-        0
-      );
-
-  const netProfit =
-    totalIncome -
-    totalExpense;
-
-  /* 
+  /* =========================
      WEATHER ICON
-  */
+  ========================= */
 
   const getWeatherIcon = (
     code: number
@@ -543,10 +360,7 @@ export default function FarmerDashboardPage() {
       );
     }
 
-    if (
-      code >= 1 &&
-      code <= 2
-    ) {
+    if (code >= 1 && code <= 2) {
       return (
         <CloudSun className="h-10 w-10 text-amber-500" />
       );
@@ -589,83 +403,9 @@ export default function FarmerDashboardPage() {
     );
   };
 
-  /* 
-     TOP STATS
-   */
-
-  const stats = [
-    {
-      title: "My Farms",
-
-      value: farmsLoading
-        ? "..."
-        : String(farms.length),
-
-      description:
-        "Registered farms",
-
-      icon: Sprout,
-
-      href:
-        "/dashboard/farmer/farms",
-    },
-
-    {
-      title:
-        "Active Listings",
-
-      value:
-        marketplaceLoading
-          ? "..."
-          : String(
-            activeListingsCount
-          ),
-
-      description:
-        "Marketplace products",
-
-      icon: ShoppingBag,
-
-      href:
-        "/dashboard/farmer/marketplace/listings",
-    },
-
-    {
-      title:
-        "Purchase Requests",
-
-      value:
-        marketplaceLoading
-          ? "..."
-          : String(
-            pendingRequestsCount
-          ),
-
-      description:
-        "Pending requests",
-
-      icon: Store,
-
-      href:
-        "/dashboard/farmer/marketplace/requests",
-    },
-
-    {
-      title: "Net Profit",
-
-      value: financeLoading
-        ? "..."
-        : `৳${netProfit.toLocaleString()}`,
-
-      description:
-        "Income minus expense",
-
-      icon: WalletCards,
-
-      href:
-        "/dashboard/farmer/finance",
-    },
-  ];
+  /* =========================
+     LOADING
+  ========================= */
 
   if (sessionLoading) {
     return (
@@ -675,328 +415,418 @@ export default function FarmerDashboardPage() {
     );
   }
 
+  /* =========================
+     PAGE
+  ========================= */
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Welcome */}
+      {/* =====================
+          HEADER
+      ===================== */}
 
-      <section>
-        <p className="text-sm font-medium text-[#477A5B]">
-          Farmer Dashboard
-        </p>
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-medium text-[#477A5B]">
+            Farmer Dashboard
+          </p>
 
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Welcome
-          {session?.user?.name
-            ? `, ${session.user.name}`
-            : " to AgriNova"}
-        </h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Welcome
+            {session?.user?.name
+              ? `, ${session.user.name}`
+              : " to AgriNova"}
+          </h1>
 
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Manage your farms, access
-          smart agricultural tools,
-          monitor weather, sell
-          products and keep track of
-          your farming activities from
-          one place.
-        </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Monitor your farm and get
+            useful farming insights from
+            one place.
+          </p>
+        </div>
+
+        {!farmsLoading &&
+          farms.length > 0 && (
+            <div className="w-full lg:w-72">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Selected Farm
+              </label>
+
+              <select
+                value={
+                  selectedFarm?._id ||
+                  ""
+                }
+                onChange={(event) =>
+                  setSelectedFarmId(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0B6B4A] focus:ring-2 focus:ring-[#0B6B4A]/10"
+              >
+                {farms.map((farm) => (
+                  <option
+                    key={farm._id}
+                    value={farm._id}
+                  >
+                    {farm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
       </section>
 
-      {marketplaceError && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          {marketplaceError}
+      {/* =====================
+          FARM ERROR
+      ===================== */}
+
+      {farmsError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {farmsError}
         </div>
       )}
 
-      {/* Stats */}
+      {/* =====================
+          FARM LOADING
+      ===================== */}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => {
-          const Icon =
-            item.icon;
+      {farmsLoading && (
+        <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+          <Loader2 className="h-7 w-7 animate-spin text-[#0B6B4A]" />
+        </div>
+      )}
 
-          return (
+      {/* =====================
+          NO FARM
+      ===================== */}
+
+      {!farmsLoading &&
+        farms.length === 0 && (
+          <section className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EAF4ED] text-[#0B513D]">
+              <Sprout className="h-7 w-7" />
+            </div>
+
+            <h2 className="mt-4 text-lg font-bold text-slate-900">
+              Add your first farm
+            </h2>
+
+            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Add a farm to view
+              location-based weather and
+              farming insights.
+            </p>
+
             <Link
-              key={item.title}
-              href={item.href}
-              className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+              href="/dashboard/farmer/farms"
+              className="mt-5 rounded-xl bg-[#0B6B4A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#09583d]"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    {item.title}
-                  </p>
-
-                  <p className="mt-2 text-3xl font-bold text-slate-900">
-                    {item.value}
-                  </p>
-                </div>
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EAF4ED] text-[#0B513D]">
-                  <Icon className="h-5 w-5" />
-                </div>
-              </div>
-
-              <p className="mt-3 text-xs text-slate-500">
-                {item.description}
-              </p>
+              Go to My Farms
             </Link>
-          );
-        })}
-      </section>
+          </section>
+        )}
 
-      {/* Weather + Finance */}
+      {!farmsLoading &&
+        selectedFarm && (
+          <>
+            {/* =====================
+                FARM SUMMARY
+            ===================== */}
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {/* Weather */}
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 xl:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Weather Overview
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {primaryFarmLocation?.name ||
-                  primaryFarm?.district ||
-                  "Farm location"}{" "}
-                weather information
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  void fetchWeather()
-                }
-                disabled={
-                  weatherLoading ||
-                  !primaryFarmLocation
-                }
-                className="text-slate-400 transition hover:text-[#0B6B4A]"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${weatherLoading
-                      ? "animate-spin"
-                      : ""
-                    }`}
-                />
-              </button>
-
-              <Link
-                href="/dashboard/farmer/weather"
-                className="text-sm font-semibold text-[#0B6B4A] hover:underline"
-              >
-                View Weather
-              </Link>
-            </div>
-          </div>
-
-          {weatherLoading ? (
-            <div className="mt-6 flex min-h-44 items-center justify-center rounded-xl bg-slate-50">
-              <Loader2 className="h-7 w-7 animate-spin text-[#0B6B4A]" />
-            </div>
-          ) : weatherData ? (
-            <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-5">
-              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-5">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm">
-                    {getWeatherIcon(
-                      weatherData
-                        .current.code
-                    )}
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EAF4ED] text-[#0B513D]">
+                    <Sprout className="h-6 w-6" />
                   </div>
 
                   <div>
-                    <p className="text-4xl font-extrabold text-slate-900">
-                      {
-                        weatherData
-                          .current
-                          .temperature
-                      }
-                      °C
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {selectedFarm.name}
+                      </h2>
 
-                    <p className="mt-1 font-semibold text-slate-600">
-                      {
-                        weatherData
-                          .current
-                          .condition
-                      }
-                    </p>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          selectedFarm.status ===
+                          "Active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {
+                          selectedFarm.status
+                        }
+                      </span>
+                    </div>
 
-                    <p className="mt-1 text-xs text-slate-400">
-                      {primaryFarmLocation?.name ||
-                        primaryFarm?.district ||
-                        "Farm location"}
-                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                      <MapPin className="h-4 w-4" />
+
+                      <span>
+                        {
+                          selectedFarm.district
+                        }
+                        ,{" "}
+                        {
+                          selectedFarm.division
+                        }
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-white px-4 py-3 text-center">
-                    <Droplets className="mx-auto h-4 w-4 text-blue-500" />
-
-                    <p className="mt-2 text-xs text-slate-400">
-                      Humidity
-                    </p>
-
-                    <p className="mt-1 font-bold text-slate-800">
-                      {
-                        weatherData
-                          .current
-                          .humidity
-                      }
-                      %
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white px-4 py-3 text-center">
-                    <Wind className="mx-auto h-4 w-4 text-emerald-500" />
-
-                    <p className="mt-2 text-xs text-slate-400">
-                      Wind
-                    </p>
-
-                    <p className="mt-1 font-bold text-slate-800">
-                      {
-                        weatherData
-                          .current
-                          .windSpeed
-                      }
-                    </p>
-
-                    <p className="text-[10px] text-slate-400">
-                      km/h
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white px-4 py-3 text-center">
-                    <CloudRain className="mx-auto h-4 w-4 text-indigo-500" />
-
-                    <p className="mt-2 text-xs text-slate-400">
-                      Rain
-                    </p>
-
-                    <p className="mt-1 font-bold text-slate-800">
-                      {
-                        weatherData
-                          .current
-                          .rainProb
-                      }
-                      %
-                    </p>
-                  </div>
-                </div>
+                <Link
+                  href={`/dashboard/farmer/farms/${selectedFarm._id}`}
+                  className="text-sm font-semibold text-[#0B6B4A] hover:underline"
+                >
+                  View Farm Details
+                </Link>
               </div>
 
-              {weatherData.recommendation && (
-                <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                  <p className="text-xs font-semibold text-emerald-800">
-                    Farming
-                    Recommendation
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Land Area
                   </p>
 
-                  <p className="mt-1 text-xs leading-5 text-emerald-700">
+                  <p className="mt-2 text-lg font-bold text-slate-900">
                     {
-                      weatherData.recommendation
+                      selectedFarm.landArea
+                    }{" "}
+                    {selectedFarm.unit}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Soil Type
+                  </p>
+
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {
+                      selectedFarm.soilType
                     }
                   </p>
                 </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    District
+                  </p>
+
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {
+                      selectedFarm.district
+                    }
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* =====================
+                WEATHER
+            ===================== */}
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Weather Overview
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Weather for{" "}
+                    {selectedFarm.name},{" "}
+                    {
+                      selectedFarm.district
+                    }
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void fetchWeather()
+                    }
+                    disabled={
+                      weatherLoading ||
+                      !selectedFarmLocation
+                    }
+                    aria-label="Refresh weather"
+                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#0B6B4A] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${
+                        weatherLoading
+                          ? "animate-spin"
+                          : ""
+                      }`}
+                    />
+                  </button>
+
+                  <Link
+                    href="/dashboard/farmer/weather"
+                    className="text-sm font-semibold text-[#0B6B4A] hover:underline"
+                  >
+                    View Weather
+                  </Link>
+                </div>
+              </div>
+
+              {weatherLoading ? (
+                <div className="mt-6 flex min-h-48 items-center justify-center rounded-xl bg-slate-50">
+                  <Loader2 className="h-7 w-7 animate-spin text-[#0B6B4A]" />
+                </div>
+              ) : weatherData ? (
+                <div className="mt-6">
+                  <div className="flex flex-col gap-6 rounded-xl bg-slate-50 p-5 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-5">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
+                        {getWeatherIcon(
+                          weatherData
+                            .current.code
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-4xl font-extrabold text-slate-900">
+                          {
+                            weatherData
+                              .current
+                              .temperature
+                          }
+                          °C
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-600">
+                          {
+                            weatherData
+                              .current
+                              .condition
+                          }
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          {
+                            selectedFarm.district
+                          }
+                          ,{" "}
+                          {
+                            selectedFarm.division
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-xl bg-white px-4 py-3 text-center">
+                        <Droplets className="mx-auto h-4 w-4 text-blue-500" />
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Humidity
+                        </p>
+
+                        <p className="mt-1 font-bold text-slate-800">
+                          {
+                            weatherData
+                              .current
+                              .humidity
+                          }
+                          %
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-white px-4 py-3 text-center">
+                        <Wind className="mx-auto h-4 w-4 text-emerald-500" />
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Wind
+                        </p>
+
+                        <p className="mt-1 font-bold text-slate-800">
+                          {
+                            weatherData
+                              .current
+                              .windSpeed
+                          }
+                        </p>
+
+                        <p className="text-[10px] text-slate-400">
+                          km/h
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-white px-4 py-3 text-center">
+                        <CloudRain className="mx-auto h-4 w-4 text-indigo-500" />
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Rain
+                        </p>
+
+                        <p className="mt-1 font-bold text-slate-800">
+                          {
+                            weatherData
+                              .current
+                              .rainProb
+                          }
+                          %
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-6 flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center">
+                  <CloudSun className="h-8 w-8 text-slate-300" />
+
+                  <p className="mt-3 text-sm font-semibold text-slate-700">
+                    Weather unavailable
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    {weatherError ||
+                      "Unable to load weather for this farm."}
+                  </p>
+                </div>
               )}
-            </div>
-          ) : (
-            <div className="mt-6 flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed border-red-200 bg-red-50 px-4 text-center">
-              <CloudSun className="h-8 w-8 text-red-300" />
+            </section>
 
-              <p className="mt-3 text-sm font-semibold text-red-700">
-                Weather unavailable
-              </p>
+            {/* =====================
+                SMART INSIGHT
+            ===================== */}
 
-              <p className="mt-1 text-xs text-red-500">
-                {weatherError}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Finance */}
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Finance
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Financial summary
-              </p>
-            </div>
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF4ED] text-[#0B513D]">
-              <WalletCards className="h-5 w-5" />
-            </div>
-          </div>
-
-          {financeLoading ? (
-            <div className="flex min-h-[250px] items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0B6B4A]" />
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    Total Income
-                  </span>
-
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+            <section className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#0B513D] shadow-sm">
+                  <Sprout className="h-5 w-5" />
                 </div>
 
-                <p className="mt-2 text-xl font-bold text-slate-900">
-                  ৳
-                  {totalIncome.toLocaleString()}
-                </p>
-              </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#477A5B]">
+                    Smart Farming Insight
+                  </p>
 
-              <div className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">
-                    Total Expense
-                  </span>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">
+                    Recommendation for{" "}
+                    {selectedFarm.name}
+                  </h2>
 
-                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                    {weatherLoading
+                      ? "Analyzing current weather conditions..."
+                      : weatherData
+                            ?.recommendation
+                        ? weatherData.recommendation
+                        : "Weather-based farming advice is not available right now."}
+                  </p>
                 </div>
-
-                <p className="mt-2 text-xl font-bold text-slate-900">
-                  ৳
-                  {totalExpense.toLocaleString()}
-                </p>
               </div>
-
-              <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                <span className="text-sm font-medium text-slate-600">
-                  Net Profit
-                </span>
-
-                <span className="text-lg font-bold text-[#0B513D]">
-                  ৳
-                  {netProfit.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <Link
-            href="/dashboard/farmer/finance"
-            className="mt-5 block text-center text-sm font-semibold text-[#0B6B4A] hover:underline"
-          >
-            View Finance
-          </Link>
-        </div>
-      </section>
+            </section>
+          </>
+        )}
     </div>
   );
 }

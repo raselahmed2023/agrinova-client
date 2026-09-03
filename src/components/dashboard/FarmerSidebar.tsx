@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
-  Bell,
   Bot,
   BrainCircuit,
   CloudSun,
+  HandCoins,
   LayoutDashboard,
   Leaf,
-  Menu,
   MessageSquareText,
   ShoppingBag,
   Store,
@@ -30,11 +30,6 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Notifications",
-    href: "/dashboard/farmer/notifications",
-    icon: Bell,
-  },
-  {
     label: "My Farms",
     href: "/dashboard/farmer/farms",
     icon: Leaf,
@@ -53,8 +48,8 @@ const aiItems = [
     icon: BrainCircuit,
   },
   {
-    label: "Crop Recommendation",
-    href: "/dashboard/farmer/ai/crop-recommendation",
+    label: "Smart Farming Recommendation",
+    href: "/dashboard/farmer/ai/smart-farming-recommendation",
     icon: Leaf,
   },
   {
@@ -98,6 +93,11 @@ const otherItems = [
     href: "/dashboard/farmer/consultation",
     icon: MessageSquareText,
   },
+  {
+    label: "Need Investment",
+    href: "/dashboard/farmer/investment",
+    icon: HandCoins,
+  },
 ];
 
 export default function FarmerSidebar({
@@ -114,16 +114,17 @@ export default function FarmerSidebar({
       return pathname === href;
     }
 
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    );
   };
 
-  const renderItem = (
-    item: {
-      label: string;
-      href: string;
-      icon: React.ElementType;
-    }
-  ) => {
+  const renderItem = (item: {
+    label: string;
+    href: string;
+    icon: React.ElementType;
+  }) => {
     const Icon = item.icon;
     const active = isActive(item.href);
 
@@ -132,16 +133,18 @@ export default function FarmerSidebar({
         key={item.href}
         href={item.href}
         onClick={onClose}
-        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+          active
             ? "bg-[#EAF4ED] text-[#0B513D]"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }`}
+        }`}
       >
         <Icon
-          className={`h-4.5 w-4.5 ${active
+          className={`h-[18px] w-[18px] shrink-0 ${
+            active
               ? "text-[#0B513D]"
               : "text-slate-400"
-            }`}
+          }`}
         />
 
         <span>{item.label}</span>
@@ -151,7 +154,7 @@ export default function FarmerSidebar({
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* MOBILE OVERLAY */}
       {isOpen && (
         <button
           type="button"
@@ -161,14 +164,15 @@ export default function FarmerSidebar({
         />
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${isOpen
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${
+          isOpen
             ? "translate-x-0"
             : "-translate-x-full"
-          }`}
+        }`}
       >
-        {/* Header */}
+        {/* HEADER */}
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <Link
             href="/dashboard/farmer"
@@ -190,7 +194,7 @@ export default function FarmerSidebar({
             </div>
           </Link>
 
-          {/* Mobile Close Button */}
+          {/* MOBILE CLOSE BUTTON */}
           <button
             type="button"
             onClick={onClose}
@@ -201,12 +205,14 @@ export default function FarmerSidebar({
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* NAVIGATION */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {/* MAIN */}
           <div className="space-y-1">
             {menuItems.map(renderItem)}
           </div>
 
+          {/* AI TOOLS */}
           <div className="mt-6">
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               AI Tools
@@ -217,6 +223,7 @@ export default function FarmerSidebar({
             </div>
           </div>
 
+          {/* MARKETPLACE */}
           <div className="mt-6">
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Marketplace
@@ -227,12 +234,13 @@ export default function FarmerSidebar({
             </div>
           </div>
 
+          {/* OTHER MODULES */}
           <div className="mt-6 space-y-1">
             {otherItems.map(renderItem)}
           </div>
         </nav>
 
-        {/* Bottom */}
+        {/* BOTTOM */}
         <div className="border-t border-slate-100 p-4">
           <div className="rounded-xl bg-[#F5F8F6] p-3">
             <p className="text-xs font-semibold text-[#0B513D]">

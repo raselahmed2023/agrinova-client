@@ -1,20 +1,57 @@
+export type FarmType =
+  | 'Crop'
+  | 'Orchard'
+  | 'Poultry'
+  | 'Livestock'
+  | 'Fishery';
+
+export type FarmUnit =
+  | 'Bigha'
+  | 'Acre'
+  | 'Hectare'
+  | 'Decimal';
+
 export interface IFarm {
   _id: string;
+
   name: string;
+
+  farmType: FarmType;
+
   division: string;
   district: string;
-  landArea: string;
-  unit: string;
-  soilType: string;
+  upazila: string;
+
+  landArea?: number | string;
+  unit?: FarmUnit;
+
+  soilType?: string;
+
   status: 'Active' | 'Inactive';
+
   coverImage?: string;
-  description?: string; // Optional description field
-  activeCropsCount?: number;
+  description?: string;
+
   createdAt: string;
   updatedAt: string;
 }
 
-export type IFarmFormData = Omit<IFarm, '_id' | 'createdAt' | 'updatedAt' | 'activeCropsCount'> & {
-  landArea: string | number;
+export interface IFarmFormData {
+  name: string;
+
+  farmType: FarmType | '';
+
+  division: string;
+  district: string;
+  upazila: string;
+
+  landArea?: string | number;
+  unit?: FarmUnit;
+
+  soilType?: string;
+
+  status: 'Active' | 'Inactive';
+
+  coverImage?: string;
   description?: string;
-};
+}
