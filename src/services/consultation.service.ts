@@ -5,8 +5,10 @@ import type {
   ConsultationsResponse,
   ConsultationStatus,
   ConsultationStats,
+  ConsultationUrgency,
   CreateRecommendationPayload,
   ScheduleConsultationPayload,
+  CreateConsultationRequestPayload,
 } from "@/types/consultation";
 
 const getApiUrl = () => {
@@ -254,6 +256,7 @@ export const getConsultations = async (params?: {
   status?: ConsultationStatus | "ALL";
   search?: string;
   limit?: number;
+  isExpert?: boolean;
 }): Promise<Consultation[]> => {
   try {
     const API_URL = getApiUrl();
@@ -264,7 +267,8 @@ export const getConsultations = async (params?: {
     if (params?.limit) query.set("limit", String(params.limit));
 
     if (token) {
-      const response = await fetch(`${API_URL}/consultations/expert?${query.toString()}`, {
+      const endpoint = params?.isExpert ? "/consultations/expert" : "/consultations";
+      const response = await fetch(`${API_URL}${endpoint}?${query.toString()}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -674,15 +678,244 @@ export const submitRecommendation = async (
   return getConsultationById(payload.consultationId);
 };
 
-export const getExpertConsultations = getConsultations;
+export const getExpertConsultations = async (params?: {
+  status?: ConsultationStatus | "ALL";
+  search?: string;
+  limit?: number;
+}): Promise<Consultation[]> => {
+  return getConsultations({ ...params, isExpert: true });
+};
 
 export const getExpertRequests = async (params?: {
   limit?: number;
   page?: number;
   search?: string;
 }): Promise<Consultation[]> => {
-  return getConsultations({ ...params, status: "PENDING" });
+  return getConsultations({ ...params, status: "PENDING", isExpert: true });
+};
+
+export const createConsultation = async (
+  payload: CreateConsultationRequestPayload
+): Promise<Consultation> => {
+  const cleanId = `cons-${Date.now()}`;
+  const videoRoomId = `agrinova-consultation-${cleanId}`;
+  const meetingLink = payload.meetingLink || `https://meet.jit.si/${videoRoomId}`;
+
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(`${API_URL}/consultations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...payload,
+          meetingLink,
+        }),
+      });
+
+      if (response.ok) {
+        const result: ConsultationResponse = await response.json();
+        if (result.success && result.data) {
+          // Prepend to local mock list without duplicate
+          mockConsultations = [
+            result.data,
+            ...mockConsultations.filter(
+              (c) => c._id !== result.data._id && c.id !== result.data._id
+            ),
+          ];
+          return result.data;
+        }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        throw new Error(
+          errJson?.message ||
+            `Failed to book consultation with specialist (Status ${response.status}).`
+        );
+      }
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+    console.warn("Backend consultation creation error:", err);
+  }
+
+  // Fallback consultation record
+  const newConsultation: Consultation = {
+    _id: cleanId,
+    id: cleanId,
+    farmerId: "current-farmer",
+    farmerName: payload.farmerName || "AgriNova Farmer",
+    farmerEmail: payload.farmerEmail || "farmer@agrinova.io",
+    farmer: {
+      name: payload.farmerName || "AgriNova Farmer",
+      email: payload.farmerEmail || "farmer@agrinova.io",
+      phone: payload.farmerPhone || "+880 1700-000000",
+      farmName: payload.farmName || "Greenfield Farm",
+      district: payload.district || "Bogra",
+      location: payload.district || "Bogra, Bangladesh",
+    },
+    expertId: payload.expertId || "exp-001",
+    expertName: payload.expertName || "Dr. Rafiqul Islam",
+    expertEmail: payload.expertEmail || "dr.rafiqul@agrinova.io",
+    expert: {
+      id: payload.expertId || "exp-001",
+      name: payload.expertName || "Dr. Rafiqul Islam",
+      email: payload.expertEmail || "dr.rafiqul@agrinova.io",
+      title: "Senior Agronomist & Plant Pathologist",
+    },
+    farmName: payload.farmName || "Greenfield Farm",
+    district: payload.district || "Bogra",
+    cropType: payload.cropType,
+    cropName: payload.cropName || payload.cropType,
+    problemTitle: payload.problemTitle,
+    problemDescription: payload.problemDescription,
+    images: payload.images || [],
+    status: payload.scheduledDate ? "SCHEDULED" : "PENDING",
+    urgency: payload.urgency || "MEDIUM",
+    scheduledDate: payload.scheduledDate,
+    scheduledTime: payload.scheduledTime,
+    preferredDate: payload.preferredDate || payload.scheduledDate,
+    preferredTime: payload.preferredTime || payload.scheduledTime,
+    videoRoomId,
+    meetingLink,
+    notes: payload.notes,
+    createdAt: new Date().toISOString(),
+  };
+
+  mockConsultations = [newConsultation, ...mockConsultations];
+  return newConsultation;
 };
 
 export const startConsultation = startVideoConsultation;
 export const saveRecommendation = submitRecommendation;
+
+export const updateConsultationDetails = async (
+  consultationId: string,
+  payload: {
+    cropType?: string;
+    cropName?: string;
+    problemTitle?: string;
+    problemDescription?: string;
+    urgency?: ConsultationUrgency;
+    farmName?: string;
+    district?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    notes?: string;
+  }
+): Promise<Consultation> => {
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(`${API_URL}/consultations/${consultationId}/details`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result: ConsultationResponse = await response.json();
+        if (result.success && result.data) {
+          mockConsultations = mockConsultations.map((c) =>
+            (c._id === consultationId || c.id === consultationId || c._id === result.data._id || c.id === result.data._id)
+              ? result.data
+              : c
+          );
+          return result.data;
+        }
+      } else {
+        const errJson = await response.json().catch(() => null);
+        throw new Error(
+          errJson?.message || `Failed to update consultation details (Status ${response.status})`
+        );
+      }
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+    console.warn("Failed to update consultation via API:", err);
+  }
+
+  // Fallback update in mockConsultations
+  mockConsultations = mockConsultations.map((c) => {
+    if (c._id === consultationId || c.id === consultationId) {
+      return {
+        ...c,
+        ...payload,
+        farmName: payload.farmName || c.farmName,
+        district: payload.district || c.district,
+        farmer: {
+          ...c.farmer,
+          farmName: payload.farmName || c.farmer?.farmName,
+          district: payload.district || c.farmer?.district,
+        },
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return c;
+  });
+
+  return getConsultationById(consultationId);
+};
+
+export const rescheduleConsultation = async (
+  consultationId: string,
+  scheduledDate: string,
+  scheduledTime: string,
+  notes?: string
+): Promise<Consultation> => {
+  return updateConsultationDetails(consultationId, {
+    scheduledDate,
+    scheduledTime,
+    notes,
+  });
+};
+
+export const deleteConsultation = async (
+  consultationId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const API_URL = getApiUrl();
+    const token = await getAuthToken();
+    if (token) {
+      const response = await fetch(`${API_URL}/consultations/${consultationId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        mockConsultations = mockConsultations.filter(
+          (c) => c._id !== consultationId && c.id !== consultationId
+        );
+        return { success: true, message: "Consultation deleted successfully" };
+      } else {
+        const errJson = await response.json().catch(() => null);
+        throw new Error(errJson?.message || "Failed to delete consultation");
+      }
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+    console.warn("API delete failed, fallback to local:", err);
+  }
+
+  mockConsultations = mockConsultations.filter(
+    (c) => c._id !== consultationId && c.id !== consultationId
+  );
+  return { success: true, message: "Consultation deleted successfully" };
+};
+
+

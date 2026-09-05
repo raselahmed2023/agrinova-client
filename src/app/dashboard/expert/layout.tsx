@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 
 import ExpertSidebar from "@/components/expert/ExpertSidebar";
 
@@ -57,15 +59,19 @@ export default function ExpertLayout({
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div>
-                <h2 className="text-sm font-bold text-emerald-950">
-                  AgriNova
-                </h2>
-
-                <p className="text-[11px] text-slate-400">
-                  Expert Panel
-                </p>
-              </div>
+              <Link href="/" className="flex items-center gap-2 transition hover:opacity-90" title="AgriNova Home">
+                <Image
+                  src="/AgriNova-Logo.png"
+                  alt="AgriNova"
+                  width={130}
+                  height={40}
+                  priority
+                  className="h-8 w-auto object-contain"
+                />
+                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                  Expert
+                </span>
+              </Link>
             </div>
 
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">

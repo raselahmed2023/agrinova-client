@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "@/lib/auth-client";
 import {
   CalendarCheck,
   ClipboardList,
   LayoutDashboard,
+  LogOut,
   UserCircle,
   Video,
   X,
@@ -50,7 +53,28 @@ export default function ExpertSidebar({
   isOpen = false,
   onClose,
 }: ExpertSidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
+  const { data: session, isPending } = useSession();
+  const user = session?.user;
+
+  const handleLogout = async () => {
+    await signOut();
+    if (onClose) onClose();
+    router.push("/");
+    router.refresh();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "E";
+
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
 
   return (
     <aside
@@ -77,19 +101,24 @@ export default function ExpertSidebar({
     >
       {/* Header */}
       <div className="mb-6 flex items-start justify-between px-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-800 text-white font-bold">
-            <Stethoscope className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-emerald-950 leading-tight">
-              AgriNova
-            </h2>
-            <p className="text-[11px] font-semibold text-emerald-700">
-              Expert Panel
-            </p>
-          </div>
-        </div>
+        <Link
+          href="/"
+          onClick={onClose}
+          className="flex items-center gap-2.5 transition hover:opacity-90"
+          title="AgriNova Home"
+        >
+          <Image
+            src="/AgriNova-Logo.png"
+            alt="AgriNova"
+            width={140}
+            height={42}
+            priority
+            className="h-9 w-auto object-contain"
+          />
+          <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+            Expert
+          </span>
+        </Link>
 
         <button
           type="button"
@@ -129,15 +158,47 @@ export default function ExpertSidebar({
         })}
       </nav>
 
-      {/* Bottom links */}
-      <div className="pt-4 border-t border-slate-100 space-y-1 px-1">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Back to Main Site</span>
-        </Link>
+      {/* Bottom User Profile & Logout */}
+      <div className="mt-auto border-t border-slate-200/80 bg-slate-50/70 p-3 rounded-xl">
+        {isPending ? (
+          <div className="flex items-center gap-3 animate-pulse">
+            <div className="h-9 w-9 rounded-full bg-slate-200 shrink-0" />
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
+              <div className="h-2.5 w-28 bg-slate-200 rounded" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs">
+                {getInitials(user?.name)}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-slate-900 leading-tight">
+                  {user?.name || "Expert Account"}
+                </p>
+                <p
+                  className="truncate text-[11px] text-slate-500 leading-tight mt-0.5"
+                  title={user?.email || "Signed In"}
+                >
+                  {user?.email || "expert@agrinova.io"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Logout from AgriNova"
+              aria-label="Logout"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

@@ -128,3 +128,28 @@ export interface ScheduleConsultationPayload {
   meetingLink?: string;
   notes?: string;
 }
+
+export interface CreateConsultationRequestPayload {
+  cropType: string;
+  cropName?: string;
+  problemTitle: string;
+  problemDescription: string;
+  farmId?: string;
+  farmName?: string;
+  district?: string;
+  images?: string[];
+  urgency?: ConsultationUrgency;
+  expertId?: string;
+  expertName?: string;
+  expertEmail?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  preferredDate?: string;
+  preferredTime?: string;
+  meetingLink?: string;
+  notes?: string;
+  farmerName?: string;
+  farmerEmail?: string;
+  farmerPhone?: string;
+}
+

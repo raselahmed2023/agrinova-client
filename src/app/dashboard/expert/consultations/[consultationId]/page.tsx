@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Video,
@@ -11,6 +12,7 @@ import {
   CheckCircle2,
   RefreshCw,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import ConsultationDetails from "@/components/expert/ConsultationDetails";
 import ConsultationActions from "@/components/expert/ConsultationActions";
@@ -25,6 +27,7 @@ import {
   acceptConsultation,
   rejectConsultation,
   startVideoConsultation,
+  deleteConsultation,
 } from "@/services/consultation.service";
 import type {
   Consultation,
@@ -39,6 +42,7 @@ export default function ConsultationDetailPage({
 }) {
   const resolvedParams = use(params);
   const consultationId = resolvedParams.consultationId;
+  const router = useRouter();
 
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,6 +159,18 @@ export default function ConsultationDetailPage({
     }
   };
 
+  const handleDelete = async () => {
+    setIsProcessing(true);
+    setActionError(null);
+    try {
+      await deleteConsultation(consultationId);
+      router.push("/dashboard/expert/consultations");
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to delete consultation");
+      setIsProcessing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50/60 p-6 sm:p-8 max-w-6xl mx-auto space-y-6">
@@ -210,6 +226,7 @@ export default function ConsultationDetailPage({
             onStartCall={handleStartCall}
             onOpenRecommendation={() => setShowRecommendationForm(true)}
             onMarkCompleted={handleMarkCompleted}
+            onDelete={handleDelete}
             isProcessing={isProcessing}
           />
         </div>
