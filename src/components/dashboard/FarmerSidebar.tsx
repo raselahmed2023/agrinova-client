@@ -1,18 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "@/lib/auth-client";
+import Link from "next/link";
 import {
-  Bell,
+  usePathname,
+  useRouter,
+} from "next/navigation";
+
+import {
+  signOut,
+  useSession,
+} from "@/lib/auth-client";
+
+import {
   Bot,
   BrainCircuit,
   CloudSun,
+  HandCoins,
   LayoutDashboard,
   Leaf,
   LogOut,
-  Menu,
   MessageSquareText,
   ShoppingBag,
   Store,
@@ -33,11 +40,6 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Notifications",
-    href: "/dashboard/farmer/notifications",
-    icon: Bell,
-  },
-  {
     label: "My Farms",
     href: "/dashboard/farmer/farms",
     icon: Leaf,
@@ -56,8 +58,8 @@ const aiItems = [
     icon: BrainCircuit,
   },
   {
-    label: "Crop Recommendation",
-    href: "/dashboard/farmer/ai/crop-recommendation",
+    label: "Smart Farming Recommendation",
+    href: "/dashboard/farmer/ai/smart-farming-recommendation",
     icon: Leaf,
   },
   {
@@ -101,6 +103,11 @@ const otherItems = [
     href: "/dashboard/farmer/consultation",
     icon: MessageSquareText,
   },
+  {
+    label: "Need Investment",
+    href: "/dashboard/farmer/investment",
+    icon: HandCoins,
+  },
 ];
 
 export default function FarmerSidebar({
@@ -109,18 +116,29 @@ export default function FarmerSidebar({
 }: FarmerSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, isPending } = useSession();
+
+  const {
+    data: session,
+    isPending,
+  } = useSession();
+
   const user = session?.user;
 
   const handleLogout = async () => {
     await signOut();
+
     onClose();
+
     router.push("/");
     router.refresh();
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return "U";
+  const getInitials = (
+    name?: string
+  ) => {
+    if (!name) {
+      return "U";
+    }
 
     return name
       .split(" ")
@@ -130,52 +148,62 @@ export default function FarmerSidebar({
       .toUpperCase();
   };
 
-  const isActive = (href: string) => {
+  const isActive = (
+    href: string
+  ) => {
     if (
       href === "/dashboard/farmer" ||
-      href === "/dashboard/farmer/marketplace"
+      href ===
+        "/dashboard/farmer/marketplace"
     ) {
       return pathname === href;
     }
 
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return (
+      pathname === href ||
+      pathname.startsWith(
+        `${href}/`
+      )
+    );
   };
 
-  const renderItem = (
-    item: {
-      label: string;
-      href: string;
-      icon: React.ElementType;
-    }
-  ) => {
+  const renderItem = (item: {
+    label: string;
+    href: string;
+    icon: React.ElementType;
+  }) => {
     const Icon = item.icon;
-    const active = isActive(item.href);
+    const active =
+      isActive(item.href);
 
     return (
       <Link
         key={item.href}
         href={item.href}
         onClick={onClose}
-        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+          active
             ? "bg-[#EAF4ED] text-[#0B513D]"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }`}
+        }`}
       >
         <Icon
-          className={`h-4.5 w-4.5 ${active
+          className={`h-[18px] w-[18px] shrink-0 ${
+            active
               ? "text-[#0B513D]"
               : "text-slate-400"
-            }`}
+          }`}
         />
 
-        <span>{item.label}</span>
+        <span>
+          {item.label}
+        </span>
       </Link>
     );
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isOpen && (
         <button
           type="button"
@@ -185,14 +213,13 @@ export default function FarmerSidebar({
         />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${isOpen
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${
+          isOpen
             ? "translate-x-0"
             : "-translate-x-full"
-          }`}
+        }`}
       >
-        {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <Link
             href="/"
@@ -208,12 +235,12 @@ export default function FarmerSidebar({
               priority
               className="h-9 w-auto object-contain"
             />
+
             <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
               Farmer
             </span>
           </Link>
 
-          {/* Mobile Close Button */}
           <button
             type="button"
             onClick={onClose}
@@ -224,10 +251,11 @@ export default function FarmerSidebar({
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            {menuItems.map(renderItem)}
+            {menuItems.map(
+              renderItem
+            )}
           </div>
 
           <div className="mt-6">
@@ -236,7 +264,9 @@ export default function FarmerSidebar({
             </p>
 
             <div className="space-y-1">
-              {aiItems.map(renderItem)}
+              {aiItems.map(
+                renderItem
+              )}
             </div>
           </div>
 
@@ -246,59 +276,85 @@ export default function FarmerSidebar({
             </p>
 
             <div className="space-y-1">
-              {marketplaceItems.map(renderItem)}
+              {marketplaceItems.map(
+                renderItem
+              )}
             </div>
           </div>
 
           <div className="mt-6 space-y-1">
-            {otherItems.map(renderItem)}
+            {otherItems.map(
+              renderItem
+            )}
           </div>
         </nav>
 
-        {/* Bottom User Profile & Logout */}
-        <div className="border-t border-slate-200/80 bg-slate-50/70 p-3.5">
-          {isPending ? (
-            <div className="flex items-center gap-3 animate-pulse">
-              <div className="h-9 w-9 rounded-full bg-slate-200 shrink-0" />
-              <div className="flex-1 space-y-1.5 min-w-0">
-                <div className="h-3.5 w-20 bg-slate-200 rounded" />
-                <div className="h-2.5 w-28 bg-slate-200 rounded" />
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                {/* Profile Avatar */}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs">
-                  {getInitials(user?.name)}
-                </div>
+        <div className="border-t border-slate-200 bg-white p-3">
+          <div className="mb-3 rounded-xl bg-[#F5F8F6] p-3">
+            <p className="text-xs font-semibold text-[#0B513D]">
+              Grow Smarter
+            </p>
 
-                {/* Name and Email */}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-slate-900 leading-tight">
-                    {user?.name || "Farmer Account"}
-                  </p>
-                  <p
-                    className="truncate text-[11px] text-slate-500 leading-tight mt-0.5"
-                    title={user?.email || "Signed In"}
-                  >
-                    {user?.email || "farmer@agrinova.io"}
-                  </p>
+            <p className="mt-1 text-[11px] leading-4 text-slate-500">
+              Use AgriNova tools to
+              manage your farm and
+              make better decisions.
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 p-3">
+            {isPending ? (
+              <div className="flex animate-pulse items-center gap-3">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-slate-200" />
+
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="h-3.5 w-20 rounded bg-slate-200" />
+
+                  <div className="h-2.5 w-28 rounded bg-slate-200" />
                 </div>
               </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B]">
+                    {getInitials(
+                      user?.name
+                    )}
+                  </div>
 
-              {/* Logout Button */}
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="Logout from AgriNova"
-                aria-label="Logout"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold leading-tight text-slate-900">
+                      {user?.name ||
+                        "Farmer Account"}
+                    </p>
+
+                    <p
+                      className="mt-0.5 truncate text-[11px] leading-tight text-slate-500"
+                      title={
+                        user?.email ||
+                        "Signed In"
+                      }
+                    >
+                      {user?.email ||
+                        "farmer@agrinova.io"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleLogout
+                  }
+                  title="Logout from AgriNova"
+                  aria-label="Logout"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>

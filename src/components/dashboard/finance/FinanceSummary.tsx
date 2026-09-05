@@ -8,7 +8,9 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+
 import { useMemo, useState } from "react";
+
 import {
   Area,
   AreaChart,
@@ -23,18 +25,21 @@ export interface FinanceTransaction {
   _id?: string;
   id?: string;
   userId?: string;
+  farmId?: string;
 
-  type: "income" | "expense" | "INCOME" | "EXPENSE";
+  type:
+    | "Income"
+    | "Expense"
+    | "income"
+    | "expense"
+    | "INCOME"
+    | "EXPENSE";
+
   amount: number;
-
   category: string;
   date: string;
-
   description?: string;
   note?: string;
-
-  farmId?: string;
-  farm?: string;
 
   createdAt?: string;
   updatedAt?: string;
@@ -49,11 +54,10 @@ type ChartPeriod =
   | "LAST_3_MONTHS"
   | "THIS_YEAR";
 
-const formatCurrency = (amount: number) => {
-  return `৳${amount.toLocaleString("en-BD", {
+const formatCurrency = (amount: number) =>
+  `৳${Number(amount || 0).toLocaleString("en-BD", {
     maximumFractionDigits: 0,
   })}`;
-};
 
 const normalizeType = (type: string) =>
   type.toLowerCase();
@@ -67,16 +71,13 @@ export default function FinanceSummary({
 
     transactions.forEach((transaction) => {
       const amount = Number(transaction.amount) || 0;
+      const type = normalizeType(transaction.type);
 
-      if (
-        normalizeType(transaction.type) === "income"
-      ) {
+      if (type === "income") {
         totalIncome += amount;
       }
 
-      if (
-        normalizeType(transaction.type) === "expense"
-      ) {
+      if (type === "expense") {
         totalExpense += amount;
       }
     });
@@ -104,7 +105,8 @@ export default function FinanceSummary({
       description: "All recorded expenses",
       icon: TrendingDown,
       trendIcon: ArrowDownRight,
-      className: "bg-rose-50 text-rose-700",
+      className:
+        "bg-rose-50 text-rose-700",
     },
     {
       title: "Net Profit",
@@ -225,31 +227,38 @@ export function FinanceOverviewChart({
     if (period === "THIS_MONTH") {
       const grouped = new Map<
         number,
-        { income: number; expense: number }
+        {
+          income: number;
+          expense: number;
+        }
       >();
 
       filteredTransactions.forEach(
         (transaction) => {
           const date = new Date(transaction.date);
+
           const week =
-            Math.floor((date.getDate() - 1) / 7) + 1;
+            Math.floor(
+              (date.getDate() - 1) / 7
+            ) + 1;
 
           const current = grouped.get(week) || {
             income: 0,
             expense: 0,
           };
 
-          if (
-            normalizeType(transaction.type) ===
-            "income"
-          ) {
-            current.income += Number(
-              transaction.amount
-            );
-          } else {
-            current.expense += Number(
-              transaction.amount
-            );
+          const amount =
+            Number(transaction.amount) || 0;
+
+          const type =
+            normalizeType(transaction.type);
+
+          if (type === "income") {
+            current.income += amount;
+          }
+
+          if (type === "expense") {
+            current.expense += amount;
           }
 
           grouped.set(week, current);
@@ -258,8 +267,7 @@ export function FinanceOverviewChart({
 
       return [1, 2, 3, 4, 5].map((week) => ({
         name: `Week ${week}`,
-        income:
-          grouped.get(week)?.income || 0,
+        income: grouped.get(week)?.income || 0,
         expense:
           grouped.get(week)?.expense || 0,
       }));
@@ -294,17 +302,18 @@ export function FinanceOverviewChart({
           ).getTime(),
         };
 
-        if (
-          normalizeType(transaction.type) ===
-          "income"
-        ) {
-          existing.income += Number(
-            transaction.amount
-          );
-        } else {
-          existing.expense += Number(
-            transaction.amount
-          );
+        const amount =
+          Number(transaction.amount) || 0;
+
+        const type =
+          normalizeType(transaction.type);
+
+        if (type === "income") {
+          existing.income += amount;
+        }
+
+        if (type === "expense") {
+          existing.expense += amount;
         }
 
         monthMap.set(key, existing);
@@ -312,9 +321,17 @@ export function FinanceOverviewChart({
     );
 
     return Array.from(monthMap.values())
-      .sort((a, b) => a.sortDate - b.sortDate)
+      .sort(
+        (a, b) => a.sortDate - b.sortDate
+      )
       .map(({ sortDate, ...item }) => item);
   }, [filteredTransactions, period]);
+
+  const hasChartData = chartData.some(
+    (item) =>
+      item.income > 0 ||
+      item.expense > 0
+  );
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -325,7 +342,7 @@ export function FinanceOverviewChart({
           </h2>
 
           <p className="mt-1 text-xs text-slate-500">
-            Financial activity from your real
+            Financial activity from your recorded
             transactions.
           </p>
         </div>
@@ -366,11 +383,7 @@ export function FinanceOverviewChart({
       </div>
 
       <div className="mt-6 h-[280px] w-full">
-        {chartData.some(
-          (item) =>
-            item.income > 0 ||
-            item.expense > 0
-        ) ? (
+        {hasChartData ? (
           <ResponsiveContainer
             width="100%"
             height="100%"
@@ -393,7 +406,9 @@ export function FinanceOverviewChart({
                 axisLine={false}
                 fontSize={11}
                 tickFormatter={(value) =>
-                  `৳${Number(value) / 1000}k`
+                  `৳${Math.round(
+                    Number(value) / 1000
+                  )}k`
                 }
               />
 
