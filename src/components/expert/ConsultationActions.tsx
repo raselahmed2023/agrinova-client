@@ -11,6 +11,7 @@ import {
   Clock,
   Sparkles,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 
@@ -22,6 +23,7 @@ interface ConsultationActionsProps {
   onStartCall?: () => void;
   onOpenRecommendation?: () => void;
   onMarkCompleted?: () => Promise<void> | void;
+  onDelete?: () => Promise<void> | void;
   isProcessing?: boolean;
 }
 
@@ -33,9 +35,11 @@ export default function ConsultationActions({
   onStartCall,
   onOpenRecommendation,
   onMarkCompleted,
+  onDelete,
   isProcessing = false,
 }: ConsultationActionsProps) {
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   const handleConfirmReject = async () => {
@@ -145,12 +149,68 @@ export default function ConsultationActions({
         </>
       )}
 
+      {/* Delete Upcoming Consultation button */}
+      {onDelete &&
+        (consultation.status === "SCHEDULED" ||
+          consultation.status === "ACCEPTED" ||
+          consultation.status === "PENDING") && (
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-rose-200 bg-rose-50/60 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100/80 transition disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Delete Consultation</span>
+          </button>
+        )}
+
       {/* 5. COMPLETED State: View Only */}
       {consultation.status === "COMPLETED" && (
         <span className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           Completed (Recommendation View-Only)
         </span>
+      )}
+
+      {/* DELETE MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-700">
+              <Trash2 className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-slate-900">
+                Delete Upcoming Consultation
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+              Are you sure you want to delete this upcoming consultation? The booked appointment slot will be released and this session will be permanently removed.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={async () => {
+                  if (onDelete) {
+                    await onDelete();
+                    setShowDeleteModal(false);
+                  }
+                }}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                Yes, Delete Consultation
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* REJECT MODAL */}

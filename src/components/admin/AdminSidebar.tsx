@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "@/lib/auth-client";
 
 import {
   BarChart3,
   LayoutDashboard,
   Leaf,
+  LogOut,
   MessageSquareText,
   Settings,
   ShieldCheck,
@@ -67,7 +70,28 @@ export default function AdminSidebar({
   isOpen = false,
   onClose,
 }: AdminSidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
+  const { data: session, isPending } = useSession();
+  const user = session?.user;
+
+  const handleLogout = async () => {
+    await signOut();
+    if (onClose) onClose();
+    router.push("/");
+    router.refresh();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "A";
+
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
 
   return (
     <aside
@@ -94,15 +118,24 @@ export default function AdminSidebar({
     >
       {/* Header */}
       <div className="mb-8 flex items-start justify-between px-3">
-        <div>
-          <h2 className="text-xl font-bold text-emerald-950">
-            AgriNova
-          </h2>
-
-          <p className="mt-1 text-xs font-medium text-slate-400">
-            Admin Panel
-          </p>
-        </div>
+        <Link
+          href="/"
+          onClick={onClose}
+          className="flex items-center gap-2.5 transition hover:opacity-90"
+          title="AgriNova Home"
+        >
+          <Image
+            src="/AgriNova-Logo.png"
+            alt="AgriNova"
+            width={140}
+            height={42}
+            priority
+            className="h-9 w-auto object-contain"
+          />
+          <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+            Admin
+          </span>
+        </Link>
 
         {/* Mobile Close */}
         <button
@@ -146,6 +179,48 @@ export default function AdminSidebar({
         })}
       </nav>
 
+      {/* Bottom User Profile & Logout */}
+      <div className="mt-auto border-t border-slate-200/80 bg-slate-50/70 p-3 rounded-xl">
+        {isPending ? (
+          <div className="flex items-center gap-3 animate-pulse">
+            <div className="h-9 w-9 rounded-full bg-slate-200 shrink-0" />
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
+              <div className="h-2.5 w-28 bg-slate-200 rounded" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs">
+                {getInitials(user?.name)}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-slate-900 leading-tight">
+                  {user?.name || "Admin Account"}
+                </p>
+                <p
+                  className="truncate text-[11px] text-slate-500 leading-tight mt-0.5"
+                  title={user?.email || "Signed In"}
+                >
+                  {user?.email || "admin@agrinova.io"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Logout from AgriNova"
+              aria-label="Logout"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

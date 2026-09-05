@@ -31,7 +31,15 @@ export default function FarmerConsultationsPage() {
     setIsLoading(true);
     try {
       const data = await getConsultations();
-      setConsultations(data);
+      // Deduplicate consultations by unique id to prevent any duplicate display
+      const seenIds = new Set<string>();
+      const uniqueList = data.filter((c) => {
+        const id = c._id || c.id;
+        if (!id || seenIds.has(id)) return false;
+        seenIds.add(id);
+        return true;
+      });
+      setConsultations(uniqueList);
     } catch (err) {
       console.error("Failed to load farmer consultations:", err);
     } finally {
@@ -54,9 +62,9 @@ export default function FarmerConsultationsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50/60 p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50/60 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
             Advisory & Plant Clinics
@@ -69,21 +77,21 @@ export default function FarmerConsultationsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={loadData}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            <span>Refresh</span>
           </button>
           <Link
             href="/consultant"
-            className="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+            className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition flex-1 sm:flex-none"
           >
             <Plus className="h-4 w-4" />
-            Book Specialist
+            <span>Book Specialist</span>
           </Link>
         </div>
       </div>
@@ -94,7 +102,7 @@ export default function FarmerConsultationsPage() {
           <div className="h-36 rounded-3xl bg-slate-200 animate-pulse" />
         </div>
       ) : consultations.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-4">
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 sm:p-12 text-center space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
             <Sprout className="h-8 w-8" />
           </div>
@@ -139,7 +147,7 @@ export default function FarmerConsultationsPage() {
                   return (
                     <div
                       key={c._id || c.id}
-                      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 hover:border-emerald-300 transition"
+                      className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm space-y-4 hover:border-emerald-300 transition"
                     >
                       <div className="flex items-center justify-between">
                         <ConsultationStatusBadge status={c.status} size="sm" />
@@ -150,30 +158,30 @@ export default function FarmerConsultationsPage() {
                         <span className="text-[11px] font-bold text-emerald-800 uppercase">
                           {c.cropType} · {c.farmName || "Farmland"}
                         </span>
-                        <h4 className="text-base font-black text-slate-900 mt-0.5">
+                        <h4 className="text-base font-black text-slate-900 mt-0.5 break-words">
                           {c.problemTitle}
                         </h4>
                       </div>
 
                       {/* Expert Info */}
-                      <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-100 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center">
+                      <div className="rounded-2xl bg-slate-50 p-3 sm:p-3.5 border border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-8 w-8 shrink-0 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center">
                             <User className="h-4 w-4" />
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900">
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate">
                               {c.expert?.name || c.expertName || "Assigned Specialist"}
                             </p>
-                            <p className="text-[11px] text-slate-500">
+                            <p className="text-[11px] text-slate-500 truncate">
                               {c.expert?.title || "Agronomist"}
                             </p>
                           </div>
                         </div>
 
                         {scheduledTimeStr && (
-                          <div className="text-right">
-                            <span className="font-bold text-emerald-900 block">
+                          <div className="text-right ml-auto">
+                            <span className="font-bold text-emerald-900 block text-xs">
                               {scheduledTimeStr}
                             </span>
                             <span className="text-[10px] text-slate-400">
@@ -184,7 +192,7 @@ export default function FarmerConsultationsPage() {
                       </div>
 
                       {/* Video Room Action */}
-                      <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
                         <Link
                           href={`/dashboard/farmer/consultation/${c._id || c.id}`}
                           className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1"
@@ -192,18 +200,12 @@ export default function FarmerConsultationsPage() {
                           View Details <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
 
-                        {c.status === "ONGOING" ? (
+                        {c.status === "ONGOING" || c.status === "SCHEDULED" ? (
                           <VideoCallButton
                             consultation={c}
                             isFarmer={true}
                             userName={c.farmer?.name || "Farmer"}
                           />
-                        ) : c.status === "SCHEDULED" ? (
-                          <div className="text-right">
-                            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl">
-                              Starts at {c.scheduledTime || scheduledTimeStr}
-                            </span>
-                          </div>
                         ) : (
                           <span className="text-xs text-amber-700 font-medium">
                             Awaiting scheduling by expert
