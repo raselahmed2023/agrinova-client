@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Sparkles,
   FileCheck2,
+  Trash2,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 import ConsultationStatusBadge from "./ConsultationStatusBadge";
@@ -16,12 +17,14 @@ interface ConsultationCardProps {
   consultation: Consultation;
   onStartCall?: (id: string) => void;
   onOpenSchedule?: (consultation: Consultation) => void;
+  onDelete?: (id: string) => void;
 }
 
 export default function ConsultationCard({
   consultation,
   onStartCall,
   onOpenSchedule,
+  onDelete,
 }: ConsultationCardProps) {
   const isOngoing = consultation.status === "ONGOING";
   const isScheduled = consultation.status === "SCHEDULED";
@@ -129,18 +132,40 @@ export default function ConsultationCard({
               >
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(consultation._id || consultation.id || "")}
+                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/60 p-2 text-rose-600 transition hover:bg-rose-100 hover:text-rose-800"
+                  title="Delete upcoming consultation"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </>
           )}
 
           {isAccepted && (
-            <button
-              type="button"
-              onClick={() => onOpenSchedule && onOpenSchedule(consultation)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              Schedule Time
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onOpenSchedule && onOpenSchedule(consultation)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Schedule Time
+              </button>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(consultation._id || consultation.id || "")}
+                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/60 p-2 text-rose-600 transition hover:bg-rose-100 hover:text-rose-800"
+                  title="Delete upcoming consultation"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
 
           {isCompleted && (
@@ -154,13 +179,25 @@ export default function ConsultationCard({
           )}
 
           {!isOngoing && !isScheduled && !isAccepted && !isCompleted && (
-            <Link
-              href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <span>View Details</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <>
+              <Link
+                href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <span>View Details</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(consultation._id || consultation.id || "")}
+                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/60 p-2 text-rose-600 transition hover:bg-rose-100 hover:text-rose-800"
+                  title="Delete upcoming consultation"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

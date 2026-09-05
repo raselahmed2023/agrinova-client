@@ -17,6 +17,8 @@ import {
   ExternalLink,
   ShieldCheck,
   RefreshCw,
+  Edit3,
+  CalendarDays,
 } from "lucide-react";
 import { getConsultationById } from "@/services/consultation.service";
 import type { Consultation } from "@/types/consultation";
@@ -24,6 +26,9 @@ import ConsultationStatusBadge, {
   UrgencyBadge,
 } from "@/components/expert/ConsultationStatusBadge";
 import VideoCallButton from "@/components/expert/VideoCallButton";
+import ConsultationCountdownCard from "@/components/consultant/ConsultationCountdownCard";
+import EditConsultationModal from "@/components/consultant/EditConsultationModal";
+import RescheduleConsultationModal from "@/components/consultant/RescheduleConsultationModal";
 
 export default function FarmerConsultationDetailPage({
   params,
@@ -36,6 +41,8 @@ export default function FarmerConsultationDetailPage({
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -92,9 +99,9 @@ export default function FarmerConsultationDetailPage({
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50/60 p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-slate-50/60 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-5xl mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <Link
           href="/dashboard/farmer/consultation"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition"
@@ -103,21 +110,49 @@ export default function FarmerConsultationDetailPage({
           Back to My Consultations
         </Link>
 
-        <button
-          type="button"
-          onClick={loadData}
-          className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
+          >
+            <Edit3 className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Edit Details</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsRescheduleModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/80 shadow-sm flex-1 sm:flex-none"
+          >
+            <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
+            <span>Reschedule</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
-      {/* 1. Expert & Consultation Session Banner */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 shrink-0 rounded-2xl bg-emerald-100 border border-emerald-200 overflow-hidden flex items-center justify-center font-bold text-emerald-800 text-xl shadow-inner">
+      {/* 1. Live Countdown & Video Room Hero Card */}
+      <ConsultationCountdownCard
+        consultation={consultation}
+        onEditDetails={() => setIsEditModalOpen(true)}
+        onReschedule={() => setIsRescheduleModalOpen(true)}
+        onRefresh={loadData}
+      />
+
+      {/* 2. Expert & Consultation Session Banner */}
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-100">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-2xl bg-emerald-100 border border-emerald-200 overflow-hidden flex items-center justify-center font-bold text-emerald-800 text-lg sm:text-xl shadow-inner">
               {consultation.expert?.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -126,59 +161,53 @@ export default function FarmerConsultationDetailPage({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <User className="h-8 w-8 text-emerald-700" />
+                <User className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-700" />
               )}
             </div>
 
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-2xl font-black text-slate-900">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 break-words">
                   {consultation.expert?.name || consultation.expertName || "Assigned Specialist"}
                 </h2>
                 <ConsultationStatusBadge status={consultation.status} size="md" />
                 <UrgencyBadge urgency={consultation.urgency} />
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1 truncate">
                 {consultation.expert?.title || "Senior Agronomist & Plant Pathologist"}
               </p>
             </div>
           </div>
 
-          {/* Action / Video Room Access for Farmer */}
-          <div>
-            {consultation.status === "ONGOING" ? (
-              <VideoCallButton
-                consultation={consultation}
-                isFarmer={true}
-                userName={consultation.farmer?.name || "Farmer"}
-              />
-            ) : consultation.status === "SCHEDULED" ? (
-              <div className="flex flex-col items-end gap-1">
-                <VideoCallButton
-                  consultation={consultation}
-                  isFarmer={true}
-                  userName={consultation.farmer?.name || "Farmer"}
-                />
-                <span className="text-[10px] text-slate-500 font-medium">
-                  Scheduled for {consultation.scheduledTime || scheduledDisplay}
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3.5 py-2 rounded-xl">
-                Status: {consultation.status}
-              </span>
-            )}
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <button
+              type="button"
+              onClick={() => setIsRescheduleModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+            >
+              <Calendar className="h-3.5 w-3.5 text-emerald-700" />
+              Change Slot
+            </button>
           </div>
         </div>
 
         {/* Schedule & Crop Meta */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-1">
           <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
               Scheduled Date & Time
             </span>
-            <p className="text-sm font-bold text-slate-900">
+            <p className="text-xs sm:text-sm font-bold text-slate-900">
               {scheduledDisplay || "Awaiting Expert Schedule"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Farm & District
+            </span>
+            <p className="text-xs sm:text-sm font-bold text-slate-900">
+              {consultation.farmName || "Registered Farm"} · {consultation.district || "Bangladesh"}
             </p>
           </div>
 
@@ -186,17 +215,8 @@ export default function FarmerConsultationDetailPage({
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
               Crop & Issue
             </span>
-            <p className="text-sm font-bold text-slate-900">
+            <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
               {consultation.cropType} · {consultation.problemTitle}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Live Video Room
-            </span>
-            <p className="text-sm font-mono font-bold text-slate-800 truncate">
-              {consultation.videoRoomId || `agrinova-consultation-${consultation._id}`}
             </p>
           </div>
         </div>
@@ -204,10 +224,10 @@ export default function FarmerConsultationDetailPage({
 
       {/* 2. Official Recommendation Card if completed */}
       {(consultation.recommendations || consultation.recommendation) && (
-        <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-emerald-50/20 p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-950 font-bold text-lg">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+        <div className="rounded-2xl sm:rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-emerald-50/20 p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-emerald-950 font-bold text-base sm:text-lg">
+              <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 shrink-0" />
               <span>Specialist Diagnostic Recommendation</span>
             </div>
             {consultation.recommendations?.createdAt && (
@@ -282,25 +302,35 @@ export default function FarmerConsultationDetailPage({
       )}
 
       {/* 3. Problem Description & Uploaded Images */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
         <div>
-          <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60 mb-2">
-            Submitted Issue
-          </span>
-          <h3 className="text-xl font-extrabold text-slate-900">
+          <div className="flex items-center justify-between mb-2">
+            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
+              Submitted Issue
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl transition"
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              <span>Edit Details</span>
+            </button>
+          </div>
+          <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 break-words">
             {consultation.problemTitle}
           </h3>
-          <div className="mt-3 text-sm leading-relaxed text-slate-700 whitespace-pre-line bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <div className="mt-3 text-xs sm:text-sm leading-relaxed text-slate-700 whitespace-pre-line bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-100 break-words">
             {consultation.problemDescription}
           </div>
         </div>
 
         {consultation.images && consultation.images.length > 0 && (
           <div>
-            <h4 className="text-sm font-bold text-slate-800 mb-3">
+            <h4 className="text-xs sm:text-sm font-bold text-slate-800 mb-3">
               Uploaded Crop Images ({consultation.images.length})
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
               {consultation.images.map((img, idx) => (
                 <button
                   key={idx}
@@ -346,6 +376,28 @@ export default function FarmerConsultationDetailPage({
           </div>
         </div>
       )}
+
+      {/* Edit Consultation Details Modal */}
+      <EditConsultationModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        consultation={consultation}
+        onSuccess={(updated) => {
+          setConsultation(updated);
+          loadData();
+        }}
+      />
+
+      {/* Reschedule Consultation Appointment Modal */}
+      <RescheduleConsultationModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        consultation={consultation}
+        onSuccess={(updated) => {
+          setConsultation(updated);
+          loadData();
+        }}
+      />
     </div>
   );
 }
