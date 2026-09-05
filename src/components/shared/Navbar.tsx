@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LayoutDashboard, LogOut, User } from "lucide-react";
 
@@ -60,8 +61,15 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Brand */}
-        <Link href="/" className="text-lg font-bold text-[#063B2B]">
-          AgriNova
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/AgriNova-Logo.png"
+            alt="AgriNova"
+            width={135}
+            height={45}
+            priority
+            className="h-9 w-auto object-contain"
+          />
         </Link>
 
         <div className="flex items-center gap-8">
