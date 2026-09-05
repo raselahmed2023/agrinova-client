@@ -1,4 +1,4 @@
-// support/SupportHero.tsx
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,7 +13,7 @@ export default function SupportHero({ onSubmitClick }: SupportHeroProps) {
         {/* Left Content Column */}
         <div className="flex flex-col items-start space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-            Sell Your Produce <br />
+            Sell Your Product <br />
             Through AgriNova
           </h1>
           <p className="text-base md:text-lg text-gray-600 max-w-lg leading-relaxed">
@@ -26,7 +26,7 @@ export default function SupportHero({ onSubmitClick }: SupportHeroProps) {
               onClick={onSubmitClick}
               className="bg-[#053225] hover:bg-[#032018] text-white font-medium px-6 py-3.5 rounded-md transition-colors duration-200 cursor-pointer"
             >
-              Submit Your Produce
+              Submit Your Product
             </button>
             <Link
               href="#how-it-works"

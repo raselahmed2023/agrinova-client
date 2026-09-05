@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Users,
   X,
+  Warehouse,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -45,6 +46,11 @@ const sidebarItems = [
     label: "Marketplace",
     href: "/dashboard/admin/marketplace",
     icon: ShoppingBag,
+  },
+  {
+    label: "Supply Chain",
+    href: "/dashboard/admin/supply-chain",
+    icon: Warehouse,
   },
   {
     label: "Consultations",
@@ -85,10 +91,9 @@ export default function AdminSidebar({
         lg:translate-x-0
         lg:shadow-none
 
-        ${
-          isOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
+        ${isOpen
+          ? "translate-x-0"
+          : "-translate-x-full"
         }
       `}
     >
@@ -124,19 +129,18 @@ export default function AdminSidebar({
             item.href === "/dashboard/admin"
               ? pathname === item.href
               : pathname.startsWith(
-                  item.href
-                );
+                item.href
+              );
 
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                isActive
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive
                   ? "bg-emerald-950 text-white shadow-sm"
                   : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-950"
-              }`}
+                }`}
             >
               <Icon className="h-5 w-5 shrink-0" />
 
