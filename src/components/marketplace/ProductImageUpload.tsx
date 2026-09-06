@@ -1,112 +1,299 @@
 "use client";
 
-import Image from "next/image";
-import { ChangeEvent } from "react";
 import {
-  ImagePlus,
-  Trash2,
-} from "lucide-react";
+  useState,
+} from "react";
+
+
 
 interface ProductImageUploadProps {
-  imageFile: File | null;
-  imagePreview: string;
-  disabled?: boolean;
-  onImageChange: (
-    event: ChangeEvent<HTMLInputElement>
-  ) => void;
-  onRemove: () => void;
+
+  images:string[];
+
+  setImages:
+  React.Dispatch<
+    React.SetStateAction<string[]>
+  >;
+
 }
 
+
+
 export default function ProductImageUpload({
-  imageFile,
-  imagePreview,
-  disabled,
-  onImageChange,
-  onRemove,
-}: ProductImageUploadProps) {
+
+  images,
+
+  setImages,
+
+}:ProductImageUploadProps){
+
+
+
+  const [uploading,setUploading] =
+    useState(false);
+
+
+
+
+
+  const handleUpload =
+    async(
+      e:React.ChangeEvent<HTMLInputElement>
+    )=>{
+
+
+      const files =
+        e.target.files;
+
+
+      if(!files)
+        return;
+
+
+
+      try{
+
+
+        setUploading(true);
+
+
+
+        /*
+          Future:
+          Cloudinary/S3 upload API here
+
+          Currently creating local preview
+        */
+
+
+
+        const previewUrls =
+          Array.from(files).map(
+
+            file=>
+
+            URL.createObjectURL(file)
+
+          );
+
+
+
+        setImages((prev)=>
+
+          [
+            ...prev,
+            ...previewUrls,
+          ]
+
+        );
+
+
+
+      }finally{
+
+
+        setUploading(false);
+
+
+      }
+
+
+    };
+
+
+
+
+
+
+
+  const removeImage =
+    (index:number)=>{
+
+
+      setImages((prev)=>
+
+        prev.filter(
+          (_,i)=>i!==index
+        )
+
+      );
+
+
+    };
+
+
+
+
+
+
+
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="font-bold text-slate-900">
-          Product Image
-        </h2>
 
-        <p className="mt-1 text-xs text-slate-500">
-          Add a clear photo of your product.
-        </p>
-      </div>
+    <div className="space-y-4">
 
-      <div className="p-5">
-        {!imagePreview ? (
-          <label className="flex h-64 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm">
-              <ImagePlus className="h-6 w-6 text-emerald-600" />
-            </div>
 
-            <p className="mt-4 text-sm font-bold text-slate-700">
-              Upload product image
-            </p>
+      <label
 
-            <p className="mt-1 text-xs leading-5 text-slate-400">
-              PNG, JPG or WEBP
-              <br />
-              Maximum 5MB
-            </p>
+        className="
+        text-sm
+        font-medium
+        "
 
-            <span className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
-              Choose Image
-            </span>
+      >
 
-            <input
-              type="file"
-              accept="image/*"
-              disabled={disabled}
-              onChange={onImageChange}
-              className="hidden"
-            />
-          </label>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="relative h-64 bg-slate-50">
-              <Image
-                src={imagePreview}
-                alt="Product preview"
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            </div>
+        Product Images
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-3">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-slate-700">
-                  {imageFile?.name}
-                </p>
+      </label>
 
-                {imageFile && (
-                  <p className="mt-0.5 text-[11px] text-slate-400">
-                    {(
-                      imageFile.size /
-                      1024 /
-                      1024
-                    ).toFixed(2)}{" "}
-                    MB
-                  </p>
-                )}
-              </div>
 
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={onRemove}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 transition hover:bg-red-100 disabled:opacity-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+
+
+
+      <input
+
+        type="file"
+
+        multiple
+
+        accept="image/*"
+
+        onChange={handleUpload}
+
+        className="
+        block
+        w-full
+        rounded-lg
+        border
+        p-2
+        "
+
+      />
+
+
+
+
+
+
+
+      {
+        uploading && (
+
+          <p className="text-sm text-gray-500">
+
+            Uploading...
+
+          </p>
+
+        )
+      }
+
+
+
+
+
+
+
+
+      {
+        images.length>0 && (
+
+          <div
+
+            className="
+            grid
+            grid-cols-2
+            md:grid-cols-4
+            gap-4
+            "
+
+          >
+
+            {
+              images.map(
+                (image,index)=>(
+
+
+                  <div
+
+                    key={index}
+
+                    className="
+                    relative
+                    h-32
+                    rounded-xl
+                    overflow-hidden
+                    bg-gray-100
+                    "
+
+                  >
+
+
+
+                    <img
+
+                      src={image}
+
+                      alt="product"
+
+                      className="
+                      h-full
+                      w-full
+                      object-cover
+                      "
+
+                    />
+
+
+
+
+                    <button
+
+                      type="button"
+
+                      onClick={()=>
+                        removeImage(index)
+                      }
+
+                      className="
+                      absolute
+                      top-2
+                      right-2
+                      rounded-full
+                      bg-red-500
+                      px-2
+                      text-white
+                      "
+
+                    >
+
+                      ×
+
+                    </button>
+
+
+
+
+                  </div>
+
+
+                )
+
+              )
+            }
+
+
           </div>
-        )}
-      </div>
-    </section>
+
+        )
+      }
+
+
+
+
+
+    </div>
+
   );
+
 }
