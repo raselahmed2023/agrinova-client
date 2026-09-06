@@ -165,7 +165,7 @@ export default function ExpertDashboardPage() {
                     Live Session Now
                   </span>
                   <span className="text-xs text-slate-500 font-medium">
-                    Consultation with {ongoingConsultations[0].farmer.name}
+                    Consultation with {ongoingConsultations[0].farmer?.name || ongoingConsultations[0].farmerName || "Farmer"}
                   </span>
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mt-0.5">
@@ -232,11 +232,11 @@ export default function ExpertDashboardPage() {
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-bold overflow-hidden border border-slate-200">
-                            {item.farmer.avatar ? (
+                            {item.farmer?.avatar ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={item.farmer.avatar}
-                                alt={item.farmer.name}
+                                alt={item.farmer?.name || item.farmerName || "Farmer"}
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -245,7 +245,7 @@ export default function ExpertDashboardPage() {
                           </div>
                           <div>
                             <p className="font-bold text-slate-900 group-hover:text-emerald-900 transition">
-                              {item.farmer.name}
+                              {item.farmer?.name || item.farmerName || "Farmer"}
                             </p>
                             <p className="text-[11px] text-slate-400">
                               {item.cropType}

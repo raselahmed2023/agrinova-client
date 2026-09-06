@@ -109,7 +109,7 @@ export default function RecommendationForm({
               Expert Diagnosis & Treatment Prescription
             </h3>
             <p className="text-xs text-slate-500">
-              Provide formal recommendations to {consultation.farmer.name} for {consultation.cropType}.
+              Provide formal recommendations to {consultation.farmer?.name || consultation.farmerName || "the farmer"} for {consultation.cropType}.
             </p>
           </div>
         </div>

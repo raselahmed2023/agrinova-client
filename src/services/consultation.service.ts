@@ -292,9 +292,9 @@ export const getConsultations = async (params?: {
     const s = params.search.toLowerCase();
     list = list.filter(
       (c) =>
-        c.farmer.name.toLowerCase().includes(s) ||
-        c.problemTitle.toLowerCase().includes(s) ||
-        c.cropType.toLowerCase().includes(s)
+        (c.farmer?.name || c.farmerName || "").toLowerCase().includes(s) ||
+        (c.problemTitle || "").toLowerCase().includes(s) ||
+        (c.cropType || "").toLowerCase().includes(s)
     );
   }
   if (params?.limit) {
@@ -855,9 +855,10 @@ export const updateConsultationDetails = async (
         farmName: payload.farmName || c.farmName,
         district: payload.district || c.district,
         farmer: {
-          ...c.farmer,
-          farmName: payload.farmName || c.farmer?.farmName,
-          district: payload.district || c.farmer?.district,
+          ...(c.farmer || {}),
+          name: c.farmer?.name || c.farmerName || "Farmer",
+          farmName: payload.farmName || c.farmer?.farmName || c.farmName,
+          district: payload.district || c.farmer?.district || c.district,
         },
         updatedAt: new Date().toISOString(),
       };

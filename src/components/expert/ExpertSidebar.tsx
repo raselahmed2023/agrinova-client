@@ -14,6 +14,7 @@ import {
   X,
   ArrowLeft,
   Stethoscope,
+  BookOpen,
 } from "lucide-react";
 
 interface ExpertSidebarProps {
@@ -36,6 +37,11 @@ const sidebarItems = [
     label: "My Consultations",
     href: "/dashboard/expert/consultations",
     icon: Video,
+  },
+  {
+    label: "Blog Articles",
+    href: "/dashboard/expert/blogs",
+    icon: BookOpen,
   },
   {
     label: "Profile",

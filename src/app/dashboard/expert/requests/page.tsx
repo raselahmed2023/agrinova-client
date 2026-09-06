@@ -262,16 +262,16 @@ export default function ConsultationRequestsPage() {
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={req.farmer.avatar}
-                                alt={req.farmer.name}
+                                alt={req.farmer?.name || req.farmerName || "Farmer"}
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              req.farmer?.name?.charAt(0) || "F"
+                              (req.farmer?.name || req.farmerName || "F").charAt(0)
                             )}
                           </div>
                           <div>
                             <p className="font-bold text-slate-900 group-hover:text-emerald-900">
-                              {req.farmer?.name}
+                              {req.farmer?.name || req.farmerName || "Farmer"}
                             </p>
                             {req.farmer?.phone && (
                               <p className="text-[11px] text-slate-400">

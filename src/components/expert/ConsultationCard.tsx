@@ -49,11 +49,11 @@ export default function ConsultationCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700 overflow-hidden border border-slate-200">
-              {consultation.farmer.avatar ? (
+              {consultation.farmer?.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={consultation.farmer.avatar}
-                  alt={consultation.farmer.name}
+                  alt={consultation.farmer?.name || consultation.farmerName || "Farmer"}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -63,7 +63,7 @@ export default function ConsultationCard({
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-base font-bold text-slate-900 leading-tight">
-                  {consultation.farmer.name}
+                  {consultation.farmer?.name || consultation.farmerName || "Farmer"}
                 </h4>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">

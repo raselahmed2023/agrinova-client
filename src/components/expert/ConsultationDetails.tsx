@@ -93,7 +93,7 @@ export default function ConsultationDetails({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={consultation.farmer.avatar}
-                  alt={consultation.farmer.name}
+                  alt={consultation.farmer?.name || consultation.farmerName || "Farmer"}
                   className="h-full w-full object-cover"
                 />
               ) : (
