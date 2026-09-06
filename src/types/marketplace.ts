@@ -1,7 +1,66 @@
+export type ProductCategory =
+  | "crops"
+  | "seeds"
+  | "fertilizers"
+  | "pesticides"
+  | "equipment"
+  | "poultry"
+  | "farm_foods"
+  | "by_products"
+  | "other";
+
+export type ProductionMethod =
+  | "conventional"
+  | "organic"
+  | "natural";
+
+export type TransactionType =
+  | "sale"
+  | "free";
+
 export type ProductStatus =
-  | "available"
-  | "out_of_stock"
-  | "unavailable";
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "SOLD";
+
+export interface IProduct{
+  _id:string;
+  title:string;
+  category:ProductCategory;
+  description:string;
+  price?:number;
+  unit?:string;
+  quantity:number;
+  location:{
+    division:string;
+    district:string;
+    upazila:string;
+  };
+  productionMethod:ProductionMethod;
+  transactionType:TransactionType;
+  images?:string[];
+  status:ProductStatus;
+  createdAt?:string;
+  updatedAt?:string;
+}
+
+export interface ICreateProduct{
+  title:string;
+  category:ProductCategory;
+  description:string;
+  price?:number;
+  unit?:string;
+  quantity:number;
+  location:{
+    division:string;
+    district:string;
+    upazila:string;
+  };
+  productionMethod:ProductionMethod;
+  transactionType:TransactionType;
+  images?:string[];
+}
 
 export type PurchaseRequestStatus =
   | "PENDING"
@@ -11,107 +70,35 @@ export type PurchaseRequestStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-export interface MarketplaceProduct {
-  _id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  quantity: number;
-  unit: string;
-
-  images?: string[];
-
-  sellerName?: string;
-  sellerEmail?: string;
-  sellerContact?: string;
-
-  location?: string;
-
-  status?: ProductStatus;
-  isFeatured?: boolean;
-
-  createdAt?: string;
-  updatedAt?: string;
+export interface IPurchaseRequest{
+  _id:string;
+  productId:string;
+  productTitle?:string;
+  productPrice?:number;
+  unit?:string;
+  quantity:number;
+  buyerName?:string;
+  buyerEmail?:string;
+  sellerName?:string;
+  sellerEmail?:string;
+  deliveryLocation?:string;
+  note?:string;
+  message?:string;
+  status:PurchaseRequestStatus;
+  createdAt?:string;
+  updatedAt?:string;
 }
 
-export interface MarketplaceMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+export type PurchaseRequest=IPurchaseRequest;
 
-export interface ProductsResponse {
-  success: boolean;
-  message: string;
-  meta?: MarketplaceMeta;
-  data: MarketplaceProduct[];
-}
-
-export interface ProductResponse {
-  success: boolean;
-  message: string;
-  data: MarketplaceProduct;
-}
-
-export interface CreateProductPayload {
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  quantity: number;
-  unit: string;
-
-  images?: string[];
-
-  sellerName?: string;
-  sellerEmail?: string;
-  sellerContact?: string;
-
-  location: string;
-
-  status?: ProductStatus;
-  isFeatured?: boolean;
-}
-
-export interface PurchaseRequest {
-  _id: string;
-
-  productId:
-    | string
-    | MarketplaceProduct;
-
-  productTitle: string;
-  productPrice: number;
-
-  buyerId?: string;
-  buyerName?: string;
-  buyerEmail: string;
-
-  sellerName?: string;
-  sellerEmail: string;
-
-  quantity: number;
-  unit: string;
-
-  deliveryLocation: string;
-  note?: string;
-
-  status: PurchaseRequestStatus;
-
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface PurchaseRequestResponse {
-  success: boolean;
-  message: string;
-  data: PurchaseRequest;
-}
-
-export interface PurchaseRequestsResponse {
-  success: boolean;
-  message: string;
-  data: PurchaseRequest[];
-}
+export const PRODUCT_CATEGORIES=[
+  {value:"crops",label:"Crops"},
+  {value:"seeds",label:"Seeds"},
+  {value:"fertilizers",label:"Fertilizers"},
+  {value:"pesticides",label:"Pesticides"},
+  {value:"equipment",label:"Equipment"},
+  {value:"poultry",label:"Poultry"},
+  {value:"farm_foods",label:"Farm Food"},
+  {value:"by_products",label:"By Products"},
+  {value:"other",label:"Other"},
+] as const;

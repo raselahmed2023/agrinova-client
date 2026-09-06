@@ -1,315 +1,157 @@
 "use client";
 
-import {
-  Loader2,
-  X,
-} from "lucide-react";
-import { useState } from "react";
+import {useState} from "react";
+import {MarketplaceService} from "@/services/marketplace.service";
 
-import { authClient } from "@/lib/auth-client";
-import { createPurchaseRequest } from "@/services/marketplace.service";
-
-import type { MarketplaceProduct } from "@/types/marketplace";
-
-interface PurchaseRequestModalProps {
-  product: MarketplaceProduct;
-  open: boolean;
-  onClose: () => void;
+interface PurchaseRequestModalProps{
+  productId:string;
+  onClose:()=>void;
 }
 
 export default function PurchaseRequestModal({
-  product,
-  open,
+  productId,
   onClose,
-}: PurchaseRequestModalProps) {
-  const {
-    data: session,
-    isPending: sessionLoading,
-  } = authClient.useSession();
+}:PurchaseRequestModalProps){
 
-  const [quantity, setQuantity] =
-    useState(1);
+  const [quantity,setQuantity]=useState(1);
+  const [message,setMessage]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const [success,setSuccess]=useState("");
 
-  const [
-    deliveryLocation,
-    setDeliveryLocation,
-  ] = useState("");
 
-  const [note, setNote] =
-    useState("");
+  const handleSubmit=async()=>{
 
-  const [loading, setLoading] =
-    useState(false);
+    if(quantity<=0){
+      setError("Quantity must be greater than zero");
+      return;
+    }
 
-  const [error, setError] =
-    useState("");
 
-  const [success, setSuccess] =
-    useState("");
+    try{
 
-  if (!open) return null;
-
-  const handleSubmit = async () => {
-    try {
       setLoading(true);
       setError("");
-      setSuccess("");
 
-      if (!session?.user) {
-        throw new Error(
-          "Please login to send a purchase request."
-        );
-      }
-
-      if (quantity < 1) {
-        throw new Error(
-          "Quantity must be at least 1."
-        );
-      }
-
-      if (quantity > product.quantity) {
-        throw new Error(
-          `Only ${product.quantity} ${product.unit} available.`
-        );
-      }
-
-      if (!deliveryLocation.trim()) {
-        throw new Error(
-          "Delivery location is required."
-        );
-      }
-
-      await createPurchaseRequest({
-        productId: product._id,
+      await MarketplaceService.createPurchaseRequest({
+        productId,
         quantity,
-        deliveryLocation:
-          deliveryLocation.trim(),
-        note:
-          note.trim() ||
-          undefined,
+        note:message,
       });
 
+
       setSuccess(
-        "Purchase request sent successfully."
+        "Purchase request submitted successfully"
       );
 
-      setTimeout(() => {
-        setQuantity(1);
-        setDeliveryLocation("");
-        setNote("");
-        setSuccess("");
+
+      setTimeout(()=>{
         onClose();
-      }, 900);
-    } catch (err) {
+      },1500);
+
+
+    }catch(err:any){
+
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to send request."
+        err.message||"Failed to submit request"
       );
-    } finally {
+
+    }finally{
+
       setLoading(false);
+
     }
+
   };
 
-  const isSubmitting =
-    loading || sessionLoading;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between border-b border-slate-100 p-6">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Send Purchase Request
-            </h2>
+  return(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
 
-            <p className="mt-1 text-sm text-slate-500">
-              {product.title}
-            </p>
-          </div>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+
+        <div className="flex justify-between items-center">
+
+          <h2 className="text-xl font-bold">
+            Request Product
+          </h2>
 
           <button
-            type="button"
-            disabled={isSubmitting}
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 disabled:opacity-50"
+            className="text-gray-500 hover:text-black"
           >
-            <X className="h-5 w-5" />
+            ✕
           </button>
+
         </div>
 
-        <div className="space-y-5 p-6">
-          {session?.user && (
-            <div className="rounded-xl bg-emerald-50 px-4 py-3">
-              <p className="text-xs text-emerald-700">
-                Requesting as
-              </p>
 
-              <p className="mt-1 text-sm font-bold text-slate-800">
-                {session.user.name || "Farmer"}
-              </p>
-
-              <p className="text-xs text-slate-500">
-                {session.user.email}
-              </p>
-            </div>
-          )}
+        <div className="mt-6 space-y-4">
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
+
+            <label className="text-sm font-medium text-gray-700">
               Quantity
             </label>
 
-            <div className="flex overflow-hidden rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() =>
-                  setQuantity((value) =>
-                    Math.max(1, value - 1)
-                  )
-                }
-                className="h-12 w-12 bg-slate-50 text-xl font-semibold text-slate-600"
-              >
-                −
-              </button>
-
-              <input
-                type="number"
-                min={1}
-                max={product.quantity}
-                value={quantity}
-                onChange={(event) =>
-                  setQuantity(
-                    Math.max(
-                      1,
-                      Number(
-                        event.target.value
-                      ) || 1
-                    )
-                  )
-                }
-                className="h-12 min-w-0 flex-1 border-x border-slate-200 text-center font-semibold outline-none"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setQuantity((value) =>
-                    Math.min(
-                      product.quantity,
-                      value + 1
-                    )
-                  )
-                }
-                className="h-12 w-12 bg-slate-50 text-xl font-semibold text-slate-600"
-              >
-                +
-              </button>
-            </div>
-
-            <p className="mt-2 text-xs text-slate-400">
-              Maximum available:{" "}
-              {product.quantity}{" "}
-              {product.unit}
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Delivery Location
-            </label>
-
             <input
-              value={deliveryLocation}
-              onChange={(event) =>
-                setDeliveryLocation(
-                  event.target.value
-                )
-              }
-              placeholder="e.g. Kushtia, Bangladesh"
-              className="h-12 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50"
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={e=>setQuantity(Number(e.target.value))}
+              className="mt-2 w-full rounded-lg border px-3 py-2 outline-none focus:border-[#0B513D]"
             />
+
           </div>
 
+
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Note{" "}
-              <span className="font-normal text-slate-400">
-                (optional)
-              </span>
+
+            <label className="text-sm font-medium text-gray-700">
+              Message (optional)
             </label>
 
             <textarea
+              value={message}
+              onChange={e=>setMessage(e.target.value)}
               rows={4}
-              value={note}
-              onChange={(event) =>
-                setNote(event.target.value)
-              }
-              placeholder="Additional information for the seller..."
-              className="w-full resize-none rounded-xl border border-slate-200 p-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50"
+              placeholder="Write a message to farmer..."
+              className="mt-2 w-full rounded-lg border px-3 py-2 resize-none outline-none focus:border-[#0B513D]"
             />
+
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">
-                Price
-              </span>
 
-              <span className="font-medium text-slate-700">
-                ৳
-                {product.price.toLocaleString()}{" "}
-                × {quantity}
-              </span>
-            </div>
+          {
+            error && (
+              <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </p>
+            )
+          }
 
-            <div className="mt-3 flex justify-between border-t border-slate-200 pt-3">
-              <span className="font-semibold text-slate-700">
-                Estimated Total
-              </span>
 
-              <span className="text-lg font-bold text-emerald-600">
-                ৳
-                {(
-                  product.price *
-                  quantity
-                ).toLocaleString()}
-              </span>
-            </div>
-          </div>
+          {
+            success && (
+              <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                {success}
+              </p>
+            )
+          }
 
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-              {success}
-            </div>
-          )}
 
           <button
-            type="button"
-            disabled={
-              isSubmitting ||
-              !session?.user
-            }
+            disabled={loading}
             onClick={handleSubmit}
-            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="w-full rounded-xl bg-[#0B513D] py-3 font-semibold text-white disabled:opacity-50"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              "Send Request"
-            )}
+            {loading?"Submitting...":"Submit Request"}
           </button>
+
         </div>
+
       </div>
+
     </div>
   );
 }
