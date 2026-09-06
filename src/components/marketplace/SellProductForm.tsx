@@ -17,6 +17,7 @@ const transactionOptions=[
   {value:"free",label:"Give Free"},
 ];
 
+
 export default function SellProductForm(){
 
   const router=useRouter();
@@ -25,41 +26,63 @@ export default function SellProductForm(){
   const [error,setError]=useState("");
 
   const [form,setForm]=useState<ICreateProduct>({
-    productName:"",
+    title:"",
     category:"crops",
     description:"",
     price:0,
     unit:"kg",
     quantity:0,
-    division:"",
-    district:"",
-    upazila:"",
+    location:{
+      division:"",
+      district:"",
+      upazila:"",
+    },
     productionMethod:"conventional",
     transactionType:"sale",
     images:[],
   });
 
+
   const updateField=(key:keyof ICreateProduct,value:any)=>{
-    setForm(prev=>({...prev,[key]:value}));
+    setForm(prev=>({
+      ...prev,
+      [key]:value,
+    }));
+  };
+
+
+  const updateLocation=(key:"division"|"district"|"upazila",value:string)=>{
+
+    setForm(prev=>({
+      ...prev,
+      location:{
+        ...prev.location,
+        [key]:value,
+      },
+    }));
+
   };
 
 
   const handleSubmit=async(e:React.FormEvent)=>{
+
     e.preventDefault();
 
     if(
-      !form.productName ||
+      !form.title ||
       !form.description ||
       !form.quantity ||
-      !form.division ||
-      !form.district ||
-      !form.upazila
+      !form.location.division ||
+      !form.location.district ||
+      !form.location.upazila
     ){
       setError("Please fill all required fields");
       return;
     }
 
+
     try{
+
       setLoading(true);
       setError("");
 
@@ -72,17 +95,30 @@ export default function SellProductForm(){
         quantity:Number(form.quantity),
       });
 
-      router.push("/dashboard/farmer/marketplace");
+
+      router.push(
+        "/dashboard/farmer/marketplace"
+      );
+
 
     }catch(err:any){
-      setError(err.message || "Failed to create product");
+
+      setError(
+        err.message ||
+        "Failed to create product"
+      );
+
     }finally{
+
       setLoading(false);
+
     }
+
   };
 
 
   return(
+
     <form
       onSubmit={handleSubmit}
       className="max-w-3xl mx-auto rounded-2xl bg-white border p-6 space-y-5"
@@ -92,17 +128,22 @@ export default function SellProductForm(){
         Add Product
       </h2>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
+
+      {
+        error && (
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )
+      }
+
 
       <Input
         label="Product Name"
-        value={form.productName}
-        onChange={v=>updateField("productName",v)}
+        value={form.title}
+        onChange={v=>updateField("title",v)}
       />
+
 
       <Select
         label="Category"
@@ -114,6 +155,7 @@ export default function SellProductForm(){
         onChange={v=>updateField("category",v)}
       />
 
+
       <Input
         label="Quantity"
         type="number"
@@ -121,11 +163,13 @@ export default function SellProductForm(){
         onChange={v=>updateField("quantity",Number(v))}
       />
 
+
       <Input
         label="Unit"
         value={form.unit || ""}
         onChange={v=>updateField("unit",v)}
       />
+
 
       <Input
         label="Price"
@@ -133,10 +177,11 @@ export default function SellProductForm(){
         value={
           form.transactionType==="free"
           ?"0"
-          :String(form.price)
+          :String(form.price || 0)
         }
         onChange={v=>updateField("price",Number(v))}
       />
+
 
       <Select
         label="Production Method"
@@ -145,6 +190,7 @@ export default function SellProductForm(){
         onChange={v=>updateField("productionMethod",v)}
       />
 
+
       <Select
         label="Transaction Type"
         value={form.transactionType}
@@ -152,25 +198,30 @@ export default function SellProductForm(){
         onChange={v=>updateField("transactionType",v)}
       />
 
+
       <Input
         label="Division"
-        value={form.division}
-        onChange={v=>updateField("division",v)}
+        value={form.location.division}
+        onChange={v=>updateLocation("division",v)}
       />
+
 
       <Input
         label="District"
-        value={form.district}
-        onChange={v=>updateField("district",v)}
+        value={form.location.district}
+        onChange={v=>updateLocation("district",v)}
       />
+
 
       <Input
         label="Upazila"
-        value={form.upazila}
-        onChange={v=>updateField("upazila",v)}
+        value={form.location.upazila}
+        onChange={v=>updateLocation("upazila",v)}
       />
 
+
       <div>
+
         <label className="text-sm font-medium">
           Description
         </label>
@@ -181,23 +232,33 @@ export default function SellProductForm(){
           rows={5}
           className="input"
         />
+
       </div>
+
 
       <ProductImageUpload
         images={form.images || []}
         setImages={images=>updateField("images",images)}
       />
 
+
       <button
         disabled={loading}
         className="w-full rounded-xl bg-[#0B513D] py-3 text-white font-semibold disabled:opacity-50"
       >
-        {loading?"Submitting...":"Submit Product"}
+        {
+          loading
+          ?"Submitting..."
+          :"Submit Product"
+        }
       </button>
 
     </form>
+
   );
+
 }
+
 
 
 function Input({
@@ -211,20 +272,28 @@ function Input({
   onChange:(v:string)=>void;
   type?:string;
 }){
+
   return(
+
     <div>
+
       <label className="text-sm font-medium">
         {label}
       </label>
+
       <input
         type={type}
         value={value}
         onChange={e=>onChange(e.target.value)}
         className="input"
       />
+
     </div>
+
   );
+
 }
+
 
 
 function Select({
@@ -240,7 +309,9 @@ function Select({
 }){
 
   return(
+
     <div>
+
       <label className="text-sm font-medium">
         {label}
       </label>
@@ -250,15 +321,22 @@ function Select({
         onChange={e=>onChange(e.target.value)}
         className="input"
       >
-        {options.map(item=>(
-          <option
-            key={item.value}
-            value={item.value}
-          >
-            {item.label}
-          </option>
-        ))}
+
+        {
+          options.map(item=>(
+            <option
+              key={item.value}
+              value={item.value}
+            >
+              {item.label}
+            </option>
+          ))
+        }
+
       </select>
+
     </div>
+
   );
+
 }

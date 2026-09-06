@@ -24,9 +24,9 @@ export type ProductStatus =
   | "REJECTED"
   | "SOLD";
 
-export interface IProduct {
+export interface IProduct{
   _id:string;
-  productName:string;
+  title:string;
   category:ProductCategory;
   description:string;
   price?:number;
@@ -45,16 +45,18 @@ export interface IProduct {
   updatedAt?:string;
 }
 
-export interface ICreateProduct {
-  productName:string;
+export interface ICreateProduct{
+  title:string;
   category:ProductCategory;
   description:string;
   price?:number;
   unit?:string;
   quantity:number;
-  division:string;
-  district:string;
-  upazila:string;
+  location:{
+    division:string;
+    district:string;
+    upazila:string;
+  };
   productionMethod:ProductionMethod;
   transactionType:TransactionType;
   images?:string[];
@@ -68,53 +70,35 @@ export type PurchaseRequestStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-export interface IPurchaseRequest {
+export interface IPurchaseRequest{
   _id:string;
   productId:string;
+  productTitle?:string;
+  productPrice?:number;
+  unit?:string;
   quantity:number;
+  buyerName?:string;
+  buyerEmail?:string;
+  sellerName?:string;
+  sellerEmail?:string;
+  deliveryLocation?:string;
+  note?:string;
   message?:string;
   status:PurchaseRequestStatus;
   createdAt?:string;
   updatedAt?:string;
 }
 
-export type PurchaseRequest = IPurchaseRequest;
+export type PurchaseRequest=IPurchaseRequest;
 
-export const PRODUCT_CATEGORIES = [
-  {
-    value:"crops",
-    label:"Crops",
-  },
-  {
-    value:"seeds",
-    label:"Seeds",
-  },
-  {
-    value:"fertilizers",
-    label:"Fertilizers",
-  },
-  {
-    value:"pesticides",
-    label:"Pesticides",
-  },
-  {
-    value:"equipment",
-    label:"Equipment",
-  },
-  {
-    value:"poultry",
-    label:"Poultry",
-  },
-  {
-    value:"farm_foods",
-    label:"Farm Food",
-  },
-  {
-    value:"by_products",
-    label:"By Products",
-  },
-  {
-    value:"other",
-    label:"Other",
-  },
+export const PRODUCT_CATEGORIES=[
+  {value:"crops",label:"Crops"},
+  {value:"seeds",label:"Seeds"},
+  {value:"fertilizers",label:"Fertilizers"},
+  {value:"pesticides",label:"Pesticides"},
+  {value:"equipment",label:"Equipment"},
+  {value:"poultry",label:"Poultry"},
+  {value:"farm_foods",label:"Farm Food"},
+  {value:"by_products",label:"By Products"},
+  {value:"other",label:"Other"},
 ] as const;

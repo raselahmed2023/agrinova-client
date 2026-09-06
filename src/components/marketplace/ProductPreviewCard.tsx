@@ -1,237 +1,85 @@
 "use client";
 
-import Image from "next/image";
+import { ICreateProduct } from "@/types/marketplace";
 
-import {
-  ICreateProduct,
-} from "@/types/marketplace";
-
-
-interface Props{
+interface ProductPreviewCardProps{
   product:ICreateProduct;
 }
 
-
-
 export default function ProductPreviewCard({
   product,
-}:Props){
+}:ProductPreviewCardProps){
+
+  const price=
+    product.transactionType==="free"
+    ?"Free"
+    :`৳${product.price || 0}/${product.unit || "unit"}`;
 
 
   return(
+    <div className="rounded-2xl border bg-white p-5">
 
-    <div
-      className="
-      rounded-2xl
-      bg-white
-      border
-      overflow-hidden
-      "
-    >
+      <h3 className="text-xl font-bold text-gray-900">
+        {product.title || "Product Name"}
+      </h3>
 
 
-      <div
-        className="
-        relative
-        h-52
-        bg-gray-100
-        "
-      >
-
-        {
-          product.images &&
-          product.images.length>0
-          ?
-
-          <Image
-            src={product.images[0]}
-            alt={product.productName}
-            fill
-            className="object-cover"
-          />
-
-          :
-
-          <div
-            className="
-            h-full
-            flex
-            items-center
-            justify-center
-            text-gray-400
-            "
-          >
-            No Image
-          </div>
-        }
+      <p className="mt-2 text-sm text-gray-600">
+        {product.description}
+      </p>
 
 
-        {
-          product.productionMethod==="organic" && (
+      <div className="mt-4 space-y-2 text-sm">
 
-            <span
-              className="
-              absolute
-              top-3
-              left-3
-              rounded-full
-              bg-green-100
-              px-3
-              py-1
-              text-xs
-              font-semibold
-              text-green-700
-              "
-            >
-              Organic
-            </span>
-
-          )
-        }
-
-      </div>
-
-
-
-
-
-      <div
-        className="
-        p-5
-        "
-      >
-
-        <div
-          className="
-          flex
-          justify-between
-          gap-3
-          "
-        >
-
-          <h3
-            className="
-            font-bold
-            text-lg
-            "
-          >
-            {product.productName}
-          </h3>
-
-
-          <span
-            className="
-            rounded-full
-            bg-gray-100
-            px-2
-            py-1
-            text-xs
-            "
-          >
-            {product.category}
+        <div className="flex justify-between">
+          <span className="text-gray-500">
+            Category
           </span>
 
-
+          <span className="font-medium">
+            {product.category}
+          </span>
         </div>
 
 
+        <div className="flex justify-between">
+          <span className="text-gray-500">
+            Quantity
+          </span>
+
+          <span className="font-medium">
+            {product.quantity} {product.unit || ""}
+          </span>
+        </div>
 
 
+        <div className="flex justify-between">
+          <span className="text-gray-500">
+            Price
+          </span>
 
-        <p
-          className="
-          mt-3
-          text-sm
-          text-gray-600
-          line-clamp-2
-          "
-        >
-          {product.description}
-        </p>
+          <span className="font-bold text-[#0B513D]">
+            {price}
+          </span>
+        </div>
 
 
+        <div className="flex justify-between">
+          <span className="text-gray-500">
+            Location
+          </span>
 
-
-
-        <div
-          className="
-          mt-4
-          space-y-2
-          text-sm
-          "
-        >
-
-          <Info
-            label="Quantity"
-            value={`${product.quantity} ${product.unit || ""}`}
-          />
-
-
-          <Info
-            label="Location"
-            value={`${product.district}, ${product.division}`}
-          />
-
-
-          <Info
-            label="Price"
-            value={
-              product.transactionType==="free"
-              ?
-              "Free"
-              :
-              `৳${product.price || 0}/${product.unit || "unit"}`
-            }
-          />
-
+          <span className="font-medium">
+            {product.location?.district || ""}
+            {product.location?.division
+              ? `, ${product.location.division}`
+              : ""}
+          </span>
         </div>
 
 
       </div>
 
-
     </div>
-
   );
-
-}
-
-
-
-
-
-function Info({
-  label,
-  value,
-}:{
-  label:string;
-  value:string;
-}){
-
-  return(
-
-    <div
-      className="
-      flex
-      justify-between
-      "
-    >
-
-      <span
-        className="text-gray-500"
-      >
-        {label}
-      </span>
-
-
-      <span
-        className="font-medium"
-      >
-        {value}
-      </span>
-
-    </div>
-
-  );
-
 }
