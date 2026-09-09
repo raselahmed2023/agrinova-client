@@ -290,18 +290,6 @@ export default function FarmerSidebar({
         </nav>
 
         <div className="border-t border-slate-200 bg-white p-3">
-          <div className="mb-3 rounded-xl bg-[#F5F8F6] p-3">
-            <p className="text-xs font-semibold text-[#0B513D]">
-              Grow Smarter
-            </p>
-
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">
-              Use AgriNova tools to
-              manage your farm and
-              make better decisions.
-            </p>
-          </div>
-
           <div className="rounded-xl bg-slate-50 p-3">
             {isPending ? (
               <div className="flex animate-pulse items-center gap-3">
