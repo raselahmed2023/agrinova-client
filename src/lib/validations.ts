@@ -32,6 +32,7 @@ const expertRegisterObject = baseRegisterSchema.extend({
   specialization: z.string().min(2, "Specialization is required"),
   experienceYears: z.coerce.number().min(1, "Experience must be at least 1 year"),
   qualification: z.string().min(2, "Qualification details are required"),
+  avatar: z.string().optional(),
 });
 
 // 5. Expert Register Schema

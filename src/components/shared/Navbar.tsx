@@ -4,7 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, LogOut, User } from "lucide-react";
+import {
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  User,
+  Menu,
+  X,
+} from "lucide-react";
 
 import { signOut, useSession } from "@/lib/auth-client";
 
@@ -20,6 +27,7 @@ export default function Navbar() {
   const { data: session, isPending } = useSession();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const user = session?.user;
 
@@ -27,6 +35,7 @@ export default function Navbar() {
     await signOut();
 
     setIsProfileOpen(false);
+    setIsMobileMenuOpen(false);
 
     router.push("/");
     router.refresh();
@@ -59,7 +68,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <Link href="/" className="flex items-center">
           <Image
@@ -68,34 +77,34 @@ export default function Navbar() {
             width={135}
             height={45}
             priority
-            className="h-9 w-auto object-contain"
+            className="h-8 w-auto sm:h-9 object-contain"
           />
         </Link>
 
-        <div className="flex items-center gap-8">
-          {/* Navigation */}
-          <div className="hidden items-center gap-8 md:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-gray-800 transition-colors hover:text-[#063B2B]"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+        {/* Desktop Links */}
+        <div className="hidden items-center gap-8 md:flex">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm font-medium text-gray-800 transition-colors hover:text-[#063B2B]"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
 
-          {/* Session loading */}
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {isPending ? (
-            <div className="h-10 w-28 animate-pulse rounded-lg bg-gray-100" />
+            <div className="h-9 w-24 animate-pulse rounded-lg bg-gray-100" />
           ) : user ? (
             /* Logged In */
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsProfileOpen((prev) => !prev)}
-                className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
+                className="flex items-center gap-2 sm:gap-3 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
               >
                 {/* Avatar */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
@@ -183,21 +192,72 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="rounded-lg bg-[#063B2B] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0B513D]"
+                className="rounded-lg bg-[#063B2B] px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#0B513D]"
               >
                 Login
               </Link>
 
               <Link
-                href="/register?role=expert"
-                className="hidden rounded-lg bg-[#D8E9DA] px-5 py-2.5 text-sm font-semibold text-[#315B45] transition hover:bg-[#C9DFC9] sm:inline-flex"
+                href="/register/expert"
+                className="hidden rounded-lg bg-[#D8E9DA] px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-[#315B45] transition hover:bg-[#C9DFC9] sm:inline-flex"
               >
                 Join as Expert
               </Link>
             </div>
           )}
+
+          {/* Mobile Hamburger Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900 md:hidden transition"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Navigation Drawer */}
+      {isMobileMenuOpen && (
+        <div className="border-t border-gray-100 bg-white px-4 py-4 md:hidden shadow-lg animate-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col space-y-2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-800 transition hover:bg-gray-50 hover:text-[#063B2B]"
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {!user && (
+              <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                <Link
+                  href="/register/expert"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full text-center rounded-lg bg-[#D8E9DA] px-4 py-2.5 text-sm font-semibold text-[#315B45] transition hover:bg-[#C9DFC9]"
+                >
+                  Join as Expert
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full text-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  Create Farmer Account
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

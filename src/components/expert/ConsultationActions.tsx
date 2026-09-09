@@ -76,20 +76,34 @@ export default function ConsultationActions({
         </>
       )}
 
-      {/* 2. ACCEPTED State: Schedule Consultation */}
+      {/* 2. ACCEPTED State: Schedule Consultation & Write Prescription */}
       {consultation.status === "ACCEPTED" && (
-        <button
-          type="button"
-          disabled={isProcessing}
-          onClick={onOpenSchedule}
-          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
-        >
-          <Calendar className="h-4 w-4" />
-          Schedule Consultation
-        </button>
+        <>
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onOpenSchedule}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50"
+          >
+            <Calendar className="h-4 w-4" />
+            Schedule Consultation
+          </button>
+
+          {onOpenRecommendation && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={onOpenRecommendation}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+              Write Prescription
+            </button>
+          )}
+        </>
       )}
 
-      {/* 3. SCHEDULED State: Reschedule & Start Video Call */}
+      {/* 3. SCHEDULED State: Reschedule, Start Video Call, & Write Prescription */}
       {consultation.status === "SCHEDULED" && (
         <>
           <button
@@ -111,6 +125,18 @@ export default function ConsultationActions({
             <Video className="h-4 w-4" />
             Start Video Call
           </button>
+
+          {onOpenRecommendation && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={onOpenRecommendation}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+              Write Prescription
+            </button>
+          )}
         </>
       )}
 
@@ -165,12 +191,25 @@ export default function ConsultationActions({
           </button>
         )}
 
-      {/* 5. COMPLETED State: View Only */}
+      {/* 5. COMPLETED State: View & Edit */}
       {consultation.status === "COMPLETED" && (
-        <span className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          Completed (Recommendation View-Only)
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            Completed
+          </span>
+          {onOpenRecommendation && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={onOpenRecommendation}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+              Update Prescription
+            </button>
+          )}
+        </div>
       )}
 
       {/* DELETE MODAL */}

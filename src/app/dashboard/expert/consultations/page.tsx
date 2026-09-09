@@ -31,7 +31,9 @@ import type {
 
 function ExpertConsultationsContent() {
   const searchParams = useSearchParams();
-  const initialStatus = (searchParams.get("status") as ConsultationStatus) || "ALL";
+  const rawStatus = (searchParams.get("status") as ConsultationStatus) || "ALL";
+  const initialStatus =
+    rawStatus === "ACCEPTED" || rawStatus === "PENDING" ? "ALL" : rawStatus;
 
   const [activeTab, setActiveTab] = useState<string>(initialStatus);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -52,7 +54,14 @@ function ExpertConsultationsContent() {
         status: (activeTab as ConsultationStatus | "ALL"),
         search: search.trim() || undefined,
       });
-      setConsultations(data);
+      // Filter out consultation requests (PENDING) and ACCEPTED from the expert consultations view
+      const filtered =
+        activeTab === "ALL"
+          ? data.filter(
+              (c) => c.status !== "PENDING" && c.status !== "ACCEPTED"
+            )
+          : data;
+      setConsultations(filtered);
     } catch (err) {
       console.error("Failed to load consultations:", err);
     } finally {
@@ -91,7 +100,6 @@ function ExpertConsultationsContent() {
     { key: "ALL", label: "All Consultations" },
     { key: "SCHEDULED", label: "Scheduled" },
     { key: "ONGOING", label: "Ongoing / Live" },
-    { key: "ACCEPTED", label: "Accepted" },
     { key: "COMPLETED", label: "Completed" },
   ];
 

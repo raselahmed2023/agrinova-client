@@ -34,7 +34,7 @@ const marketplaceLinks = [
 const advisoryLinks = [
   { label: "Expert Consultation", href: "/consultant" },
   { label: "My Consultations", href: "/dashboard/farmer/consultation" },
-  { label: "Join as Verified Expert", href: "/register?role=expert", badge: "Hiring" },
+  { label: "Join as Verified Expert", href: "/register/expert", badge: "Hiring" },
   { label: "Farming Guides & Blog", href: "/blog" },
   { label: "Contact & Support", href: "/contact" },
 ];
