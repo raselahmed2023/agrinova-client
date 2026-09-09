@@ -79,7 +79,8 @@ export function VideoCallModal({
                 </span>
               </h4>
               <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                Crop: {consultation.cropType} · {consultation.problemTitle}
+                {consultation.cropType ? `Crop: ${consultation.cropType}` : "Crop Advisory"}
+                {consultation.problemTitle ? ` · ${consultation.problemTitle}` : ""}
               </p>
             </div>
           </div>
