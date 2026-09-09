@@ -297,6 +297,15 @@ export default function FarmerConsultationDetailPage({
                 </span>
               </div>
             )}
+
+            {consultation.recommendations?.additionalNotes && (
+              <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-xs text-amber-950 space-y-1">
+                <span className="font-bold uppercase tracking-wider text-[10px] text-amber-800 block">
+                  Safety Precautions & Specialist Advisory
+                </span>
+                <p className="leading-relaxed">{consultation.recommendations.additionalNotes}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

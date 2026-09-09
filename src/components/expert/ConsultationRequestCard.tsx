@@ -55,7 +55,7 @@ export default function ConsultationRequestCard({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={request.farmer.avatar}
-                  alt={request.farmer.name}
+                  alt={request.farmer?.name || request.farmerName || "Farmer"}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -64,7 +64,7 @@ export default function ConsultationRequestCard({
             </div>
             <div>
               <h4 className="text-base font-bold text-slate-900 leading-tight">
-                {request.farmer?.name}
+                {request.farmer?.name || request.farmerName || "Farmer"}
               </h4>
               <p className="flex items-center gap-1 text-xs text-slate-500 mt-0.5 font-medium">
                 <Building2 className="h-3 w-3 text-slate-400 shrink-0" />

@@ -1,12 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
+import { getExpertProfile } from "@/services/expert.service";
 import {
   CalendarCheck,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
   UserCircle,
@@ -14,6 +15,7 @@ import {
   X,
   ArrowLeft,
   Stethoscope,
+  BookOpen,
 } from "lucide-react";
 
 interface ExpertSidebarProps {
@@ -28,14 +30,14 @@ const sidebarItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Consultation Requests",
-    href: "/dashboard/expert/requests",
-    icon: ClipboardList,
-  },
-  {
     label: "My Consultations",
     href: "/dashboard/expert/consultations",
     icon: Video,
+  },
+  {
+    label: "Blog Articles",
+    href: "/dashboard/expert/blogs",
+    icon: BookOpen,
   },
   {
     label: "Profile",
@@ -58,6 +60,45 @@ export default function ExpertSidebar({
   const { data: session, isPending } = useSession();
   const user = session?.user;
 
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAvatar = async () => {
+      try {
+        const p = await getExpertProfile();
+        if (isMounted) {
+          const avatarUrl = p?.avatar || p?.image || (user as any)?.image || (user as any)?.avatar || null;
+          if (avatarUrl) {
+            setProfileImage(avatarUrl);
+            setImgError(false);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    loadAvatar();
+
+    const handleProfileUpdate = (e: any) => {
+      if (e?.detail?.avatar !== undefined) {
+        setProfileImage(e.detail.avatar || null);
+        setImgError(false);
+      } else {
+        loadAvatar();
+      }
+    };
+
+    window.addEventListener("expert-profile-updated", handleProfileUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("expert-profile-updated", handleProfileUpdate);
+    };
+  }, [user]);
+
   const handleLogout = async () => {
     await signOut();
     if (onClose) onClose();
@@ -76,11 +117,15 @@ export default function ExpertSidebar({
       .toUpperCase();
   };
 
+  const displayImage = !imgError
+    ? profileImage || (user as any)?.image || (user as any)?.avatar || null
+    : null;
+
   return (
     <aside
       className={`
         fixed inset-y-0 left-0 z-50
-        flex h-screen w-72 flex-col
+        flex h-screen w-72 max-w-[85vw] flex-col
         border-r border-slate-200
         bg-white
         px-4 py-6
@@ -89,6 +134,7 @@ export default function ExpertSidebar({
 
         lg:sticky lg:top-0
         lg:w-64
+        lg:max-w-none
         lg:translate-x-0
         lg:shadow-none
 
@@ -170,13 +216,30 @@ export default function ExpertSidebar({
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs">
-                {getInitials(user?.name)}
-              </div>
+            <Link
+              href="/dashboard/expert/profile"
+              onClick={onClose}
+              className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition group"
+              title="Manage Expert Profile"
+            >
+              {displayImage ? (
+                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-emerald-300 bg-slate-100 shadow-xs group-hover:border-emerald-600 transition">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={displayImage}
+                    alt={user?.name || "Expert"}
+                    className="h-full w-full object-cover"
+                    onError={() => setImgError(true)}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs group-hover:bg-[#c3dcc6] transition">
+                  {getInitials(user?.name)}
+                </div>
+              )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-slate-900 leading-tight">
+                <p className="truncate text-xs font-bold text-slate-900 leading-tight group-hover:text-emerald-950 transition">
                   {user?.name || "Expert Account"}
                 </p>
                 <p
@@ -186,7 +249,7 @@ export default function ExpertSidebar({
                   {user?.email || "expert@agrinova.io"}
                 </p>
               </div>
-            </div>
+            </Link>
 
             <button
               type="button"
