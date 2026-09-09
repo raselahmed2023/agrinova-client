@@ -56,9 +56,16 @@ export default function ExpertCard({
             <img
               src={
                 expert.avatar ||
-                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+                expert.image ||
+                "/images/default-avatar.png"
               }
               alt={expert.name}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.endsWith("/images/default-avatar.png")) {
+                  target.src = "/images/default-avatar.png";
+                }
+              }}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {expert.availabilityStatus === "AVAILABLE" && (
@@ -82,7 +89,7 @@ export default function ExpertCard({
             </div>
 
             <p className="text-xs font-medium text-emerald-800 line-clamp-1 mt-0.5">
-              {expert.title}
+              {expert.title || "Agricultural Expert"}
             </p>
 
             {expert.institution && (
@@ -106,20 +113,20 @@ export default function ExpertCard({
           <div className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
             <span className="font-bold text-slate-800">
-              {expert.rating ? expert.rating.toFixed(1) : "4.9"}
+              {expert.rating ? expert.rating.toFixed(1) : "5.0"}
             </span>
             <span className="text-[11px] text-slate-400">
-              ({expert.ratingCount || 100}+ reviews)
+              ({expert.ratingCount || 0} reviews)
             </span>
           </div>
 
           <div className="flex items-center gap-3 text-[11px] text-slate-600">
             <span className="font-semibold text-slate-700">
-              {expert.experienceYears || 10}+ yrs exp
+              {expert.experienceYears || 0} yrs exp
             </span>
             <span className="h-3 w-[1px] bg-slate-200" />
             <span className="font-semibold text-emerald-700">
-              {expert.totalConsultations || 200}+ cases
+              {expert.totalConsultations || 0} cases
             </span>
           </div>
         </div>

@@ -432,6 +432,15 @@ export default function ConsultationDetails({
                 </span>
               </div>
             )}
+
+            {consultation.recommendations?.additionalNotes && (
+              <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                <span className="font-bold uppercase tracking-wider text-[10px] text-amber-700 block">
+                  Safety Precautions & Advisory Notes
+                </span>
+                <p>{consultation.recommendations.additionalNotes}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

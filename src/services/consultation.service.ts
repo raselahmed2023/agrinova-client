@@ -662,6 +662,8 @@ export const submitRecommendation = async (
     c._id === payload.consultationId || c.id === payload.consultationId
       ? {
           ...c,
+          status: "COMPLETED" as any,
+          completedAt: new Date().toISOString(),
           recommendations: {
             diagnosis: payload.diagnosis || payload.recommendation || "Follow prescribed treatment",
             prescriptions: payload.prescriptions || [],
