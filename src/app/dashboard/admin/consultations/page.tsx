@@ -34,10 +34,15 @@ export default function AdminConsultationsPage() {
     adminService
       .getAdminConsultations()
       .then((response: unknown) => {
-        const res = response as IConsultationResponse;
-        if (res && res.success) {
-          setConsultations(res.data);
-        }
+        const res = response as any;
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : [];
+        setConsultations(list);
       })
       .catch((err: unknown) =>
         console.error("Failed to load consultations", err),

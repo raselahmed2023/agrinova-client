@@ -28,10 +28,13 @@ export default function ExpertApprovalPage() {
     setLoading(true);
     try {
       const response = await adminService.getPendingExperts();
-      const res = response as IApiResponse;
-      if (res && res.success) {
-        setExperts(res.data);
-      }
+      const res = response as any;
+      const expertList = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      setExperts(expertList);
     } catch (err: unknown) {
       console.error("Failed to load pending experts", err);
     } finally {

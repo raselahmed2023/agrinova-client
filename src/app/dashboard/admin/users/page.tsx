@@ -59,12 +59,16 @@ export default function AdminUsersManagementPage() {
       if (currentStatus) query.append("status", currentStatus);
 
       const response = await adminUserService.getUsers(query.toString());
-      const res = response as IUsersResponse;
-      if (res && res.success) {
-        setUsers(res.data);
-        if (res.meta) {
-          setMeta(res.meta);
-        }
+      const res = response as any;
+      const userList = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      setUsers(userList);
+      const metaData = res?.meta || res?.data?.meta;
+      if (metaData) {
+        setMeta(metaData);
       }
     } catch (err: unknown) {
       console.error("Failed to load users", err);
