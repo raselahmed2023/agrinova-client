@@ -33,9 +33,10 @@ export default function AdminFarmDetailsPage() {
     adminService
       .getAdminFarmById(farmId)
       .then((response: unknown) => {
-        const res = response as IFarmResponse;
-        if (res && res.success) {
-          setFarm(res.data);
+        const res = response as any;
+        const farmData = res?.data || res;
+        if (farmData && farmData._id) {
+          setFarm(farmData as FarmDetails);
         }
       })
       .catch((err: unknown) => console.error("Failed to load farm details", err))

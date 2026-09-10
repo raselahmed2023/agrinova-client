@@ -27,10 +27,15 @@ export default function AdminFarmsPage() {
     adminService
       .getAdminFarms()
       .then((response: unknown) => {
-        const res = response as IFarmsResponse;
-        if (res && res.success) {
-          setFarms(res.data);
-        }
+        const res = response as any;
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : [];
+        setFarms(list);
       })
       .catch((err: unknown) => console.error("Failed to load farms", err))
       .finally(() => setLoading(false));

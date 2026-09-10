@@ -106,5 +106,33 @@ export async function apiRequest<T>(
     );
   }
 
-  return result.data;
+  const data = result.data;
+  if (data && typeof data === "object") {
+    if (!("success" in data)) {
+      Object.defineProperty(data, "success", {
+        value: result.success,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    if (result.meta !== undefined && !("meta" in data)) {
+      Object.defineProperty(data, "meta", {
+        value: result.meta,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    if (!("data" in data)) {
+      Object.defineProperty(data, "data", {
+        value: data,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+    }
+  }
+
+  return data;
 }

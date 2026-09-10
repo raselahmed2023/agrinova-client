@@ -40,9 +40,13 @@ export default function AdminDashboardPage() {
     adminService
       .getDashboard()
       .then((response: unknown) => {
-        const res = response as IDashboardResponse;
-        if (res && res.success && res.data) {
-          setStats(res.data);
+        const res = response as any;
+        const dashboardData =
+          res?.success && res?.data
+            ? res.data
+            : res?.data || res;
+        if (dashboardData && typeof dashboardData === "object") {
+          setStats(dashboardData as DashboardStats);
         }
       })
       .catch((err: unknown) => console.error("Failed to load dashboard stats", err))

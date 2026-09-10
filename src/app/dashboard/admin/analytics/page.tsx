@@ -49,9 +49,13 @@ export default function AdminAnalyticsPage() {
     adminService
       .getAdminAnalytics()
       .then((response: unknown) => {
-        const res = response as IAnalyticsResponse;
-        if (res && res.success && res.data) {
-          setAnalytics(res.data);
+        const res = response as any;
+        const data =
+          res?.success && res?.data
+            ? res.data
+            : res?.data || res;
+        if (data && typeof data === "object") {
+          setAnalytics(data as AnalyticsData);
         }
       })
       .catch((err: unknown) => console.error("Failed to load analytics", err))
