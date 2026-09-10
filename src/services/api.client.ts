@@ -15,24 +15,25 @@ interface ApiEnvelope<T> {
 async function getAuthHeaders(): Promise<
   Record<string, string>
 > {
-  const headers: Record<string, string> = {
+  const requestHeaders: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
   try {
-    const { data } =
-      await authClient.token();
+    const { data } = await authClient.token();
 
     if (data?.token) {
-      headers.Authorization =
+      requestHeaders.Authorization =
         `Bearer ${data.token}`;
     }
-  } catch {
-    // Public marketplace endpoints
-    // can continue without auth.
+  } catch (error) {
+    console.warn(
+      "Could not retrieve authentication token:",
+      error
+    );
   }
 
-  return headers;
+  return requestHeaders;
 }
 
 export async function apiRequest<T>(
@@ -45,61 +46,64 @@ export async function apiRequest<T>(
   body?: unknown,
   queryString?: string
 ): Promise<T> {
-  const cleanEndpoint =
-    endpoint.startsWith("/")
-      ? endpoint
-      : `/${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
 
   const url = new URL(
     `${BASE_URL}${cleanEndpoint}`
   );
 
   if (queryString) {
-    new URLSearchParams(
-      queryString
-    ).forEach((value, key) => {
-      url.searchParams.set(
-        key,
-        value
-      );
+    const params = new URLSearchParams(queryString);
+
+    params.forEach((value, key) => {
+      url.searchParams.set(key, value);
     });
   }
 
-  const response = await fetch(
-    url.toString(),
-    {
+  const headers = await getAuthHeaders();
+
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), {
       method,
-      headers:
-        await getAuthHeaders(),
+      headers,
       cache: "no-store",
       credentials: "include",
       ...(body !== undefined
         ? {
-            body: JSON.stringify(
-              body
-            ),
+            body: JSON.stringify(body),
           }
         : {}),
-    }
-  );
+    });
+  } catch (error) {
+    console.error(
+      "API connection failed:",
+      {
+        url: url.toString(),
+        method,
+        error,
+      }
+    );
 
-  let result:
-    | ApiEnvelope<T>
-    | null = null;
+    throw new Error(
+      `Unable to connect to the backend server at ${BASE_URL}.`
+    );
+  }
+
+  let result: ApiEnvelope<T> | null = null;
 
   try {
-    result =
-      await response.json();
+    result = await response.json();
   } catch {
     throw new Error(
       `API returned an invalid response (${response.status}).`
     );
   }
 
-  if (
-    !response.ok ||
-    !result?.success
-  ) {
+  if (!response.ok || !result?.success) {
     throw new Error(
       result?.message ||
         `Request failed with status ${response.status}.`

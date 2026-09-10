@@ -5,6 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 
+import { signOut, useSession } from "@/lib/auth-client";
+import { useCart } from "@/context/CartContext";
+
 import {
   ChevronDown,
   LayoutDashboard,
@@ -16,9 +19,6 @@ import {
   User,
   X,
 } from "lucide-react";
-
-import { signOut, useSession } from "@/lib/auth-client";
-import { useCart } from "@/context/CartContext";
 
 const navLinks = [
   {
@@ -60,11 +60,17 @@ export default function Navbar() {
   const isExpert = role === "EXPERT";
   const isAdmin = role === "ADMIN";
 
+  /*
+   * Close menus whenever the route changes.
+   */
   useEffect(() => {
     setMobileOpen(false);
     setProfileOpen(false);
   }, [pathname]);
 
+  /*
+   * Prevent background scrolling while mobile menu is open.
+   */
   useEffect(() => {
     if (!mobileOpen) {
       document.body.style.overflow = "";
@@ -78,6 +84,9 @@ export default function Navbar() {
     };
   }, [mobileOpen]);
 
+  /*
+   * Determine the correct dashboard according to the user's role.
+   */
   const getDashboardPath = () => {
     if (isAdmin) {
       return "/dashboard/admin";
@@ -90,6 +99,9 @@ export default function Navbar() {
     return "/dashboard/farmer";
   };
 
+  /*
+   * Generate user initials.
+   */
   const getInitials = (name?: string | null) => {
     if (!name) {
       return "U";
@@ -105,9 +117,19 @@ export default function Navbar() {
     }
 
     return (
-      parts[0][0] +
-      parts[parts.length - 1][0]
+      parts[0][0] + parts[parts.length - 1][0]
     ).toUpperCase();
+  };
+
+  const isNavLinkActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    );
   };
 
   const handleLogout = async () => {
@@ -128,9 +150,10 @@ export default function Navbar() {
 
   return (
     <>
+      
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* LOGO */}
+          
           <Link
             href="/"
             onClick={closeMenus}
@@ -146,40 +169,47 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* DESKTOP NAV */}
+         
           <div className="hidden items-center gap-7 lg:flex">
             {navLinks.map((link) => {
-              const active =
-                pathname === link.href ||
-                pathname.startsWith(`${link.href}/`);
+              const active = isNavLinkActive(link.href);
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-sm font-medium transition-colors ${
+                  aria-current={active ? "page" : undefined}
+                  className={`relative py-2 text-sm font-medium transition-colors ${
                     active
                       ? "text-[#063B2B]"
                       : "text-gray-700 hover:text-[#063B2B]"
                   }`}
                 >
                   {link.label}
+
+                  {/* Active route indicator */}
+                  {active && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#0B513D]" />
+                  )}
                 </Link>
               );
             })}
           </div>
 
-          {/* DESKTOP RIGHT */}
+       
           <div className="hidden items-center gap-3 lg:flex">
             {isPending ? (
               <div className="h-10 w-28 animate-pulse rounded-xl bg-gray-100" />
             ) : user ? (
               <div className="relative">
+                {/* Profile button */}
                 <button
                   type="button"
                   onClick={() =>
                     setProfileOpen((current) => !current)
                   }
+                  aria-expanded={profileOpen}
+                  aria-haspopup="menu"
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
@@ -197,12 +227,13 @@ export default function Navbar() {
                   </div>
 
                   <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition ${
+                    className={`h-4 w-4 text-gray-500 transition-transform ${
                       profileOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
+                {/* Profile dropdown */}
                 {profileOpen && (
                   <ProfileDropdown
                     user={user}
@@ -234,8 +265,9 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* MOBILE RIGHT */}
+          
           <div className="flex items-center gap-2 lg:hidden">
+            {/* Mobile cart */}
             {user && (
               <Link
                 href="/cart"
@@ -253,6 +285,7 @@ export default function Navbar() {
               </Link>
             )}
 
+            {/* Mobile login */}
             {!user && !isPending && (
               <Link
                 href="/login"
@@ -262,6 +295,7 @@ export default function Navbar() {
               </Link>
             )}
 
+            {/* Mobile menu button */}
             <button
               type="button"
               aria-label={
@@ -283,9 +317,9 @@ export default function Navbar() {
         </nav>
       </header>
 
-      {/* MOBILE MENU */}
       {mobileOpen && (
         <>
+          {/* Overlay */}
           <button
             type="button"
             aria-label="Close mobile menu"
@@ -293,27 +327,33 @@ export default function Navbar() {
             className="fixed inset-0 z-40 bg-black/30 lg:hidden"
           />
 
+          {/* Menu panel */}
           <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-gray-200 bg-white shadow-xl lg:hidden">
             <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-              {/* MAIN LINKS */}
+            
               <div className="space-y-1">
                 {navLinks.map((link) => {
-                  const active =
-                    pathname === link.href ||
-                    pathname.startsWith(`${link.href}/`);
+                  const active = isNavLinkActive(link.href);
 
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={closeMenus}
-                      className={`flex items-center rounded-xl px-4 py-3 text-sm font-semibold ${
+                      aria-current={
+                        active ? "page" : undefined
+                      }
+                      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition ${
                         active
                           ? "bg-[#EAF4ED] text-[#0B513D]"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
-                      {link.label}
+                      <span>{link.label}</span>
+
+                      {active && (
+                        <span className="h-2 w-2 rounded-full bg-[#0B513D]" />
+                      )}
                     </Link>
                   );
                 })}
@@ -321,9 +361,10 @@ export default function Navbar() {
 
               <div className="my-4 border-t border-gray-100" />
 
-              {/* LOGGED IN MOBILE */}
+             
               {user ? (
                 <>
+                  {/* User info */}
                   <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] font-bold text-[#063B2B]">
                       {getInitials(user.name)}
@@ -345,6 +386,7 @@ export default function Navbar() {
                   </div>
 
                   <div className="space-y-1">
+                    {/* Dashboard */}
                     <MobileMenuLink
                       href={getDashboardPath()}
                       icon={
@@ -354,6 +396,7 @@ export default function Navbar() {
                       onClick={closeMenus}
                     />
 
+                    {/* Farmer-only links */}
                     {isFarmer && (
                       <>
                         <MobileMenuLink
@@ -362,6 +405,9 @@ export default function Navbar() {
                             <Store className="h-5 w-5" />
                           }
                           label="Marketplace"
+                          active={isNavLinkActive(
+                            "/marketplace"
+                          )}
                           onClick={closeMenus}
                         />
 
@@ -417,6 +463,7 @@ export default function Navbar() {
                       </>
                     )}
 
+                    {/* Profile */}
                     <MobileMenuLink
                       href="/profile"
                       icon={
@@ -426,6 +473,7 @@ export default function Navbar() {
                       onClick={closeMenus}
                     />
 
+                    {/* Logout */}
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -437,7 +485,7 @@ export default function Navbar() {
                   </div>
                 </>
               ) : (
-                /* LOGGED OUT MOBILE */
+                
                 <div className="space-y-3">
                   <Link
                     href="/login"
@@ -464,35 +512,58 @@ export default function Navbar() {
   );
 }
 
+
 function MobileMenuLink({
   href,
   icon,
   label,
   badge,
+  active = false,
   onClick,
 }: {
   href: string;
   icon: React.ReactNode;
   label: string;
   badge?: number;
+  active?: boolean;
   onClick: () => void;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition ${
+        active
+          ? "bg-[#EAF4ED] text-[#0B513D]"
+          : "text-gray-700 hover:bg-gray-50"
+      }`}
     >
       <span className="flex items-center gap-3">
-        <span className="text-gray-500">{icon}</span>
+        <span
+          className={
+            active
+              ? "text-[#0B513D]"
+              : "text-gray-500"
+          }
+        >
+          {icon}
+        </span>
+
         {label}
       </span>
 
-      {badge !== undefined && (
-        <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
+      <span className="flex items-center gap-2">
+        {active && (
+          <span className="h-2 w-2 rounded-full bg-[#0B513D]" />
+        )}
+
+        {badge !== undefined && (
+          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </span>
     </Link>
   );
 }
@@ -518,7 +589,11 @@ function ProfileDropdown({
   onLogout: () => void;
 }) {
   return (
-    <div className="absolute right-0 mt-3 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+    <div
+      className="absolute right-0 mt-3 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl"
+      role="menu"
+    >
+      {/* User information */}
       <div className="border-b border-gray-100 px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
@@ -541,6 +616,7 @@ function ProfileDropdown({
         </span>
       </div>
 
+      {/* Dropdown links */}
       <div className="p-2">
         <DropdownLink
           href={dashboardPath}
@@ -623,6 +699,7 @@ function ProfileDropdown({
           onClick={onClose}
         />
 
+        {/* Logout */}
         <button
           type="button"
           onClick={onLogout}
@@ -635,6 +712,7 @@ function ProfileDropdown({
     </div>
   );
 }
+
 
 function DropdownLink({
   href,
@@ -656,7 +734,10 @@ function DropdownLink({
       className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
     >
       <span className="flex items-center gap-3">
-        <span className="text-gray-500">{icon}</span>
+        <span className="text-gray-500">
+          {icon}
+        </span>
+
         {label}
       </span>
 
@@ -669,7 +750,10 @@ function DropdownLink({
   );
 }
 
-function getUserInitials(name?: string | null) {
+
+function getUserInitials(
+  name?: string | null
+) {
   if (!name) {
     return "U";
   }
