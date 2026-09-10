@@ -19,86 +19,311 @@ export type TransactionType =
   | "free";
 
 export type ProductStatus =
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "SOLD";
+  | "pending"
+  | "available"
+  | "out_of_stock"
+  | "rejected"
+  | "disabled"
+  | "approved";
 
-export interface IProduct{
-  _id:string;
-  title:string;
-  category:ProductCategory;
-  description:string;
-  price?:number;
-  unit?:string;
-  quantity:number;
-  location:{
-    division:string;
-    district:string;
-    upazila:string;
+export interface IProduct {
+  _id: string;
+
+  title: string;
+
+  description: string;
+
+  price: number;
+
+  category: ProductCategory;
+
+  transactionType: TransactionType;
+
+  productionMethod: ProductionMethod;
+
+  quantity: number;
+
+  unit: string;
+
+  images?: string[];
+
+  sellerId?: string;
+
+  sellerName?: string;
+
+  sellerEmail?: string;
+
+  sellerContact?: string;
+
+  location?: string;
+
+  division?: string;
+
+  district?: string;
+
+  upazila?: string;
+
+  status: ProductStatus;
+
+  isFeatured?: boolean;
+
+  poultryDetails?: {
+    poultryType?: string;
+    breed?: string;
+    ageWeeks?: number;
+    averageWeightKg?: number;
   };
-  productionMethod:ProductionMethod;
-  transactionType:TransactionType;
-  images?:string[];
-  status:ProductStatus;
-  createdAt?:string;
-  updatedAt?:string;
+
+  byProductUses?: string[];
+
+  rejectionReason?: string;
+
+  createdAt?: string;
+
+  updatedAt?: string;
 }
 
-export interface ICreateProduct{
-  title:string;
-  category:ProductCategory;
-  description:string;
-  price?:number;
-  unit?:string;
-  quantity:number;
-  location:{
-    division:string;
-    district:string;
-    upazila:string;
+export interface ICreateProduct {
+  title: string;
+
+  description: string;
+
+  price: number;
+
+  category: ProductCategory;
+
+  transactionType: TransactionType;
+
+  productionMethod: ProductionMethod;
+
+  quantity: number;
+
+  unit: string;
+
+  images?: string[];
+
+  sellerContact?: string;
+
+  location?: string;
+
+  division?: string;
+
+  district?: string;
+
+  upazila?: string;
+
+  poultryDetails?: {
+    poultryType?: string;
+    breed?: string;
+    ageWeeks?: number;
+    averageWeightKg?: number;
   };
-  productionMethod:ProductionMethod;
-  transactionType:TransactionType;
-  images?:string[];
+
+  byProductUses?: string[];
 }
 
-export type PurchaseRequestStatus =
-  | "PENDING"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "PROCESSING"
-  | "COMPLETED"
-  | "CANCELLED";
+export interface IProductListResponse {
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 
-export interface IPurchaseRequest{
-  _id:string;
-  productId:string;
-  productTitle?:string;
-  productPrice?:number;
-  unit?:string;
-  quantity:number;
-  buyerName?:string;
-  buyerEmail?:string;
-  sellerName?:string;
-  sellerEmail?:string;
-  deliveryLocation?:string;
-  note?:string;
-  message?:string;
-  status:PurchaseRequestStatus;
-  createdAt?:string;
-  updatedAt?:string;
+  data: IProduct[];
 }
 
-export type PurchaseRequest=IPurchaseRequest;
+export interface IOrderItem {
+  productId: string;
 
-export const PRODUCT_CATEGORIES=[
-  {value:"crops",label:"Crops"},
-  {value:"seeds",label:"Seeds"},
-  {value:"fertilizers",label:"Fertilizers"},
-  {value:"pesticides",label:"Pesticides"},
-  {value:"equipment",label:"Equipment"},
-  {value:"poultry",label:"Poultry"},
-  {value:"farm_foods",label:"Farm Food"},
-  {value:"by_products",label:"By Products"},
-  {value:"other",label:"Other"},
+  title: string;
+
+  image?: string;
+
+  sellerId: string;
+
+  sellerName: string;
+
+  sellerEmail: string;
+
+  quantity: number;
+
+  unit: string;
+
+  price: number;
+
+  subtotal: number;
+}
+
+export type FulfillmentStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "ready_for_pickup"
+  | "picked_up"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "partially_fulfilled"
+  | "ready_for_pickup"
+  | "picked_up"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
+
+export type PaymentMethod =
+  | "cod"
+  | "card";
+
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed";
+
+export interface IOrderFulfillment {
+  sellerId: string;
+
+  sellerName: string;
+
+  sellerEmail: string;
+
+  items: IOrderItem[];
+
+  subtotal: number;
+
+  commissionRate: number;
+
+  commissionAmount: number;
+
+  sellerPayout: number;
+
+  status: FulfillmentStatus;
+
+  pickupAddress?: string;
+
+  deliveryPartner?: {
+    name?: string;
+    phone?: string;
+  };
+}
+
+export interface IShippingAddress {
+  fullName: string;
+
+  phone: string;
+
+  address: string;
+
+  division: string;
+
+  district: string;
+
+  upazila?: string;
+
+  postalCode?: string;
+}
+
+export interface IOrder {
+  _id: string;
+
+  orderNumber: string;
+
+  customerId: string;
+
+  customerName: string;
+
+  customerEmail: string;
+
+  items: IOrderItem[];
+
+  fulfillments: IOrderFulfillment[];
+
+  shippingAddress: IShippingAddress;
+
+  subtotal: number;
+
+  deliveryFee: number;
+
+  commissionAmount: number;
+
+  sellerPayoutAmount: number;
+
+  totalAmount: number;
+
+  status: OrderStatus;
+
+  paymentMethod: PaymentMethod;
+
+  paymentStatus: PaymentStatus;
+
+  paymentReference?: string;
+
+  notes?: string;
+
+  createdAt?: string;
+
+  updatedAt?: string;
+}
+
+export interface ICreateOrderPayload {
+  items: {
+    productId: string;
+    quantity: number;
+  }[];
+
+  shippingAddress: IShippingAddress;
+
+  paymentMethod: PaymentMethod;
+
+  notes?: string;
+}
+
+export interface IStripeSession {
+  sessionId: string;
+
+  checkoutUrl: string;
+}
+
+export const PRODUCT_CATEGORIES = [
+  {
+    value: "crops",
+    label: "Crops",
+  },
+  {
+    value: "seeds",
+    label: "Seeds",
+  },
+  {
+    value: "fertilizers",
+    label: "Fertilizers",
+  },
+  {
+    value: "pesticides",
+    label: "Pesticides",
+  },
+  {
+    value: "equipment",
+    label: "Equipment",
+  },
+  {
+    value: "poultry",
+    label: "Poultry",
+  },
+  {
+    value: "farm_foods",
+    label: "Farm Food",
+  },
+  {
+    value: "by_products",
+    label: "By Products",
+  },
+  {
+    value: "other",
+    label: "Other",
+  },
 ] as const;

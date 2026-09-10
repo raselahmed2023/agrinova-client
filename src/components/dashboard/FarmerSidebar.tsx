@@ -22,8 +22,6 @@ import {
   LogOut,
   MessageSquareText,
   ShoppingBag,
-  Store,
-  Tags,
   WalletCards,
   X,
 } from "lucide-react";
@@ -71,24 +69,9 @@ const aiItems = [
 
 const marketplaceItems = [
   {
-    label: "Browse",
-    href: "/dashboard/farmer/marketplace",
+    label: "Marketplace",
+    href: "/marketplace",
     icon: ShoppingBag,
-  },
-  {
-    label: "Sell Product",
-    href: "/dashboard/farmer/marketplace/sell",
-    icon: Store,
-  },
-  {
-    label: "My Listings",
-    href: "/dashboard/farmer/marketplace/listings",
-    icon: Tags,
-  },
-  {
-    label: "Purchase Requests",
-    href: "/dashboard/farmer/marketplace/requests",
-    icon: MessageSquareText,
   },
 ];
 
@@ -133,9 +116,7 @@ export default function FarmerSidebar({
     router.refresh();
   };
 
-  const getInitials = (
-    name?: string
-  ) => {
+  const getInitials = (name?: string) => {
     if (!name) {
       return "U";
     }
@@ -148,22 +129,17 @@ export default function FarmerSidebar({
       .toUpperCase();
   };
 
-  const isActive = (
-    href: string
-  ) => {
+  const isActive = (href: string) => {
     if (
       href === "/dashboard/farmer" ||
-      href ===
-        "/dashboard/farmer/marketplace"
+      href === "/dashboard/farmer/marketplace"
     ) {
       return pathname === href;
     }
 
     return (
       pathname === href ||
-      pathname.startsWith(
-        `${href}/`
-      )
+      pathname.startsWith(`${href}/`)
     );
   };
 
@@ -173,8 +149,7 @@ export default function FarmerSidebar({
     icon: React.ElementType;
   }) => {
     const Icon = item.icon;
-    const active =
-      isActive(item.href);
+    const active = isActive(item.href);
 
     return (
       <Link
@@ -195,9 +170,7 @@ export default function FarmerSidebar({
           }`}
         />
 
-        <span>
-          {item.label}
-        </span>
+        <span>{item.label}</span>
       </Link>
     );
   };
@@ -222,10 +195,9 @@ export default function FarmerSidebar({
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <Link
-            href="/"
+            href="/dashboard/farmer"
             onClick={onClose}
-            className="flex items-center gap-2.5 transition hover:opacity-90"
-            title="AgriNova Home"
+            className="flex items-center gap-2.5"
           >
             <Image
               src="/AgriNova-Logo.png"
@@ -245,7 +217,7 @@ export default function FarmerSidebar({
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -253,9 +225,7 @@ export default function FarmerSidebar({
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            {menuItems.map(
-              renderItem
-            )}
+            {menuItems.map(renderItem)}
           </div>
 
           <div className="mt-6">
@@ -264,9 +234,7 @@ export default function FarmerSidebar({
             </p>
 
             <div className="space-y-1">
-              {aiItems.map(
-                renderItem
-              )}
+              {aiItems.map(renderItem)}
             </div>
           </div>
 
@@ -276,16 +244,12 @@ export default function FarmerSidebar({
             </p>
 
             <div className="space-y-1">
-              {marketplaceItems.map(
-                renderItem
-              )}
+              {marketplaceItems.map(renderItem)}
             </div>
           </div>
 
           <div className="mt-6 space-y-1">
-            {otherItems.map(
-              renderItem
-            )}
+            {otherItems.map(renderItem)}
           </div>
         </nav>
 
@@ -309,7 +273,6 @@ export default function FarmerSidebar({
 
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="h-3.5 w-20 rounded bg-slate-200" />
-
                   <div className="h-2.5 w-28 rounded bg-slate-200" />
                 </div>
               </div>
@@ -317,35 +280,26 @@ export default function FarmerSidebar({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B]">
-                    {getInitials(
-                      user?.name
-                    )}
+                    {getInitials(user?.name)}
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold leading-tight text-slate-900">
-                      {user?.name ||
-                        "Farmer Account"}
+                      {user?.name || "Farmer Account"}
                     </p>
 
                     <p
                       className="mt-0.5 truncate text-[11px] leading-tight text-slate-500"
-                      title={
-                        user?.email ||
-                        "Signed In"
-                      }
+                      title={user?.email || "Signed In"}
                     >
-                      {user?.email ||
-                        "farmer@agrinova.io"}
+                      {user?.email || "farmer@agrinova.io"}
                     </p>
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={
-                    handleLogout
-                  }
+                  onClick={handleLogout}
                   title="Logout from AgriNova"
                   aria-label="Logout"
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"

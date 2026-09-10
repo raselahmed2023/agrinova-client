@@ -1,171 +1,131 @@
 import { apiRequest } from "./api.client";
-import {
-  IProduct,
+
+import type {
   ICreateProduct,
-  IPurchaseRequest,
-  PurchaseRequestStatus,
+  IProduct,
+  IProductListResponse,
 } from "@/types/marketplace";
 
-interface ApiResponse<T>{
-  success:boolean;
-  message?:string;
-  data:T;
+export interface MarketplaceQuery {
+  search?: string;
+
+  category?: string;
+
+  location?: string;
+
+  district?: string;
+
+  transactionType?: string;
+
+  productionMethod?: string;
+
+  minPrice?: number | string;
+
+  maxPrice?: number | string;
+
+  sort?: string;
+
+  page?: number;
+
+  limit?: number;
+
+  status?: string;
 }
 
-export const getProducts=async(
-  params?:{
-    category?:string;
-    search?:string;
-    district?:string;
-    page?:number;
-    limit?:number;
-  }
-):Promise<IProduct[]>=>{
+function buildQuery(
+  params: MarketplaceQuery
+) {
+  const query =
+    new URLSearchParams();
 
-  const query=params
-    ? new URLSearchParams(
-        Object.entries(params)
-          .filter(([,v])=>v!==undefined)
-          .map(([k,v])=>[k,String(v)])
-      ).toString()
-    :"";
-
-  const response=await apiRequest<ApiResponse<IProduct[]>>(
-    `/products${query?`?${query}`:""}`
+  Object.entries(params).forEach(
+    ([key, value]) => {
+      if (
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+      ) {
+        query.set(
+          key,
+          String(value)
+        );
+      }
+    }
   );
 
-  return response.data||[];
-};
+  return query.toString();
+}
 
-
-export const getProductById=async(id:string):Promise<IProduct>=>{
-  const response=await apiRequest<ApiResponse<IProduct>>(
-    `/products/${id}`
+export async function getProducts(
+  params: MarketplaceQuery = {}
+): Promise<IProductListResponse> {
+  return apiRequest<IProductListResponse>(
+    "/marketplace/products",
+    "GET",
+    undefined,
+    buildQuery(params)
   );
+}
 
-  return response.data;
-};
+export async function getProductById(
+  id: string
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${id}`
+  );
+}
 
-
-export const createProduct=async(
-  data:ICreateProduct
-):Promise<IProduct>=>{
-
-  const response=await apiRequest<ApiResponse<IProduct>>(
-    "/products",
+export async function createProduct(
+  data: ICreateProduct
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    "/marketplace/products",
     "POST",
     data
   );
+}
 
-  return response.data;
-};
+export async function getMyProducts(
+  params: MarketplaceQuery = {}
+): Promise<IProductListResponse> {
+  return apiRequest<IProductListResponse>(
+    "/marketplace/my-listings",
+    "GET",
+    undefined,
+    buildQuery(params)
+  );
+}
 
-
-export const updateProduct=async(
-  id:string,
-  data:Partial<ICreateProduct>
-)=>{
-
-  const response=await apiRequest<ApiResponse<IProduct>>(
-    `/products/${id}`,
+export async function updateProduct(
+  id: string,
+  data: Partial<ICreateProduct>
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${id}`,
     "PATCH",
     data
   );
+}
 
-  return response.data;
-};
-
-
-export const deleteProduct=async(id:string)=>{
-  return apiRequest(
-    `/products/${id}`,
+export async function deleteProduct(
+  id: string
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${id}`,
     "DELETE"
   );
-};
+}
 
-
-export const getMyProducts=async():Promise<IProduct[]>=>{
-
-  const response=await apiRequest<ApiResponse<IProduct[]>>(
-    "/products/my-products"
-  );
-
-  return response.data||[];
-};
-
-
-export const createPurchaseRequest=async(data:{
-  productId:string;
-  quantity:number;
-  note?:string;
-  message?:string;
-})=>{
-
-  const response=await apiRequest<ApiResponse<IPurchaseRequest>>(
-    "/purchase-requests",
-    "POST",
-    {
-      ...data,
-      note:data.note||data.message,
-    }
-  );
-
-  return response.data;
-};
-
-
-export const getReceivedPurchaseRequests=async():Promise<IPurchaseRequest[]>=>{
-
-  const response=await apiRequest<ApiResponse<IPurchaseRequest[]>>(
-    "/purchase-requests/received"
-  );
-
-  return response.data||[];
-};
-
-
-export const getSentPurchaseRequests=async():Promise<IPurchaseRequest[]>=>{
-
-  const response=await apiRequest<ApiResponse<IPurchaseRequest[]>>(
-    "/purchase-requests/sent"
-  );
-
-  return response.data||[];
-};
-
-
-export const getMyPurchaseRequests=async():Promise<IPurchaseRequest[]>=>{
-  return getReceivedPurchaseRequests();
-};
-
-
-export const updatePurchaseRequestStatus=async(
-  id:string,
-  status:PurchaseRequestStatus
-)=>{
-
-  const response=await apiRequest<ApiResponse<IPurchaseRequest>>(
-    `/purchase-requests/${id}/status`,
-    "PATCH",
-    {
-      status,
-    }
-  );
-
-  return response.data;
-};
-
-
-export const MarketplaceService={
+export const MarketplaceService = {
   getProducts,
+
   getProductById,
+
   createProduct,
-  updateProduct,
-  deleteProduct,
+
   getMyProducts,
-  createPurchaseRequest,
-  getReceivedPurchaseRequests,
-  getSentPurchaseRequests,
-  getMyPurchaseRequests,
-  updatePurchaseRequestStatus,
+
+  updateProduct,
+
+  deleteProduct,
 };
