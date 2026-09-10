@@ -17,7 +17,6 @@ import {
 
 const platformLinks = [
   { label: "Crop Disease Detection", href: "/dashboard/farmer/ai/disease-detection", badge: "AI" },
-  { label: "Crop Recommendation", href: "/dashboard/farmer/ai/crop-recommendation", badge: "AI" },
   { label: "AI Farming Assistant", href: "/dashboard/farmer/ai/assistant" },
   { label: "Hyper-local Weather", href: "/dashboard/farmer/weather" },
   { label: "Farm Management", href: "/dashboard/farmer/farms" },
@@ -34,7 +33,7 @@ const marketplaceLinks = [
 const advisoryLinks = [
   { label: "Expert Consultation", href: "/consultant" },
   { label: "My Consultations", href: "/dashboard/farmer/consultation" },
-  { label: "Join as Verified Expert", href: "/register?role=expert", badge: "Hiring" },
+  { label: "Join as Verified Expert", href: "/register/expert", badge: "Hiring" },
   { label: "Farming Guides & Blog", href: "/blog" },
   { label: "Contact & Support", href: "/contact" },
 ];

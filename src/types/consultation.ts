@@ -50,7 +50,7 @@ export interface Consultation {
   farmerId: string;
   farmerName?: string;
   farmerEmail?: string;
-  farmer: FarmerInfo;
+  farmer?: FarmerInfo;
   farmId?: string;
   farmName?: string;
   district?: string;
