@@ -16,9 +16,7 @@ export async function createOrder(
   );
 }
 
-export async function getMyOrders(): Promise<
-  IOrder[]
-> {
+export async function getMyOrders(): Promise<IOrder[]> {
   return apiRequest<IOrder[]>(
     "/orders/my"
   );
@@ -32,9 +30,7 @@ export async function getMyOrderById(
   );
 }
 
-export async function getSellerOrders(): Promise<
-  IOrder[]
-> {
+export async function getSellerOrders(): Promise<IOrder[]> {
   return apiRequest<IOrder[]>(
     "/orders/seller"
   );
@@ -60,7 +56,7 @@ export async function createStripeCheckoutSession(
   orderId: string
 ): Promise<IStripeSession> {
   return apiRequest<IStripeSession>(
-    "/payments/stripe/create-session",
+    "/payments/stripe/checkout-session",
     "POST",
     {
       orderId,
@@ -73,15 +69,10 @@ export async function getStripeCheckoutSession(
 ) {
   return apiRequest<{
     sessionId: string;
-
     paymentStatus: string;
-
     status: string | null;
-
     orderId: string;
-
     orderNumber: string;
-
     orderPaymentStatus: string;
   }>(
     `/payments/stripe/session/${encodeURIComponent(
@@ -92,16 +83,10 @@ export async function getStripeCheckoutSession(
 
 export const OrderService = {
   createOrder,
-
   getMyOrders,
-
   getMyOrderById,
-
   getSellerOrders,
-
   updateSellerFulfillment,
-
   createStripeCheckoutSession,
-
   getStripeCheckoutSession,
 };
