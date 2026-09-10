@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
@@ -46,30 +47,19 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { data: session, isPending } =
-    useSession();
-
+  const { data: session, isPending } = useSession();
   const { totalItems } = useCart();
 
-  const [profileOpen, setProfileOpen] =
-    useState(false);
-
-  const [mobileOpen, setMobileOpen] =
-    useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const user = session?.user;
 
-  const role =
-    user?.role?.toUpperCase();
+  const role = user?.role?.toUpperCase();
 
-  const isFarmer =
-    role === "FARMER";
-
-  const isExpert =
-    role === "EXPERT";
-
-  const isAdmin =
-    role === "ADMIN";
+  const isFarmer = role === "FARMER";
+  const isExpert = role === "EXPERT";
+  const isAdmin = role === "ADMIN";
 
   useEffect(() => {
     setMobileOpen(false);
@@ -101,9 +91,7 @@ export default function Navbar() {
     return "/dashboard/farmer";
   };
 
-  const getInitials = (
-    name?: string | null
-  ) => {
+  const getInitials = (name?: string | null) => {
     if (!name) {
       return "U";
     }
@@ -114,9 +102,7 @@ export default function Navbar() {
       .filter(Boolean);
 
     if (parts.length === 1) {
-      return parts[0]
-        .slice(0, 2)
-        .toUpperCase();
+      return parts[0].slice(0, 2).toUpperCase();
     }
 
     return (
@@ -149,17 +135,16 @@ export default function Navbar() {
           <Link
             href="/"
             onClick={closeMenus}
-            className="flex shrink-0 items-center gap-2"
+            className="flex shrink-0 items-center"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B513D] text-white">
-              <span className="text-sm font-bold">
-                A
-              </span>
-            </div>
-
-            <span className="text-lg font-bold text-[#063B2B]">
-              AgriNova
-            </span>
+            <Image
+              src="/AgriNova-Logo.png"
+              alt="AgriNova"
+              width={135}
+              height={45}
+              priority
+              className="h-9 w-auto object-contain"
+            />
           </Link>
 
           {/* DESKTOP NAV */}
@@ -167,18 +152,17 @@ export default function Navbar() {
             {navLinks.map((link) => {
               const active =
                 pathname === link.href ||
-                pathname.startsWith(
-                  `${link.href}/`
-                );
+                pathname.startsWith(`${link.href}/`);
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-sm font-medium transition-colors ${active
+                  className={`text-sm font-medium transition-colors ${
+                    active
                       ? "text-[#063B2B]"
                       : "text-gray-700 hover:text-[#063B2B]"
-                    }`}
+                  }`}
                 >
                   {link.label}
                 </Link>
@@ -195,17 +179,12 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() =>
-                    setProfileOpen(
-                      (current) =>
-                        !current
-                    )
+                    setProfileOpen((current) => !current)
                   }
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
-                    {getInitials(
-                      user.name
-                    )}
+                    {getInitials(user.name)}
                   </div>
 
                   <div className="hidden max-w-32 text-left xl:block">
@@ -219,10 +198,9 @@ export default function Navbar() {
                   </div>
 
                   <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition ${profileOpen
-                        ? "rotate-180"
-                        : ""
-                      }`}
+                    className={`h-4 w-4 text-gray-500 transition ${
+                      profileOpen ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
@@ -231,18 +209,10 @@ export default function Navbar() {
                     user={user}
                     role={role}
                     isFarmer={isFarmer}
-                    totalItems={
-                      totalItems
-                    }
+                    totalItems={totalItems}
                     dashboardPath={getDashboardPath()}
-                    onClose={() =>
-                      setProfileOpen(
-                        false
-                      )
-                    }
-                    onLogout={
-                      handleLogout
-                    }
+                    onClose={() => setProfileOpen(false)}
+                    onLogout={handleLogout}
                   />
                 )}
               </div>
@@ -276,43 +246,31 @@ export default function Navbar() {
               >
                 <ShoppingCart className="h-5 w-5" />
 
-                {isFarmer &&
-                  totalItems > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
-                      {totalItems >
-                        99
-                        ? "99+"
-                        : totalItems}
-                    </span>
-                  )}
+                {isFarmer && totalItems > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
+                    {totalItems > 99 ? "99+" : totalItems}
+                  </span>
+                )}
               </Link>
             )}
 
-            {!user &&
-              !isPending && (
-                <Link
-                  href="/login"
-                  className="rounded-lg bg-[#063B2B] px-4 py-2 text-sm font-semibold text-white"
-                >
-                  Login
-                </Link>
-              )}
+            {!user && !isPending && (
+              <Link
+                href="/login"
+                className="rounded-lg bg-[#063B2B] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Login
+              </Link>
+            )}
 
             <button
               type="button"
               aria-label={
-                mobileOpen
-                  ? "Close menu"
-                  : "Open menu"
+                mobileOpen ? "Close menu" : "Open menu"
               }
-              aria-expanded={
-                mobileOpen
-              }
+              aria-expanded={mobileOpen}
               onClick={() =>
-                setMobileOpen(
-                  (current) =>
-                    !current
-                )
+                setMobileOpen((current) => !current)
               }
               className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 hover:bg-gray-100"
             >
@@ -332,9 +290,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Close mobile menu"
-            onClick={() =>
-              setMobileOpen(false)
-            }
+            onClick={() => setMobileOpen(false)}
             className="fixed inset-0 z-40 bg-black/30 lg:hidden"
           />
 
@@ -342,38 +298,26 @@ export default function Navbar() {
             <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
               {/* MAIN LINKS */}
               <div className="space-y-1">
-                {navLinks.map(
-                  (link) => {
-                    const active =
-                      pathname ===
-                      link.href ||
-                      pathname.startsWith(
-                        `${link.href}/`
-                      );
+                {navLinks.map((link) => {
+                  const active =
+                    pathname === link.href ||
+                    pathname.startsWith(`${link.href}/`);
 
-                    return (
-                      <Link
-                        key={
-                          link.href
-                        }
-                        href={
-                          link.href
-                        }
-                        onClick={
-                          closeMenus
-                        }
-                        className={`flex items-center rounded-xl px-4 py-3 text-sm font-semibold ${active
-                            ? "bg-[#EAF4ED] text-[#0B513D]"
-                            : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                      >
-                        {
-                          link.label
-                        }
-                      </Link>
-                    );
-                  }
-                )}
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={closeMenus}
+                      className={`flex items-center rounded-xl px-4 py-3 text-sm font-semibold ${
+                        active
+                          ? "bg-[#EAF4ED] text-[#0B513D]"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
               </div>
 
               <div className="my-4 border-t border-gray-100" />
@@ -383,22 +327,16 @@ export default function Navbar() {
                 <>
                   <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] font-bold text-[#063B2B]">
-                      {getInitials(
-                        user.name
-                      )}
+                      {getInitials(user.name)}
                     </div>
 
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-gray-900">
-                        {
-                          user.name
-                        }
+                        {user.name}
                       </p>
 
                       <p className="truncate text-xs text-gray-500">
-                        {
-                          user.email
-                        }
+                        {user.email}
                       </p>
 
                       <p className="mt-1 text-xs font-semibold capitalize text-[#0B513D]">
@@ -414,9 +352,7 @@ export default function Navbar() {
                         <LayoutDashboard className="h-5 w-5" />
                       }
                       label="Dashboard"
-                      onClick={
-                        closeMenus
-                      }
+                      onClick={closeMenus}
                     />
 
                     {isFarmer && (
@@ -427,9 +363,7 @@ export default function Navbar() {
                             <Store className="h-5 w-5" />
                           }
                           label="Marketplace"
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
 
                         <MobileMenuLink
@@ -439,14 +373,11 @@ export default function Navbar() {
                           }
                           label="My Cart"
                           badge={
-                            totalItems >
-                              0
+                            totalItems > 0
                               ? totalItems
                               : undefined
                           }
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
 
                         <MobileMenuLink
@@ -455,9 +386,7 @@ export default function Navbar() {
                             <Package className="h-5 w-5" />
                           }
                           label="My Orders"
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
 
                         <MobileMenuLink
@@ -466,9 +395,7 @@ export default function Navbar() {
                             <Store className="h-5 w-5" />
                           }
                           label="Manage Products"
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
 
                         <MobileMenuLink
@@ -477,9 +404,7 @@ export default function Navbar() {
                             <Store className="h-5 w-5" />
                           }
                           label="Sell Product"
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
 
                         <MobileMenuLink
@@ -488,9 +413,7 @@ export default function Navbar() {
                             <Package className="h-5 w-5" />
                           }
                           label="Seller Orders"
-                          onClick={
-                            closeMenus
-                          }
+                          onClick={closeMenus}
                         />
                       </>
                     )}
@@ -501,16 +424,12 @@ export default function Navbar() {
                         <User className="h-5 w-5" />
                       }
                       label="My Profile"
-                      onClick={
-                        closeMenus
-                      }
+                      onClick={closeMenus}
                     />
 
                     <button
                       type="button"
-                      onClick={
-                        handleLogout
-                      }
+                      onClick={handleLogout}
                       className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="h-5 w-5" />
@@ -523,9 +442,7 @@ export default function Navbar() {
                 <div className="space-y-3">
                   <Link
                     href="/login"
-                    onClick={
-                      closeMenus
-                    }
+                    onClick={closeMenus}
                     className="flex w-full items-center justify-center rounded-xl bg-[#063B2B] px-5 py-3 text-sm font-semibold text-white"
                   >
                     Login
@@ -533,9 +450,7 @@ export default function Navbar() {
 
                   <Link
                     href="/register?role=expert"
-                    onClick={
-                      closeMenus
-                    }
+                    onClick={closeMenus}
                     className="flex w-full items-center justify-center rounded-xl bg-[#D8E9DA] px-5 py-3 text-sm font-semibold text-[#315B45]"
                   >
                     Join as Expert
@@ -570,18 +485,13 @@ function MobileMenuLink({
       className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
     >
       <span className="flex items-center gap-3">
-        <span className="text-gray-500">
-          {icon}
-        </span>
-
+        <span className="text-gray-500">{icon}</span>
         {label}
       </span>
 
       {badge !== undefined && (
         <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
-          {badge > 99
-            ? "99+"
-            : badge}
+          {badge > 99 ? "99+" : badge}
         </span>
       )}
     </Link>
@@ -615,14 +525,11 @@ function ProfileDropdown({
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
             {user.name
               ? user.name
-                .split(" ")
-                .map(
-                  (part) =>
-                    part[0]
-                )
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()
               : "U"}
           </div>
 
@@ -670,8 +577,7 @@ function ProfileDropdown({
               }
               label="My Cart"
               badge={
-                totalItems >
-                  0
+                totalItems > 0
                   ? totalItems
                   : undefined
               }
@@ -758,18 +664,13 @@ function DropdownLink({
       className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
     >
       <span className="flex items-center gap-3">
-        <span className="text-gray-500">
-          {icon}
-        </span>
-
+        <span className="text-gray-500">{icon}</span>
         {label}
       </span>
 
       {badge !== undefined && (
         <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
-          {badge > 99
-            ? "99+"
-            : badge}
+          {badge > 99 ? "99+" : badge}
         </span>
       )}
     </Link>

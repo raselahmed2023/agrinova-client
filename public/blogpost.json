@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "slug": "rice-cultivation-guide-for-beginners",
+    "category": "GUIDE",
+    "title": "Comprehensive Rice Cultivation Guide for Beginners",
+    "excerpt": "Everything a new farmer needs to know about preparing soil, sowing, and managing a healthy rice field from seed to harvest.",
+    "content": [
+      "Rice remains one of the most important staple crops for farmers across South Asia, and getting the fundamentals right can be the difference between an average and an exceptional harvest.",
+      "Before sowing, prepare your field with proper leveling and puddling. This helps retain water evenly and reduces weed growth during the early growth stages.",
+      "Choose a seed variety suited to your region's climate and soil type — BRRI Dhan-89 is a strong choice for many parts of Bangladesh due to its disease resistance and yield potential.",
+      "Water management is critical during the vegetative and reproductive stages. Maintain a shallow water level of 2-5 cm, and avoid letting the field dry out completely during flowering.",
+      "Monitor your crop regularly for pests such as stem borers and diseases like blast. Early detection through daily field walks can save an entire season's yield."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1568829115421-3edcbcf141de?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Dr. Ahmed Zubayer", "avatar": "https://i.pravatar.cc/150?img=12" },
+    "date": "Aug 12, 2026",
+    "readTime": "6 min read"
+  },
+  {
+    "id": 2,
+    "slug": "identifying-early-blight-in-tomatoes",
+    "category": "DISEASE CONTROL",
+    "title": "Identifying and Treating Early Blight in Tomatoes",
+    "excerpt": "Learn how to spot the early signs of blight before it spreads, plus practical, low-cost treatment options for your tomato crop.",
+    "content": [
+      "Early blight is one of the most common fungal diseases affecting tomato plants, and it can spread quickly if left untreated.",
+      "The first sign is usually small, dark brown spots with concentric rings on the older, lower leaves of the plant — often described as looking like a target.",
+      "As the disease progresses, affected leaves turn yellow, then brown, and eventually drop off, which reduces the plant's ability to photosynthesize and produce fruit.",
+      "To manage early blight, remove and destroy infected leaves immediately, avoid overhead watering, and ensure good spacing between plants for airflow.",
+      "A copper-based fungicide applied every 7-10 days can help control the spread once symptoms appear, especially during humid weather."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1660289674091-a02faad9a55d?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Engr. Sarah Jahan", "avatar": "https://i.pravatar.cc/150?img=47" },
+    "date": "Jul 28, 2026",
+    "readTime": "4 min read"
+  },
+  {
+    "id": 3,
+    "slug": "top-10-irrigation-tips-to-save-water-and-money",
+    "category": "EFFICIENCY",
+    "title": "Top 10 Irrigation Tips to Save Water and Money",
+    "excerpt": "Simple, actionable changes to your irrigation routine that cut water waste without hurting yield — most take a single afternoon to set up.",
+    "content": [
+      "Water is one of a farm's most valuable and most wasted resources. Small changes to your irrigation habits can add up to significant savings over a season.",
+      "Water early in the morning or late in the evening to reduce evaporation loss, which can account for up to 30% of water used during the hottest parts of the day.",
+      "Use soil moisture sensors instead of a fixed schedule — many farmers over-water simply because they're following a calendar instead of what the soil actually needs.",
+      "Mulching around crops helps retain soil moisture for longer, meaning you can water less frequently while keeping the root zone consistently hydrated.",
+      "Regularly check for leaks in hoses, pipes, and sprinkler heads. A single unnoticed leak can waste thousands of liters of water over a growing season."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1738598665698-7fd7af4b5e0c?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Dr. Ahmed Zubayer", "avatar": "https://i.pravatar.cc/150?img=12" },
+    "date": "Jul 15, 2026",
+    "readTime": "5 min read"
+  },
+  {
+    "id": 4,
+    "slug": "soil-testing-101-what-every-farmer-should-know",
+    "category": "SOIL HEALTH",
+    "title": "Soil Testing 101: What Every Farmer Should Know",
+    "excerpt": "A simple breakdown of what soil tests actually measure, when to test, and how to read your results without a science degree.",
+    "content": [
+      "Soil testing is one of the most underused tools in farming, yet it's the fastest way to understand exactly what your land needs before you spend money on inputs.",
+      "A basic soil test measures three main things: pH level, nutrient content (nitrogen, phosphorus, and potassium), and organic matter percentage.",
+      "Test your soil at the same time each year, ideally a few weeks before planting season, so you have time to adjust based on the results.",
+      "A pH between 6.0 and 7.0 is ideal for most crops. If your soil is too acidic or too alkaline, nutrients become harder for plants to absorb even if they're present in the soil.",
+      "Don't guess with fertilizer. Applying nutrients your soil doesn't need wastes money and can actually harm your crop — let the test results guide your fertilizer plan."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1642952273588-ed6fa28870ac?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Engr. Sarah Jahan", "avatar": "https://i.pravatar.cc/150?img=47" },
+    "date": "Jun 30, 2026",
+    "readTime": "5 min read"
+  },
+  {
+    "id": 5,
+    "slug": "when-to-harvest-reading-the-signs-your-crop-is-ready",
+    "category": "GUIDE",
+    "title": "When to Harvest: Reading the Signs Your Crop Is Ready",
+    "excerpt": "Harvesting too early or too late can cost you yield and quality. Here's how to tell when your crop has actually reached peak readiness.",
+    "content": [
+      "Timing your harvest correctly is just as important as everything that came before it — even a perfectly managed crop can lose value if it's picked at the wrong moment.",
+      "For grain crops like rice and wheat, look for a golden-yellow color across the field and grains that feel firm, not soft, when pressed between your fingers.",
+      "For vegetables, check the specific variety's typical size and color rather than relying on the calendar alone, since weather can shift growth timelines by a week or more.",
+      "Harvesting in the early morning, once dew has dried, helps preserve freshness and reduces the risk of bruising or spoilage during transport.",
+      "Keep a simple harvest log each season — noting what date you picked and how the yield turned out helps you time it more precisely the following year."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1753866551936-998e5fcf6d5f?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Dr. Ahmed Zubayer", "avatar": "https://i.pravatar.cc/150?img=12" },
+    "date": "Jun 10, 2026",
+    "readTime": "4 min read"
+  },
+  {
+    "id": 6,
+    "slug": "natural-pest-control-methods-that-actually-work",
+    "category": "PEST MANAGEMENT",
+    "title": "Natural Pest Control Methods That Actually Work",
+    "excerpt": "Cut down on chemical spraying with these tested, low-cost natural pest control techniques used by farmers across the region.",
+    "content": [
+      "Chemical pesticides aren't always necessary — many common pests can be managed effectively with natural methods that are cheaper and safer for your soil long-term.",
+      "Companion planting, such as growing marigolds alongside vegetables, helps repel insects like nematodes and aphids through natural scent barriers.",
+      "Neem oil spray is one of the most effective natural treatments available. Mixed with water and a small amount of soap, it disrupts the feeding and breeding cycle of many common pests.",
+      "Encouraging natural predators like ladybugs and birds by planting diverse flowering plants around your field can reduce pest populations without any spraying at all.",
+      "Rotate your crops each season. Many pests are crop-specific, so changing what you plant in a given field disrupts their life cycle and prevents populations from building up over time."
+    ],
+    "coverImage": "https://images.unsplash.com/photo-1662431192410-fe2c980122cd?w=1200&q=80&auto=format&fit=crop",
+    "author": { "name": "Engr. Sarah Jahan", "avatar": "https://i.pravatar.cc/150?img=47" },
+    "date": "May 22, 2026",
+    "readTime": "5 min read"
+  }
+]

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -62,10 +63,20 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
 
         {/* Brand Logo */}
-        <div className="relative z-10 flex items-center gap-2.5 text-2xl font-bold tracking-tight">
-          <Leaf className="h-7 w-7 text-emerald-400 fill-emerald-400/20" />
-          <span>AgriNova</span>
-        </div>
+        <Link
+          href="/"
+          className="relative z-10 inline-flex items-center rounded-xl bg-white px-4 py-2 shadow-sm transition hover:opacity-95 w-fit"
+          title="AgriNova Home"
+        >
+          <Image
+            src="/AgriNova-Logo.png"
+            alt="AgriNova"
+            width={160}
+            height={48}
+            priority
+            className="h-10 w-auto object-contain"
+          />
+        </Link>
 
         {/* Hero Text */}
         <div className="relative z-10 my-auto max-w-lg space-y-6">
@@ -89,6 +100,20 @@ export default function LoginPage() {
       {/* Right Form Section */}
       <div className="flex w-full items-center justify-center p-6 sm:p-12 lg:w-1/2">
         <div className="w-full max-w-md space-y-7">
+          {/* Mobile Brand Logo */}
+          <div className="lg:hidden">
+            <Link href="/" className="inline-flex items-center transition hover:opacity-90" title="AgriNova Home">
+              <Image
+                src="/AgriNova-Logo.png"
+                alt="AgriNova"
+                width={155}
+                height={46}
+                priority
+                className="h-10 w-auto object-contain"
+              />
+            </Link>
+          </div>
+
           {/* Header */}
           <div className="space-y-1.5">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">
