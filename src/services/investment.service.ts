@@ -1,60 +1,80 @@
-import { authClient } from "@/lib/auth-client";
+import { apiRequest } from "./api.client";
+
 import type {
   CreateInvestmentProjectPayload,
+  InvestmentListResponse,
   InvestmentProject,
 } from "@/types/investment";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+export const createInvestmentProject =
+  async (
+    payload: CreateInvestmentProjectPayload
+  ): Promise<InvestmentProject> => {
+    return apiRequest<InvestmentProject>(
+      "/investments",
+      "POST",
+      payload
+    );
+  };
 
-export const createInvestmentProject = async (
-  payload: CreateInvestmentProjectPayload
-): Promise<InvestmentProject> => {
-  const { data: tokenData } = await authClient.token();
+export const getMyInvestmentProjects =
+  async (): Promise<InvestmentProject[]> => {
+    return apiRequest<InvestmentProject[]>(
+      "/investments/me",
+      "GET"
+    );
+  };
 
-  if (!tokenData?.token) {
-    throw new Error("Authentication token not found");
-  }
+export const getMyInvestmentProject =
+  async (
+    projectId: string
+  ): Promise<InvestmentProject> => {
+    return apiRequest<InvestmentProject>(
+      `/investments/me/${projectId}`,
+      "GET"
+    );
+  };
 
-  const response = await fetch(`${API_URL}/investments`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${tokenData.token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+export const updateMyInvestmentProject =
+  async (
+    projectId: string,
+    payload: Partial<CreateInvestmentProjectPayload>
+  ): Promise<InvestmentProject> => {
+    return apiRequest<InvestmentProject>(
+      `/investments/me/${projectId}`,
+      "PATCH",
+      payload
+    );
+  };
 
-  const result = await response.json();
+export const deleteMyInvestmentProject =
+  async (
+    projectId: string
+  ): Promise<InvestmentProject> => {
+    return apiRequest<InvestmentProject>(
+      `/investments/me/${projectId}`,
+      "DELETE"
+    );
+  };
 
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || "Failed to create investment project");
-  }
+export const getApprovedInvestmentProjects =
+  async (
+    queryString?: string
+  ): Promise<InvestmentListResponse> => {
+    return apiRequest<InvestmentListResponse>(
+      "/investments",
+      "GET",
+      undefined,
+      queryString
+    );
+  };
 
-  return result.data;
-};
-
-export const getMyInvestmentProjects = async (): Promise<
-  InvestmentProject[]
-> => {
-  const { data: tokenData } = await authClient.token();
-
-  if (!tokenData?.token) {
-    throw new Error("Authentication token not found");
-  }
-
-  const response = await fetch(`${API_URL}/investments/me`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${tokenData.token}`,
-    },
-    cache: "no-store",
-  });
-
-  const result = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || "Failed to load investment projects");
-  }
-
-  return result.data;
-};
+export const getApprovedInvestmentProject =
+  async (
+    projectId: string
+  ): Promise<InvestmentProject> => {
+    return apiRequest<InvestmentProject>(
+      `/investments/${projectId}`,
+      "GET"
+    );
+  };

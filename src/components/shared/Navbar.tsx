@@ -25,6 +25,10 @@ const navLinks = [
     href: "/marketplace",
   },
   {
+    label: "Investment",
+    href: "/investment",
+  },
+  {
     label: "Consultant",
     href: "/consultant",
   },
@@ -171,11 +175,10 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-sm font-medium transition-colors ${
-                    active
+                  className={`text-sm font-medium transition-colors ${active
                       ? "text-[#063B2B]"
                       : "text-gray-700 hover:text-[#063B2B]"
-                  }`}
+                    }`}
                 >
                   {link.label}
                 </Link>
@@ -216,11 +219,10 @@ export default function Navbar() {
                   </div>
 
                   <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition ${
-                      profileOpen
+                    className={`h-4 w-4 text-gray-500 transition ${profileOpen
                         ? "rotate-180"
                         : ""
-                    }`}
+                      }`}
                   />
                 </button>
 
@@ -278,7 +280,7 @@ export default function Navbar() {
                   totalItems > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
                       {totalItems >
-                      99
+                        99
                         ? "99+"
                         : totalItems}
                     </span>
@@ -344,7 +346,7 @@ export default function Navbar() {
                   (link) => {
                     const active =
                       pathname ===
-                        link.href ||
+                      link.href ||
                       pathname.startsWith(
                         `${link.href}/`
                       );
@@ -360,11 +362,10 @@ export default function Navbar() {
                         onClick={
                           closeMenus
                         }
-                        className={`flex items-center rounded-xl px-4 py-3 text-sm font-semibold ${
-                          active
+                        className={`flex items-center rounded-xl px-4 py-3 text-sm font-semibold ${active
                             ? "bg-[#EAF4ED] text-[#0B513D]"
                             : "text-gray-700 hover:bg-gray-50"
-                        }`}
+                          }`}
                       >
                         {
                           link.label
@@ -439,7 +440,7 @@ export default function Navbar() {
                           label="My Cart"
                           badge={
                             totalItems >
-                            0
+                              0
                               ? totalItems
                               : undefined
                           }
@@ -614,14 +615,14 @@ function ProfileDropdown({
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
             {user.name
               ? user.name
-                  .split(" ")
-                  .map(
-                    (part) =>
-                      part[0]
-                  )
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()
+                .split(" ")
+                .map(
+                  (part) =>
+                    part[0]
+                )
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()
               : "U"}
           </div>
 
@@ -670,7 +671,7 @@ function ProfileDropdown({
               label="My Cart"
               badge={
                 totalItems >
-                0
+                  0
                   ? totalItems
                   : undefined
               }

@@ -11,6 +11,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBag,
+  HandCoins,
   Users,
   X,
   Warehouse,
@@ -46,6 +47,11 @@ const sidebarItems = [
     label: "Marketplace",
     href: "/dashboard/admin/marketplace",
     icon: ShoppingBag,
+  },
+  {
+    label: "Investment Projects",
+    href: "/dashboard/admin/investments",
+    icon: HandCoins,
   },
   {
     label: "Supply Chain",
@@ -138,8 +144,8 @@ export default function AdminSidebar({
               href={item.href}
               onClick={onClose}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive
-                  ? "bg-emerald-950 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-950"
+                ? "bg-emerald-950 text-white shadow-sm"
+                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-950"
                 }`}
             >
               <Icon className="h-5 w-5 shrink-0" />
