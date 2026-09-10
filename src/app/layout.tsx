@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { CartProvider } from "@/context/CartContext";
+
 export const metadata: Metadata = {
   title: "AgriNova",
-  description: "Smart Agriculture & Digital Farming Platform",
+  description:
+    "Smart Agriculture & Digital Farming Platform",
 };
 
 export default function RootLayout({
@@ -13,7 +16,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <CartProvider>
+          {children}
+        </CartProvider>
+      </body>
     </html>
   );
 }

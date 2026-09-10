@@ -1,3 +1,5 @@
+import SellProductForm from "@/components/marketplace/SellProductForm";
+
 export default function SellProductPage() {
-  return <div>Sell Product</div>;
+  return <SellProductForm />;
 }

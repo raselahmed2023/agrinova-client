@@ -1,127 +1,171 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { IProduct } from "@/types/marketplace";
 
-interface ProductCardProps {
-  product:IProduct;
-}
+import {
+  MapPin,
+  Package,
+  ShoppingCart,
+  Store,
+} from "lucide-react";
 
-export default function ProductCard({product}:ProductCardProps){
+import type { IProduct } from "@/types/marketplace";
 
-  const isOrganic=product.productionMethod==="organic";
+import { useCart } from "@/context/CartContext";
 
-  const priceText=
-    product.transactionType==="free"
-    ? "Free"
-    : product.price
-      ? `৳${product.price}/${product.unit || "unit"}`
-      : "Price not set";
+export default function ProductCard({
+  product,
+}: {
+  product: IProduct;
+}) {
+  const {
+    addToCart,
+    getItemQuantity,
+  } = useCart();
 
+  const image =
+    product.images?.[0];
 
-  return(
-    <div className="bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition">
+  const inCart =
+    getItemQuantity(
+      product._id
+    );
 
-      <div className="relative h-52 bg-gray-100">
+  const isAvailable =
+    product.status ===
+      "available" &&
+    product.quantity > 0;
 
-        {
-          product.images && product.images.length>0
-          ?
-          <Image
-            src={product.images[0]}
-            alt={product.title}
-            fill
-            className="object-cover"
-          />
-          :
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-            No Image
-          </div>
-        }
+  return (
+    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+      <Link
+        href={`/marketplace/${product._id}`}
+        className="block"
+      >
+        <div className="relative h-52 overflow-hidden bg-slate-100">
+          {image ? (
+            <img
+              src={image}
+              alt={product.title}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Package className="h-12 w-12 text-slate-300" />
+            </div>
+          )}
 
-
-        {
-          isOrganic && (
-            <span className="absolute top-3 left-3 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              Organic
-            </span>
-          )
-        }
-
-      </div>
-
+          <span className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold capitalize text-slate-700 shadow">
+            {product.category.replaceAll(
+              "_",
+              " "
+            )}
+          </span>
+        </div>
+      </Link>
 
       <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <Link
+            href={`/marketplace/${product._id}`}
+            className="min-w-0"
+          >
+            <h2 className="line-clamp-2 text-lg font-bold text-slate-900 hover:text-emerald-700">
+              {product.title}
+            </h2>
+          </Link>
 
-        <div className="flex justify-between gap-3">
+          <div className="shrink-0 text-right">
+            {product.transactionType ===
+            "free" ? (
+              <p className="font-extrabold text-emerald-600">
+                FREE
+              </p>
+            ) : (
+              <>
+                <p className="font-extrabold text-emerald-600">
+                  ৳
+                  {Number(
+                    product.price
+                  ).toLocaleString(
+                    "en-BD"
+                  )}
+                </p>
 
-          <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-            {product.title}
-          </h3>
-
-          <span className="text-xs rounded-full bg-gray-100 px-2 py-1 whitespace-nowrap">
-            {product.category}
-          </span>
-
+                <p className="text-xs text-slate-400">
+                  / {product.unit}
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
-
-        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+        <p className="mt-3 line-clamp-2 text-sm leading-5 text-slate-500">
           {product.description}
         </p>
 
-
-        <div className="mt-4 space-y-2 text-sm">
-
-          <div className="flex justify-between">
-            <span className="text-gray-500">
-              Location
+        <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">
+              Available
             </span>
 
-            <span className="font-medium">
-              {product.location?.district || "N/A"}
+            <span className="font-semibold text-slate-800">
+              {product.quantity}{" "}
+              {product.unit}
             </span>
           </div>
 
+          {(product.location ||
+            product.district) && (
+            <div className="flex items-center gap-2 text-slate-500">
+              <MapPin className="h-4 w-4 shrink-0 text-emerald-500" />
 
-          <div className="flex justify-between">
+              <span className="truncate">
+                {product.location ||
+                  [
+                    product.district,
+                    product.division,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+              </span>
+            </div>
+          )}
 
-            <span className="text-gray-500">
-              Quantity
-            </span>
+          {product.sellerName && (
+            <div className="flex items-center gap-2 text-slate-500">
+              <Store className="h-4 w-4 shrink-0 text-emerald-500" />
 
-            <span className="font-medium">
-              {product.quantity} {product.unit || ""}
-            </span>
-
-          </div>
-
-
-          <div className="flex justify-between">
-
-            <span className="text-gray-500">
-              Price
-            </span>
-
-            <span className="font-bold text-[#0B513D]">
-              {priceText}
-            </span>
-
-          </div>
-
+              <span className="truncate">
+                {product.sellerName}
+              </span>
+            </div>
+          )}
         </div>
 
-
-        <Link
-          href={`/marketplace/${product._id}`}
-          className="mt-5 block text-center rounded-xl bg-[#0B513D] py-2.5 text-sm font-semibold text-white hover:bg-[#083c2d] transition"
+        <button
+          type="button"
+          disabled={!isAvailable}
+          onClick={() => {
+            if (isAvailable) {
+              addToCart(
+                product,
+                1
+              );
+            }
+          }}
+          className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          View Details
-        </Link>
+          <ShoppingCart className="h-4 w-4" />
 
+          {!isAvailable
+            ? "Out of Stock"
+            : inCart > 0
+              ? `Add More (${inCart})`
+              : "Add to Cart"}
+        </button>
       </div>
-
-    </div>
+    </article>
   );
 }

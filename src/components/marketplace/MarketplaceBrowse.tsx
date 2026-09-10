@@ -5,358 +5,200 @@ import { useEffect, useState } from "react";
 import ProductCard from "./ProductCard";
 import MarketplaceFilters from "./MarketplaceFilters";
 
-import {
-  MarketplaceService,
-} from "@/services/marketplace.service";
+import { MarketplaceService } from "@/services/marketplace.service";
 
-import {
-  IProduct,
-} from "@/types/marketplace";
+import { IProduct } from "@/types/marketplace";
 
-
+interface MarketplaceFiltersState {
+  category: string;
+  search: string;
+  district: string;
+}
 
 export default function MarketplaceBrowse() {
-
-
-  const [products,setProducts] =
+  const [products, setProducts] =
     useState<IProduct[]>([]);
 
-
-  const [loading,setLoading] =
+  const [loading, setLoading] =
     useState(true);
 
-
-  const [error,setError] =
+  const [error, setError] =
     useState("");
 
-
-
-  const [filters,setFilters] =
-    useState({
-
-      category:"",
-      search:"",
-      district:"",
-
+  const [filters, setFilters] =
+    useState<MarketplaceFiltersState>({
+      category: "",
+      search: "",
+      district: "",
     });
 
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
+      const data =
+        await MarketplaceService.getProducts({
+          category:
+            filters.category || undefined,
 
+          search:
+            filters.search || undefined,
 
+          district:
+            filters.district || undefined,
+        });
 
-  const fetchProducts =
-    async()=>{
+      setProducts(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err: any) {
+      setProducts([]);
 
+      setError(
+        err?.message ||
+          "Failed to load marketplace products."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try{
-
-
-        setLoading(true);
-
-        setError("");
-
-
-
-        const data =
-          await MarketplaceService.getProducts(
-            filters
-          );
-
-
-
-        setProducts(data);
-
-
-
-      }catch(err:any){
-
-
-        setError(
-          err.message ||
-          "Failed to load products"
-        );
-
-
-      }finally{
-
-
-        setLoading(false);
-
-      }
-
-
-    };
-
-
-
-
-
-
-  useEffect(()=>{
-
-
+  useEffect(() => {
     fetchProducts();
-
-
-  },[
+  }, [
     filters.category,
     filters.search,
-    filters.district
+    filters.district,
   ]);
 
-
-
-
-
-
-
-
   return (
-
-    <section
-      className="
-      w-full
-      min-h-screen
-      px-5
-      py-12
-      md:px-10
-      "
-    >
-
-
-      <div
-        className="
-        max-w-7xl
-        mx-auto
-        "
-      >
-
-
+    <section className="min-h-screen w-full px-5 py-12 md:px-10">
+      <div className="mx-auto max-w-7xl">
 
         {/* HEADER */}
 
-        <div
-          className="
-          mb-8
-          "
-        >
-
-
-          <h1
-            className="
-            text-3xl
-            md:text-4xl
-            font-bold
-            text-gray-900
-            "
-          >
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 md:text-4xl">
             Agricultural Marketplace
           </h1>
 
-
-
-          <p
-            className="
-            mt-2
-            text-gray-600
-            "
-          >
+          <p className="mt-2 text-gray-600">
             Explore products directly from farmers
             across Bangladesh.
           </p>
-
-
         </div>
 
-
-
-
-
-
-        {/* FILTER */}
+        {/* FILTERS */}
 
         <MarketplaceFilters
-
           filters={filters}
-
           setFilters={setFilters}
-
         />
 
-
-
-
-
-
-
-
-        {/* CONTENT */}
-
+        {/* LOADING */}
 
         {loading && (
-
-          <div
-            className="
-            mt-10
-            grid
-            grid-cols-1
-            md:grid-cols-3
-            gap-6
-            "
-          >
-
-            {[1,2,3].map((item)=>(
-
-              <div
-
-                key={item}
-
-                className="
-                h-72
-                rounded-xl
-                bg-gray-100
-                animate-pulse
-                "
-
-              />
-
-            ))}
-
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map(
+              (item) => (
+                <div
+                  key={item}
+                  className="h-80 animate-pulse rounded-2xl bg-gray-100"
+                />
+              )
+            )}
           </div>
-
         )}
 
-
-
-
-
-
-
+        {/* ERROR */}
 
         {!loading && error && (
-
-          <div
-            className="
-            mt-10
-            rounded-xl
-            bg-red-50
-            p-5
-            text-red-600
-            "
-          >
-
-            {error}
-
-          </div>
-
-        )}
-
-
-
-
-
-
-
-
-        {!loading &&
-        !error &&
-        products.length ===0 && (
-
-          <div
-            className="
-            mt-10
-            text-center
-            rounded-xl
-            bg-white
-            border
-            p-10
-            "
-          >
-
-            <h3
-              className="
-              text-lg
-              font-semibold
-              "
-            >
-              No products found
+          <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-6">
+            <h3 className="font-semibold text-red-800">
+              Unable to load products
             </h3>
 
-
-            <p
-              className="
-              mt-2
-              text-gray-500
-              "
-            >
-              Try changing your filters.
+            <p className="mt-1 text-sm text-red-600">
+              {error}
             </p>
 
-
+            <button
+              type="button"
+              onClick={fetchProducts}
+              className="mt-4 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Try Again
+            </button>
           </div>
-
         )}
 
-
-
-
-
-
-
-
+        {/* EMPTY */}
 
         {!loading &&
-        !error &&
-        products.length>0 && (
+          !error &&
+          products.length === 0 && (
+            <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+                🌾
+              </div>
 
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                No products found
+              </h3>
 
-          <div
-            className="
-            mt-10
-            grid
-            grid-cols-1
-            sm:grid-cols-2
-            lg:grid-cols-3
-            gap-6
-            "
-          >
+              <p className="mt-2 text-sm text-gray-500">
+                Try changing your search,
+                category, or district.
+              </p>
 
+              <button
+                type="button"
+                onClick={() =>
+                  setFilters({
+                    category: "",
+                    search: "",
+                    district: "",
+                  })
+                }
+                className="mt-5 rounded-xl bg-[#0B513D] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#083c2d]"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
 
-            {products.map(
-              (product)=>(
+        {/* PRODUCTS */}
 
-                <ProductCard
+        {!loading &&
+          !error &&
+          products.length > 0 && (
+            <>
+              <div className="mt-8 flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  {products.length}{" "}
+                  {products.length === 1
+                    ? "product"
+                    : "products"}{" "}
+                  found
+                </p>
+              </div>
 
-                  key={
-                    product._id
-                  }
-
-                  product={
-                    product
-                  }
-
-                />
-
-              )
-
-            )}
-
-
-
-          </div>
-
-
-        )}
-
-
-
-
-
+              <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {products.map(
+                  (product) => (
+                    <ProductCard
+                      key={product._id}
+                      product={product}
+                    />
+                  )
+                )}
+              </div>
+            </>
+          )}
       </div>
-
-
     </section>
-
   );
-
 }
