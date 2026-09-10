@@ -1,7 +1,5 @@
 import React from "react";
 import {
-  FileQuestion,
-  CheckCircle2,
   CalendarDays,
   Radio,
   CheckCheck,
@@ -11,7 +9,7 @@ import {
 import Link from "next/link";
 
 export interface ExpertStatItem {
-  id: "newRequests" | "accepted" | "scheduled" | "ongoing" | "completed";
+  id: "scheduled" | "ongoing" | "completed";
   label: string;
   count: number;
   description: string;
@@ -29,8 +27,8 @@ export interface ExpertStatItem {
 
 interface ExpertStatsCardsProps {
   stats: {
-    newRequests: number;
-    accepted: number;
+    newRequests?: number;
+    accepted?: number;
     scheduled: number;
     ongoing: number;
     completed: number;
@@ -40,38 +38,6 @@ interface ExpertStatsCardsProps {
 
 export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStatsCardsProps) {
   const statItems: ExpertStatItem[] = [
-    {
-      id: "newRequests",
-      label: "New Requests",
-      count: stats.newRequests,
-      description: "Pending review & approval",
-      icon: FileQuestion,
-      href: "/dashboard/expert/requests",
-      colorScheme: {
-        iconBg: "bg-amber-500/10",
-        iconText: "text-amber-600",
-        borderHover: "hover:border-amber-400/80",
-        badgeBg: "bg-amber-50",
-        badgeText: "text-amber-700",
-        accentGlow: "from-amber-500/5 to-transparent",
-      },
-    },
-    {
-      id: "accepted",
-      label: "Accepted",
-      count: stats.accepted,
-      description: "Awaiting time slot booking",
-      icon: CheckCircle2,
-      href: "/dashboard/expert/consultations?status=ACCEPTED",
-      colorScheme: {
-        iconBg: "bg-sky-500/10",
-        iconText: "text-sky-600",
-        borderHover: "hover:border-sky-400/80",
-        badgeBg: "bg-sky-50",
-        badgeText: "text-sky-700",
-        accentGlow: "from-sky-500/5 to-transparent",
-      },
-    },
     {
       id: "scheduled",
       label: "Scheduled",
@@ -123,7 +89,7 @@ export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStat
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {statItems.map((item) => {
         const Icon = item.icon;
         const isOngoing = item.id === "ongoing" && item.count > 0;

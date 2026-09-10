@@ -54,7 +54,6 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const user = session?.user;
-
   const role = user?.role?.toUpperCase();
 
   const isFarmer = role === "FARMER";
@@ -523,14 +522,7 @@ function ProfileDropdown({
       <div className="border-b border-gray-100 px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-sm font-bold text-[#063B2B]">
-            {user.name
-              ? user.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()
-              : "U"}
+            {getUserInitials(user.name)}
           </div>
 
           <div className="min-w-0">
@@ -675,4 +667,24 @@ function DropdownLink({
       )}
     </Link>
   );
+}
+
+function getUserInitials(name?: string | null) {
+  if (!name) {
+    return "U";
+  }
+
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return (
+    parts[0][0] +
+    parts[parts.length - 1][0]
+  ).toUpperCase();
 }

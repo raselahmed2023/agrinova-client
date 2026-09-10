@@ -69,6 +69,7 @@ export interface ExpertProfile {
   email: string;
   phone: string;
   avatar?: string;
+  image?: string;
   title: string;
   specialization: string[];
   bio: string;

@@ -61,6 +61,11 @@ export const auth = betterAuth({
         type: "string",
         required: false,
       },
+
+      avatar: {
+        type: "string",
+        required: false,
+      },
     },
   },
 
