@@ -218,49 +218,36 @@ export default function VideoCallButton({
     if (onCallEnded) onCallEnded();
   };
 
+  if (
+    ["COMPLETED", "CANCELLED", "REJECTED"].includes(consultation.status) ||
+    !effectiveIsActive
+  ) {
+    return null;
+  }
+
   return (
     <>
       <div className="inline-flex flex-col items-stretch sm:items-end w-full sm:w-auto">
         <button
           type="button"
-          disabled={!effectiveIsActive}
-          onClick={() => {
-            if (effectiveIsActive) setIsInCall(true);
-          }}
+          onClick={() => setIsInCall(true)}
           className={`inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 px-4 text-xs font-bold transition shadow-sm ${
-            !effectiveIsActive
-              ? "bg-slate-800/80 text-slate-400 border border-slate-700/60 cursor-not-allowed opacity-75"
-              : isOngoing
+            isOngoing
               ? "bg-rose-600 hover:bg-rose-700 animate-pulse text-white cursor-pointer active:scale-95"
               : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
           } ${className}`}
         >
-          {!effectiveIsActive ? (
-            <Lock className="h-4 w-4 text-slate-400" />
-          ) : (
-            <Video className="h-4 w-4" />
-          )}
+          <Video className="h-4 w-4" />
           <span>
-            {!effectiveIsActive
-              ? "Join Video (Locked until start)"
-              : isOngoing
-              ? "Join Video Call (Live)"
-              : "Join Video Call"}
+            {isOngoing ? "Join Video Call (Live)" : "Join Video Call"}
           </span>
         </button>
 
-        {!effectiveIsActive ? (
-          <span className="text-[10px] text-amber-400/90 mt-1 flex items-center justify-center sm:justify-end gap-1 font-medium">
-            <Clock className="h-3 w-3 text-amber-400" />
-            {windowMessage || "Unlocks when timer ends"}
+        {windowMessage && (
+          <span className="text-[10px] text-emerald-400 mt-1 flex items-center justify-center sm:justify-end gap-1 font-medium">
+            <Clock className="h-3 w-3 text-emerald-400" />
+            {windowMessage}
           </span>
-        ) : (
-          windowMessage && (
-            <span className="text-[10px] text-emerald-400 mt-1 flex items-center justify-center sm:justify-end gap-1 font-medium">
-              <Clock className="h-3 w-3 text-emerald-400" />
-              {windowMessage}
-            </span>
-          )
         )}
       </div>
 

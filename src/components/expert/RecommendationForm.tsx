@@ -218,13 +218,21 @@ export default function RecommendationForm({
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanDiagnosis = diagnosis.trim();
+    if (!cleanDiagnosis) return;
+
     await onSubmit({
       consultationId: consultation._id || consultation.id || "",
-      diagnosis,
-      prescriptions: prescriptions.filter((p) => p.trim().length > 0),
-      treatmentSteps: treatmentSteps.filter((s) => s.trim().length > 0),
+      diagnosis: cleanDiagnosis,
+      recommendation: cleanDiagnosis,
+      prescriptions: prescriptions
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0),
+      treatmentSteps: treatmentSteps
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0),
       followUpDate,
-      additionalNotes,
+      additionalNotes: additionalNotes.trim(),
     });
     if (onClose) onClose();
   };

@@ -3,17 +3,11 @@
 import React, { useState, useEffect } from "react";
 import {
   Clock,
-  Video,
-  Copy,
-  Check,
   Calendar,
   ExternalLink,
-  Sparkles,
-  AlertCircle,
-  RefreshCw,
   Edit3,
   CalendarDays,
-  Lock,
+  CheckCircle2,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 import VideoCallButton from "@/components/expert/VideoCallButton";
@@ -76,7 +70,6 @@ export default function ConsultationCountdownCard({
   onRefresh,
 }: ConsultationCountdownCardProps) {
   const [now, setNow] = useState<number>(Date.now());
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Live timer tick every 1 second
   useEffect(() => {
@@ -93,12 +86,6 @@ export default function ConsultationCountdownCard({
     consultation.videoRoomId || `agrinova-consultation-${cleanId}`;
   const meetingLink =
     consultation.meetingLink || `https://meet.jit.si/${videoRoomId}`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(meetingLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
 
   // Compute countdown calculations and active status
   let countdownDisplay = "";
@@ -208,17 +195,17 @@ export default function ConsultationCountdownCard({
           </p>
         </div>
 
-        {/* Video Call Entry Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-          <VideoCallButton
-            consultation={consultation}
-            isFarmer={true}
-            userName={consultation.farmer?.name || "Farmer"}
-            className="w-full sm:w-auto"
-            isActive={isCallActive}
-          />
+        {/* Video Call Entry Actions (Only shown when call is active) */}
+        {isCallActive && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            <VideoCallButton
+              consultation={consultation}
+              isFarmer={true}
+              userName={consultation.farmer?.name || "Farmer"}
+              className="w-full sm:w-auto"
+              isActive={isCallActive}
+            />
 
-          {isCallActive ? (
             <a
               href={meetingLink}
               target="_blank"
@@ -229,75 +216,47 @@ export default function ConsultationCountdownCard({
               <ExternalLink className="h-3.5 w-3.5 text-emerald-300" />
               <span>External Window</span>
             </a>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 px-4 py-2.5 text-xs font-semibold text-emerald-300/40 cursor-not-allowed opacity-60 w-full sm:w-auto"
-              title="Meeting link will activate when countdown timer ends"
-            >
-              <Lock className="h-3.5 w-3.5 text-emerald-300/40" />
-              <span>External Window (Locked)</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Direct Meeting Link Strip */}
-      <div className="rounded-2xl bg-emerald-900/50 border border-emerald-800/80 p-4 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Direct Video Consultation Link:</span>
-          </span>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 hover:text-white bg-emerald-800/60 px-2.5 py-1 rounded-lg border border-emerald-700/50 transition"
-          >
-            {copiedLink ? (
-              <Check className="h-3 w-3 text-emerald-400" />
-            ) : (
-              <Copy className="h-3 w-3" />
+      {/* Quick Farmer Actions Bar or Completed Notification */}
+      {consultation.status === "COMPLETED" ? (
+        <div className="pt-2 flex items-center gap-2 border-t border-emerald-800/60 text-xs text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>Consultation finished · Official diagnostic advice and prescription issued below.</span>
+        </div>
+      ) : onEditDetails || onReschedule ? (
+        <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-emerald-800/60 text-xs">
+          <div className="text-emerald-200/90 text-xs">
+            Need to change your problem details or schedule?
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {onEditDetails && (
+              <button
+                type="button"
+                onClick={onEditDetails}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 px-3.5 py-2 text-xs font-bold text-white border border-white/20 transition shadow-sm flex-1 sm:flex-none"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-emerald-300" />
+                <span>Edit Details</span>
+              </button>
             )}
-            <span>{copiedLink ? "Copied" : "Copy Link"}</span>
-          </button>
-        </div>
-        <div className="font-mono text-xs text-emerald-200 select-all break-all bg-emerald-950/80 p-2.5 rounded-xl border border-emerald-800/40">
-          {meetingLink}
-        </div>
-      </div>
 
-      {/* Quick Farmer Actions Bar */}
-      <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-emerald-800/60 text-xs">
-        <div className="text-emerald-200/90 text-xs">
-          Need to change your problem details or schedule?
+            {onReschedule && (
+              <button
+                type="button"
+                onClick={onReschedule}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition shadow-sm flex-1 sm:flex-none"
+              >
+                <CalendarDays className="h-3.5 w-3.5 text-slate-950" />
+                <span>Reschedule Date/Time</span>
+              </button>
+            )}
+          </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {onEditDetails && (
-            <button
-              type="button"
-              onClick={onEditDetails}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 px-3.5 py-2 text-xs font-bold text-white border border-white/20 transition shadow-sm flex-1 sm:flex-none"
-            >
-              <Edit3 className="h-3.5 w-3.5 text-emerald-300" />
-              <span>Edit Details</span>
-            </button>
-          )}
-
-          {onReschedule && (
-            <button
-              type="button"
-              onClick={onReschedule}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition shadow-sm flex-1 sm:flex-none"
-            >
-              <CalendarDays className="h-3.5 w-3.5 text-slate-950" />
-              <span>Reschedule Date/Time</span>
-            </button>
-          )}
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

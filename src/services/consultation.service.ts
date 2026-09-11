@@ -647,8 +647,13 @@ export const submitRecommendation = async (
         }
       } else {
         const errJson = await response.json().catch(() => null);
-        if (errJson?.message) {
-          throw new Error(errJson.message);
+        if (errJson) {
+          const detail =
+            errJson.errorSources?.map((s: any) => s.message).filter(Boolean).join(", ") ||
+            errJson.message;
+          if (detail) {
+            throw new Error(detail);
+          }
         }
       }
     }

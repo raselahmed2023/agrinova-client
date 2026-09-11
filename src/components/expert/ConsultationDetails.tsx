@@ -17,8 +17,10 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
+  Download,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
+import { downloadPrescriptionPDF } from "@/utils/prescriptionPdf";
 import ConsultationStatusBadge, {
   UrgencyBadge,
 } from "./ConsultationStatusBadge";
@@ -358,19 +360,29 @@ export default function ConsultationDetails({
       {/* 5. Recommendation Section (View Only when completed or recommendation present) */}
       {(consultation.recommendations || consultation.recommendation) && (
         <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-emerald-50/20 p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-emerald-100">
             <div className="flex items-center gap-2 text-emerald-950 font-bold text-lg">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
               <span>Official Recommendation & Advisory Issued</span>
             </div>
-            {consultation.recommendations?.createdAt && (
-              <span className="text-xs text-slate-500">
-                Issued on{" "}
-                {new Date(
-                  consultation.recommendations.createdAt
-                ).toLocaleDateString()}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {consultation.recommendations?.createdAt && (
+                <span className="text-xs text-slate-500 hidden md:inline">
+                  Issued on{" "}
+                  {new Date(
+                    consultation.recommendations.createdAt
+                  ).toLocaleDateString()}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => downloadPrescriptionPDF(consultation)}
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:from-emerald-700 hover:to-teal-800 transition"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Download PDF</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -441,6 +453,11 @@ export default function ConsultationDetails({
                 <p>{consultation.recommendations.additionalNotes}</p>
               </div>
             )}
+
+            <div className="pt-3 border-t border-emerald-100/80 text-xs text-slate-500">
+              Prescription has been permanently recorded and delivered to{" "}
+              <strong className="text-slate-800 font-semibold">{consultation.farmer?.name || consultation.farmerName || "Farmer"}</strong>.
+            </div>
           </div>
         </div>
       )}
