@@ -13,7 +13,6 @@ import {
   MapPin,
   Package,
   Plus,
-  Trash2,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -22,6 +21,7 @@ import { useRouter } from "next/navigation";
 import {
   MarketplaceService,
 } from "@/services/marketplace.service";
+import ProductImageUpload from "./ProductImageUpload";
 
 import type {
   ICreateProduct,
@@ -127,8 +127,6 @@ export default function SellProductForm() {
   const [imageUrls, setImageUrls] =
     useState<string[]>([]);
 
-  const [useImageUrl, setUseImageUrl] =
-    useState("");
 
   const [byProductUse, setByProductUse] =
     useState("");
@@ -178,50 +176,6 @@ export default function SellProductForm() {
     );
   };
 
-  const addImage = () => {
-    const url =
-      useImageUrl.trim();
-
-    if (!url) {
-      return;
-    }
-
-    if (
-      imageUrls.includes(url)
-    ) {
-      setUseImageUrl("");
-      return;
-    }
-
-    const next = [
-      ...imageUrls,
-      url,
-    ];
-
-    setImageUrls(next);
-    updateField(
-      "images",
-      next
-    );
-
-    setUseImageUrl("");
-  };
-
-  const removeImage = (
-    index: number
-  ) => {
-    const next =
-      imageUrls.filter(
-        (_, i) =>
-          i !== index
-      );
-
-    setImageUrls(next);
-    updateField(
-      "images",
-      next
-    );
-  };
 
   const addByProductUse = () => {
     const value =
@@ -447,7 +401,7 @@ export default function SellProductForm() {
 
       setTimeout(() => {
         router.push(
-          "/marketplace?tab=manage"
+          "/marketplace/listings"
         );
 
         router.refresh();
@@ -467,7 +421,7 @@ export default function SellProductForm() {
     <main className="min-h-screen bg-[#f5f8f2] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         <Link
-          href="/marketplace?tab=manage"
+          href="/marketplace/listings"
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-700"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -712,103 +666,18 @@ export default function SellProductForm() {
                 <ImagePlus className="h-5 w-5" />
               }
               title="Product Images"
-              description="Add image URLs for your product."
+              description="Upload product images"
             />
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="url"
-                value={
-                  useImageUrl
-                }
-                onChange={(
-                  event
-                ) =>
-                  setUseImageUrl(
-                    event
-                      .target
-                      .value
-                  )
-                }
-                placeholder="https://example.com/product-image.jpg"
-                className="h-11 flex-1 rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-emerald-500"
+            <div className="mt-6">
+              <ProductImageUpload
+                images={imageUrls}
+                setImages={(next) => {
+                  setImageUrls(next);
+                  updateField("images", next);
+                }}
               />
-
-              <button
-                type="button"
-                onClick={
-                  addImage
-                }
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                <Plus className="h-4 w-4" />
-                Add Image
-              </button>
             </div>
-
-            {imageUrls.length >
-              0 && (
-              <div className="mt-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {imageUrls.map(
-                  (
-                    image,
-                    index
-                  ) => (
-                    <div
-                      key={`${image}-${index}`}
-                      className="overflow-hidden rounded-xl border bg-slate-50"
-                    >
-                      <div className="h-40 bg-slate-100">
-                        <img
-                          src={
-                            image
-                          }
-                          alt={`Product image ${index + 1}`}
-                          className="h-full w-full object-cover"
-                          onError={(
-                            event
-                          ) => {
-                            event.currentTarget.style.opacity =
-                              "0.25";
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 p-3">
-                        <span className="truncate text-xs text-slate-500">
-                          {
-                            image
-                          }
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeImage(
-                              index
-                            )
-                          }
-                          className="shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-
-            {imageUrls.length ===
-              0 && (
-              <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-                <ImagePlus className="mx-auto h-8 w-8 text-slate-300" />
-
-                <p className="mt-2 text-sm font-medium text-slate-500">
-                  No images added yet.
-                </p>
-              </div>
-            )}
           </section>
 
           {/* LOCATION */}
@@ -1128,7 +997,7 @@ export default function SellProductForm() {
           {/* SUBMIT */}
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Link
-              href="/marketplace?tab=manage"
+              href="/marketplace/listings"
               className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Cancel

@@ -15,7 +15,6 @@ import {
   Menu,
   Package,
   ShoppingCart,
-  Store,
   User,
   X,
 } from "lucide-react";
@@ -85,7 +84,7 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   /*
-   * Determine the correct dashboard according to the user's role.
+   * Determine dashboard according to user's role.
    */
   const getDashboardPath = () => {
     if (isAdmin) {
@@ -121,6 +120,7 @@ export default function Navbar() {
     ).toUpperCase();
   };
 
+
   const isNavLinkActive = (href: string) => {
     if (href === "/") {
       return pathname === "/";
@@ -132,12 +132,16 @@ export default function Navbar() {
     );
   };
 
+  /*
+   * Logout.
+   */
   const handleLogout = async () => {
     try {
       await signOut();
     } finally {
       setProfileOpen(false);
       setMobileOpen(false);
+
       router.push("/");
       router.refresh();
     }
@@ -150,10 +154,11 @@ export default function Navbar() {
 
   return (
     <>
-      
+   
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          
+
+          {/* Logo */}
           <Link
             href="/"
             onClick={closeMenus}
@@ -169,7 +174,7 @@ export default function Navbar() {
             />
           </Link>
 
-         
+          {/* Desktop navigation */}
           <div className="hidden items-center gap-7 lg:flex">
             {navLinks.map((link) => {
               const active = isNavLinkActive(link.href);
@@ -178,7 +183,9 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={
+                    active ? "page" : undefined
+                  }
                   className={`relative py-2 text-sm font-medium transition-colors ${
                     active
                       ? "text-[#063B2B]"
@@ -196,17 +203,20 @@ export default function Navbar() {
             })}
           </div>
 
-       
+          {/* Desktop right side */}
           <div className="hidden items-center gap-3 lg:flex">
             {isPending ? (
               <div className="h-10 w-28 animate-pulse rounded-xl bg-gray-100" />
             ) : user ? (
               <div className="relative">
+
                 {/* Profile button */}
                 <button
                   type="button"
                   onClick={() =>
-                    setProfileOpen((current) => !current)
+                    setProfileOpen(
+                      (current) => !current
+                    )
                   }
                   aria-expanded={profileOpen}
                   aria-haspopup="menu"
@@ -228,7 +238,9 @@ export default function Navbar() {
 
                   <ChevronDown
                     className={`h-4 w-4 text-gray-500 transition-transform ${
-                      profileOpen ? "rotate-180" : ""
+                      profileOpen
+                        ? "rotate-180"
+                        : ""
                     }`}
                   />
                 </button>
@@ -241,7 +253,9 @@ export default function Navbar() {
                     isFarmer={isFarmer}
                     totalItems={totalItems}
                     dashboardPath={getDashboardPath()}
-                    onClose={() => setProfileOpen(false)}
+                    onClose={() =>
+                      setProfileOpen(false)
+                    }
                     onLogout={handleLogout}
                   />
                 )}
@@ -265,8 +279,9 @@ export default function Navbar() {
             )}
           </div>
 
-          
+          {/* Mobile controls */}
           <div className="flex items-center gap-2 lg:hidden">
+
             {/* Mobile cart */}
             {user && (
               <Link
@@ -277,11 +292,14 @@ export default function Navbar() {
               >
                 <ShoppingCart className="h-5 w-5" />
 
-                {isFarmer && totalItems > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
-                    {totalItems > 99 ? "99+" : totalItems}
-                  </span>
-                )}
+                {isFarmer &&
+                  totalItems > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
+                      {totalItems > 99
+                        ? "99+"
+                        : totalItems}
+                    </span>
+                  )}
               </Link>
             )}
 
@@ -299,11 +317,15 @@ export default function Navbar() {
             <button
               type="button"
               aria-label={
-                mobileOpen ? "Close menu" : "Open menu"
+                mobileOpen
+                  ? "Close menu"
+                  : "Open menu"
               }
               aria-expanded={mobileOpen}
               onClick={() =>
-                setMobileOpen((current) => !current)
+                setMobileOpen(
+                  (current) => !current
+                )
               }
               className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 hover:bg-gray-100"
             >
@@ -317,6 +339,9 @@ export default function Navbar() {
         </nav>
       </header>
 
+      {/* =========================
+          MOBILE MENU
+      ========================== */}
       {mobileOpen && (
         <>
           {/* Overlay */}
@@ -330,10 +355,12 @@ export default function Navbar() {
           {/* Menu panel */}
           <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-gray-200 bg-white shadow-xl lg:hidden">
             <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-            
+
+              {/* Main navigation */}
               <div className="space-y-1">
                 {navLinks.map((link) => {
-                  const active = isNavLinkActive(link.href);
+                  const active =
+                    isNavLinkActive(link.href);
 
                   return (
                     <Link
@@ -361,7 +388,7 @@ export default function Navbar() {
 
               <div className="my-4 border-t border-gray-100" />
 
-             
+              {/* Logged-in mobile menu */}
               {user ? (
                 <>
                   {/* User info */}
@@ -386,6 +413,7 @@ export default function Navbar() {
                   </div>
 
                   <div className="space-y-1">
+
                     {/* Dashboard */}
                     <MobileMenuLink
                       href={getDashboardPath()}
@@ -399,18 +427,7 @@ export default function Navbar() {
                     {/* Farmer-only links */}
                     {isFarmer && (
                       <>
-                        <MobileMenuLink
-                          href="/marketplace"
-                          icon={
-                            <Store className="h-5 w-5" />
-                          }
-                          label="Marketplace"
-                          active={isNavLinkActive(
-                            "/marketplace"
-                          )}
-                          onClick={closeMenus}
-                        />
-
+                        {/* My Cart */}
                         <MobileMenuLink
                           href="/cart"
                           icon={
@@ -425,6 +442,7 @@ export default function Navbar() {
                           onClick={closeMenus}
                         />
 
+                        {/* My Orders */}
                         <MobileMenuLink
                           href="/orders"
                           icon={
@@ -434,24 +452,7 @@ export default function Navbar() {
                           onClick={closeMenus}
                         />
 
-                        <MobileMenuLink
-                          href="/marketplace?tab=manage"
-                          icon={
-                            <Store className="h-5 w-5" />
-                          }
-                          label="Manage Products"
-                          onClick={closeMenus}
-                        />
-
-                        <MobileMenuLink
-                          href="/marketplace/sell"
-                          icon={
-                            <Store className="h-5 w-5" />
-                          }
-                          label="Sell Product"
-                          onClick={closeMenus}
-                        />
-
+                        {/* Seller Orders */}
                         <MobileMenuLink
                           href="/seller-orders"
                           icon={
@@ -485,7 +486,7 @@ export default function Navbar() {
                   </div>
                 </>
               ) : (
-                
+                /* Logged-out mobile menu */
                 <div className="space-y-3">
                   <Link
                     href="/login"
@@ -513,6 +514,7 @@ export default function Navbar() {
 }
 
 
+
 function MobileMenuLink({
   href,
   icon,
@@ -532,7 +534,9 @@ function MobileMenuLink({
     <Link
       href={href}
       onClick={onClick}
-      aria-current={active ? "page" : undefined}
+      aria-current={
+        active ? "page" : undefined
+      }
       className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition ${
         active
           ? "bg-[#EAF4ED] text-[#0B513D]"
@@ -567,6 +571,7 @@ function MobileMenuLink({
     </Link>
   );
 }
+
 
 function ProfileDropdown({
   user,
@@ -618,6 +623,8 @@ function ProfileDropdown({
 
       {/* Dropdown links */}
       <div className="p-2">
+
+        {/* Dashboard */}
         <DropdownLink
           href={dashboardPath}
           icon={
@@ -627,17 +634,10 @@ function ProfileDropdown({
           onClick={onClose}
         />
 
+        {/* Farmer-only links */}
         {isFarmer && (
           <>
-            <DropdownLink
-              href="/marketplace"
-              icon={
-                <Store className="h-4 w-4" />
-              }
-              label="Marketplace"
-              onClick={onClose}
-            />
-
+            {/* My Cart */}
             <DropdownLink
               href="/cart"
               icon={
@@ -652,6 +652,7 @@ function ProfileDropdown({
               onClick={onClose}
             />
 
+            {/* My Orders */}
             <DropdownLink
               href="/orders"
               icon={
@@ -661,24 +662,7 @@ function ProfileDropdown({
               onClick={onClose}
             />
 
-            <DropdownLink
-              href="/marketplace?tab=manage"
-              icon={
-                <Store className="h-4 w-4" />
-              }
-              label="Manage Products"
-              onClick={onClose}
-            />
-
-            <DropdownLink
-              href="/marketplace/sell"
-              icon={
-                <Store className="h-4 w-4" />
-              }
-              label="Sell Product"
-              onClick={onClose}
-            />
-
+            {/* Seller Orders */}
             <DropdownLink
               href="/seller-orders"
               icon={
@@ -690,6 +674,7 @@ function ProfileDropdown({
           </>
         )}
 
+        {/* Profile */}
         <DropdownLink
           href="/profile"
           icon={
@@ -712,6 +697,7 @@ function ProfileDropdown({
     </div>
   );
 }
+
 
 
 function DropdownLink({
@@ -749,6 +735,7 @@ function DropdownLink({
     </Link>
   );
 }
+
 
 
 function getUserInitials(

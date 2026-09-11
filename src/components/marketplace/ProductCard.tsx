@@ -7,6 +7,7 @@ import {
   Package,
   ShoppingCart,
   Store,
+  Check,
 } from "lucide-react";
 
 import type { IProduct } from "@/types/marketplace";
@@ -155,15 +156,30 @@ export default function ProductCard({
               );
             }
           }}
-          className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${
+            !isAvailable
+              ? "cursor-not-allowed bg-slate-300 text-white"
+              : inCart > 0
+                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                : "bg-emerald-700 text-white hover:bg-emerald-800"
+          }`}
         >
-          <ShoppingCart className="h-4 w-4" />
-
-          {!isAvailable
-            ? "Out of Stock"
-            : inCart > 0
-              ? `Add More (${inCart})`
-              : "Add to Cart"}
+          {!isAvailable ? (
+            <>
+              <ShoppingCart className="h-4 w-4" />
+              Out of Stock
+            </>
+          ) : inCart > 0 ? (
+            <>
+              <Check className="h-4 w-4" />
+              Added ✓
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" />
+              Add to Cart
+            </>
+          )}
         </button>
       </div>
     </article>
