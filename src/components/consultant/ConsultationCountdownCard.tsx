@@ -8,6 +8,7 @@ import {
   Edit3,
   CalendarDays,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 import VideoCallButton from "@/components/expert/VideoCallButton";
@@ -18,6 +19,11 @@ interface ConsultationCountdownCardProps {
   onReschedule?: () => void;
   onRefresh?: () => void;
 }
+
+import {
+  getConsultationOngoingInfo,
+  CONSULTATION_DURATION_MINUTES,
+} from "@/utils/consultationTiming";
 
 export function parseScheduledDate(consultation: Consultation): Date | null {
   // If scheduledDate (YYYY-MM-DD) and scheduledTime (e.g. "06:00 PM") exist
@@ -33,6 +39,11 @@ export function parseScheduledDate(consultation: Consultation): Date | null {
       const parts = consultation.scheduledDate.split("-").map(Number);
       if (parts.length === 3) {
         return new Date(parts[0], parts[1] - 1, parts[2], hours, minutes, 0);
+      }
+      const d = new Date(consultation.scheduledDate);
+      if (!isNaN(d.getTime())) {
+        d.setHours(hours, minutes, 0, 0);
+        return d;
       }
     }
   }
@@ -57,6 +68,11 @@ export function parseScheduledDate(consultation: Consultation): Date | null {
       if (parts.length === 3) {
         return new Date(parts[0], parts[1] - 1, parts[2], hours, minutes, 0);
       }
+      const d = new Date(consultation.preferredDate);
+      if (!isNaN(d.getTime())) {
+        d.setHours(hours, minutes, 0, 0);
+        return d;
+      }
     }
   }
 
@@ -79,6 +95,7 @@ export default function ConsultationCountdownCard({
     return () => clearInterval(timer);
   }, []);
 
+  const timing = getConsultationOngoingInfo(consultation, now);
   const scheduledDateTime = parseScheduledDate(consultation);
 
   const cleanId = consultation._id || consultation.id || "live";
@@ -96,21 +113,18 @@ export default function ConsultationCountdownCard({
     statusBadgeType = "COMPLETED";
     countdownDisplay = "Session Completed";
     isCallActive = false;
-  } else if (consultation.status === "ONGOING") {
+  } else if (timing.isOngoing) {
     statusBadgeType = "LIVE";
-    countdownDisplay = "Live Call In Progress";
+    countdownDisplay = `Live Session Open · ${timing.formattedRemaining} remaining`;
     isCallActive = true;
+  } else if (timing.isMissedOrIncomplete) {
+    statusBadgeType = "PAST";
+    countdownDisplay = "Session Window Ended · Not Completed";
+    isCallActive = false;
   } else if (scheduledDateTime) {
     const diff = scheduledDateTime.getTime() - now;
 
-    // Active live window: within 90 mins after scheduled time
-    const ninetyMinAfter = 90 * 60 * 1000;
-
-    if (diff <= 0 && Math.abs(diff) < ninetyMinAfter) {
-      statusBadgeType = "LIVE";
-      countdownDisplay = "Live Session Window Open";
-      isCallActive = true;
-    } else if (diff > 0) {
+    if (diff > 0) {
       statusBadgeType = "UPCOMING";
       isCallActive = false;
       const totalSeconds = Math.floor(diff / 1000);
@@ -130,8 +144,8 @@ export default function ConsultationCountdownCard({
       }
     } else {
       statusBadgeType = "PAST";
-      countdownDisplay = "Scheduled Time Passed";
-      isCallActive = true; // Allow join if late
+      countdownDisplay = "Scheduled Window Passed";
+      isCallActive = false;
     }
   } else {
     countdownDisplay = "Awaiting Schedule";
@@ -225,6 +239,29 @@ export default function ConsultationCountdownCard({
         <div className="pt-2 flex items-center gap-2 border-t border-emerald-800/60 text-xs text-emerald-200">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>Consultation finished · Official diagnostic advice and prescription issued below.</span>
+        </div>
+      ) : timing.isMissedOrIncomplete ? (
+        <div className="pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-emerald-800/60 text-xs bg-rose-950/40 p-4 rounded-2xl border border-rose-500/30">
+          <div className="text-rose-200 text-xs">
+            <span className="font-bold text-rose-100 block flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+              Specialist did not mark complete / missed this consultation session.
+            </span>
+            <span className="text-rose-300/80 text-[11px] mt-0.5 block">
+              The 30-minute consultation window has elapsed. You can reschedule to a new available date and time slot.
+            </span>
+          </div>
+
+          {onReschedule && (
+            <button
+              type="button"
+              onClick={onReschedule}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2.5 text-xs font-bold text-slate-950 transition shadow-md flex-1 sm:flex-none"
+            >
+              <CalendarDays className="h-4 w-4 text-slate-950" />
+              <span>Reschedule Slot Now</span>
+            </button>
+          )}
         </div>
       ) : onEditDetails || onReschedule ? (
         <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-emerald-800/60 text-xs">

@@ -62,6 +62,12 @@ export default function ConsultationStatusBadge({
           bg: "bg-red-50 text-red-700 border-red-200",
           dot: "bg-red-500",
         };
+      case "MISSED":
+        return {
+          label: "MISSED",
+          bg: "bg-amber-50 text-amber-800 border-amber-300",
+          dot: "bg-amber-500",
+        };
       default:
         return {
           label: status,

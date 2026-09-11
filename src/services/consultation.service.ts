@@ -115,11 +115,12 @@ let mockConsultations: Consultation[] = [
     ],
     status: "ONGOING",
     urgency: "EMERGENCY",
-    scheduledDate: "31 Aug 2026",
-    scheduledTime: "02:15 PM",
+    scheduledDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    scheduledTime: new Date(Date.now() - 5 * 60 * 1000).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+    startedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
     meetingLink: "https://meet.agrinova.io/room/cons-103",
     notes: "Live consultation currently in session. Examining leaf underside specimens.",
-    createdAt: "2026-08-31T08:00:00Z",
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
   },
   {
     _id: "cons-104",
@@ -461,13 +462,19 @@ export const scheduleConsultation = async (
     payload.meetingLink ||
     `https://meet.jit.si/agrinova-consultation-${payload.consultationId}`;
 
+  const isStartNow = payload.scheduledAt
+    ? new Date(payload.scheduledAt).getTime() <= Date.now() + 60000
+    : false;
+
   mockConsultations = mockConsultations.map((c) =>
     c._id === payload.consultationId || c.id === payload.consultationId
       ? {
           ...c,
-          status: "SCHEDULED" as ConsultationStatus,
+          status: (isStartNow ? "ONGOING" : "SCHEDULED") as ConsultationStatus,
           scheduledDate: payload.scheduledDate,
           scheduledTime: payload.scheduledTime,
+          scheduledAt: payload.scheduledAt,
+          startedAt: isStartNow ? new Date().toISOString() : undefined,
           videoRoomId: `agrinova-consultation-${payload.consultationId}`,
           meetingLink: generatedLink,
           notes: payload.notes || c.notes,
@@ -856,9 +863,12 @@ export const updateConsultationDetails = async (
   // Fallback update in mockConsultations
   mockConsultations = mockConsultations.map((c) => {
     if (c._id === consultationId || c.id === consultationId) {
+      const isReschedule = Boolean(payload.scheduledDate && payload.scheduledTime);
       return {
         ...c,
         ...payload,
+        status: isReschedule ? ("SCHEDULED" as ConsultationStatus) : c.status,
+        startedAt: isReschedule ? undefined : c.startedAt,
         farmName: payload.farmName || c.farmName,
         district: payload.district || c.district,
         farmer: {

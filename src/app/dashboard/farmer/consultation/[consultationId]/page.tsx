@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Download,
   Lock,
+  AlertCircle,
 } from "lucide-react";
 import { getConsultationById } from "@/services/consultation.service";
 import type { Consultation } from "@/types/consultation";
@@ -32,6 +33,7 @@ import VideoCallButton from "@/components/expert/VideoCallButton";
 import ConsultationCountdownCard from "@/components/consultant/ConsultationCountdownCard";
 import EditConsultationModal from "@/components/consultant/EditConsultationModal";
 import RescheduleConsultationModal from "@/components/consultant/RescheduleConsultationModal";
+import { getConsultationOngoingInfo } from "@/utils/consultationTiming";
 
 export default function FarmerConsultationDetailPage({
   params,
@@ -46,6 +48,14 @@ export default function FarmerConsultationDetailPage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -88,6 +98,15 @@ export default function FarmerConsultationDetailPage({
     );
   }
 
+  const timing = getConsultationOngoingInfo(consultation, now);
+  const isCompleted = consultation.status === "COMPLETED";
+  const isSessionFinished = [
+    "COMPLETED",
+    "CANCELLED",
+    "REJECTED",
+  ].includes(consultation.status);
+  const canReschedule = !isCompleted && (timing.canReschedule || !isSessionFinished);
+
   const scheduledDisplay = consultation.scheduledAt
     ? new Date(consultation.scheduledAt).toLocaleString("en-US", {
         weekday: "short",
@@ -101,15 +120,33 @@ export default function FarmerConsultationDetailPage({
     ? `${consultation.scheduledDate} · ${consultation.scheduledTime || ""}`
     : null;
 
-  const isCompleted = consultation.status === "COMPLETED";
-  const isSessionFinished = [
-    "COMPLETED",
-    "CANCELLED",
-    "REJECTED",
-  ].includes(consultation.status);
-
   return (
     <div className="min-h-screen bg-slate-50/60 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-5xl mx-auto">
+      {/* Missed / Incomplete Session Alert for Farmer */}
+      {timing.isMissedOrIncomplete && !isCompleted && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-300 text-amber-900 text-xs shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-sm block text-amber-950">
+                Specialist Did Not Mark Complete / Missed Session
+              </span>
+              <span className="text-amber-800 text-xs">
+                The 30-minute consultation window has concluded. You are eligible to reschedule this consultation to a new appointment slot for free.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsRescheduleModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 text-xs font-bold transition shadow-sm shrink-0"
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span>Reschedule Slot</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <Link
@@ -121,25 +158,29 @@ export default function FarmerConsultationDetailPage({
         </Link>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {!isSessionFinished && (
+          {!isCompleted && (
             <>
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
-              >
-                <Edit3 className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Edit Details</span>
-              </button>
+              {!isSessionFinished && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Edit Details</span>
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setIsRescheduleModalOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/80 shadow-sm flex-1 sm:flex-none"
-              >
-                <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
-                <span>Reschedule</span>
-              </button>
+              {canReschedule && (
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduleModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/80 shadow-sm flex-1 sm:flex-none"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>Reschedule</span>
+                </button>
+              )}
             </>
           )}
 
@@ -158,7 +199,7 @@ export default function FarmerConsultationDetailPage({
       <ConsultationCountdownCard
         consultation={consultation}
         onEditDetails={!isSessionFinished ? () => setIsEditModalOpen(true) : undefined}
-        onReschedule={!isSessionFinished ? () => setIsRescheduleModalOpen(true) : undefined}
+        onReschedule={canReschedule ? () => setIsRescheduleModalOpen(true) : undefined}
         onRefresh={loadData}
       />
 
@@ -441,7 +482,7 @@ export default function FarmerConsultationDetailPage({
       )}
 
       {/* Reschedule Consultation Appointment Modal */}
-      {!isSessionFinished && isRescheduleModalOpen && (
+      {canReschedule && isRescheduleModalOpen && (
         <RescheduleConsultationModal
           isOpen={isRescheduleModalOpen}
           onClose={() => setIsRescheduleModalOpen(false)}
