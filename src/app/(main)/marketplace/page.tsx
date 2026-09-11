@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import {
+  ChevronLeft,
+  ChevronRight,
   Package,
   Plus,
   Search,
@@ -66,8 +67,13 @@ function MarketplaceContent() {
   const [category, setCategory] = useState(
     searchParams.get("category") || ""
   );
-
+  const [district, setDistrict] = useState(
+    searchParams.get("district") || ""
+  );
   const [sort, setSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -78,19 +84,18 @@ function MarketplaceContent() {
       setError("");
 
       const response =
-        await MarketplaceService.getProducts({
+        await MarketplaceService.getProductsPage({
           search: search.trim(),
           category,
-          page: 1,
-          limit: 25,
+          district: district.trim(),
+          page,
+          limit: 20,
           sort,
         });
 
-      const productList = Array.isArray(response)
-        ? response
-        : response?.data || [];
-
-      setProducts(productList);
+      setProducts(response.data);
+      setTotal(response.meta.total);
+      setTotalPages(Math.max(response.meta.totalPages, 1));
     } catch (err) {
       console.error(
         "Marketplace products failed:",
@@ -107,7 +112,7 @@ function MarketplaceContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, sort]);
+  }, [search, category, district, page, sort]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -122,7 +127,9 @@ function MarketplaceContent() {
   const clearFilters = () => {
     setSearch("");
     setCategory("");
+    setDistrict("");
     setSort("newest");
+    setPage(1);
   };
 
   return (
@@ -228,6 +235,16 @@ function MarketplaceContent() {
 
                 {isFarmer && (
                   <Link
+                    href="/marketplace/listings"
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white/95 px-5 py-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
+                  >
+                    <Package className="h-4 w-4" />
+                    Manage Listings
+                  </Link>
+                )}
+
+                {isFarmer && (
+                  <Link
                     href="/marketplace/sell"
                     className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-lg"
                   >
@@ -244,16 +261,17 @@ function MarketplaceContent() {
 
         <section className="mt-0">
           <div className="rounded-2xl border border-white/70 bg-white/85 p-3 shadow-lg shadow-slate-900/5 backdrop-blur-md">
-            <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_210px_190px]">
+            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px_190px]">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
 
                 <input
                   value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
                   placeholder="Search products..."
                   aria-label="Search marketplace products"
                   className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
@@ -263,9 +281,10 @@ function MarketplaceContent() {
               {/* Category */}
               <select
                 value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value)
-                }
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setPage(1);
+                }}
                 aria-label="Filter by category"
                 className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
               >
@@ -279,11 +298,23 @@ function MarketplaceContent() {
                 ))}
               </select>
 
+              <input
+                value={district}
+                onChange={(event) => {
+                  setDistrict(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="District"
+                aria-label="Filter by district"
+                className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+              />
+
               <select
                 value={sort}
-                onChange={(event) =>
-                  setSort(event.target.value)
-                }
+                onChange={(event) => {
+                  setSort(event.target.value);
+                  setPage(1);
+                }}
                 aria-label="Sort marketplace products"
                 className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
               >
@@ -293,7 +324,7 @@ function MarketplaceContent() {
               </select>
             </div>
 
-            {(search || category || sort !== "newest") && (
+            {(search || category || district || sort !== "newest") && (
               <div className="mt-2 flex justify-end">
                 <button
                   type="button"
@@ -361,7 +392,7 @@ function MarketplaceContent() {
                   Try another product name or category.
                 </p>
 
-                {(search || category) && (
+                {(search || category || district) && (
                   <button
                     type="button"
                     onClick={clearFilters}
@@ -379,7 +410,15 @@ function MarketplaceContent() {
             !error &&
             products.length > 0 && (
               <>
-                <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-white/70 bg-white/75 px-4 py-3 text-sm text-slate-600 backdrop-blur-sm">
+                  <span>
+                    <strong className="text-slate-900">{total}</strong>{" "}
+                    {total === 1 ? "approved product" : "approved products"} found
+                  </span>
+                  <span>Page {page} of {totalPages}</span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                   {products.map((product) => (
                     <ProductCard
                       key={product._id}
@@ -387,6 +426,30 @@ function MarketplaceContent() {
                     />
                   ))}
                 </div>
+
+                {totalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                      disabled={page <= 1}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                      disabled={page >= totalPages}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </>
             )}
         </section>

@@ -23,11 +23,6 @@ interface DashboardStats {
   recentUsers: RecentUser[];
 }
 
-interface IDashboardResponse {
-  success?: boolean;
-  data?: DashboardStats;
-}
-
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -40,10 +35,7 @@ export default function AdminDashboardPage() {
     adminService
       .getDashboard()
       .then((response: unknown) => {
-        const res = response as IDashboardResponse;
-        if (res && res.success && res.data) {
-          setStats(res.data);
-        }
+        setStats(response as DashboardStats);
       })
       .catch((err: unknown) => console.error("Failed to load dashboard stats", err))
       .finally(() => setLoading(false));

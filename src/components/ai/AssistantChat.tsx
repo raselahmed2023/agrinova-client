@@ -14,6 +14,8 @@ import {
   useState,
 } from "react";
 
+import { authClient } from "@/lib/auth-client";
+
 import ChatMessage, {
   type ChatMessageType,
 } from "./ChatMessage";
@@ -105,13 +107,19 @@ export default function AssistantChat() {
     setIsLoading(true);
 
     try {
+      const { data: tokenData } = await authClient.token();
+
+      if (!tokenData?.token) {
+        throw new Error("Please sign in again to use the farming assistant.");
+      }
+
       const response = await fetch(
         `${API_URL}/ai/assistant`,
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
           },
           body: JSON.stringify({
             message: cleanMessage,

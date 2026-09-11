@@ -29,6 +29,10 @@ import type {
   ProductionMethod,
   TransactionType,
 } from "@/types/marketplace";
+import {
+  BY_PRODUCT_USE_OPTIONS,
+  POULTRY_TYPE_OPTIONS,
+} from "@/types/marketplace";
 
 const categories: {
   value: ProductCategory;
@@ -791,24 +795,34 @@ export default function SellProductForm() {
               />
 
               <div className="mt-6 grid gap-5 md:grid-cols-2">
-                <Field
-                  label="Poultry Type"
-                  value={
-                    form
-                      .poultryDetails
-                      ?.poultryType ||
-                    ""
-                  }
-                  onChange={(
-                    value
-                  ) =>
-                    updatePoultry(
-                      "poultryType",
-                      value
-                    )
-                  }
-                  placeholder="Chicken, duck, etc."
-                />
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Poultry Type
+                  </label>
+                  <select
+                    value={
+                      form.poultryDetails?.poultryType || ""
+                    }
+                    onChange={(event) =>
+                      updatePoultry(
+                        "poultryType",
+                        event.target.value
+                      )
+                    }
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    required
+                  >
+                    <option value="">Select poultry type</option>
+                    {POULTRY_TYPE_OPTIONS.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <Field
                   label="Breed"
@@ -908,33 +922,26 @@ export default function SellProductForm() {
               />
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <input
-                  value={
-                    byProductUse
+                <select
+                  value={byProductUse}
+                  onChange={(event) =>
+                    setByProductUse(event.target.value)
                   }
-                  onChange={(
-                    event
-                  ) =>
-                    setByProductUse(
-                      event
-                        .target
-                        .value
-                    )
-                  }
-                  onKeyDown={(
-                    event
-                  ) => {
-                    if (
-                      event.key ===
-                      "Enter"
-                    ) {
-                      event.preventDefault();
-                      addByProductUse();
-                    }
-                  }}
-                  placeholder="e.g. Animal feed"
-                  className="h-11 flex-1 rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-emerald-500"
-                />
+                  className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-emerald-500"
+                >
+                  <option value="">Select a use</option>
+                  {BY_PRODUCT_USE_OPTIONS.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      disabled={(form.byProductUses || []).includes(
+                        option.value
+                      )}
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
 
                 <button
                   type="button"
@@ -968,7 +975,9 @@ export default function SellProductForm() {
                         }
                         className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700"
                       >
-                        {use}
+                        {BY_PRODUCT_USE_OPTIONS.find(
+                          (option) => option.value === use
+                        )?.label || use}
 
                         <span>
                           ×

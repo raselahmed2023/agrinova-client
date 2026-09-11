@@ -1,131 +1,82 @@
-import { apiRequest } from "./api.client";
-
+import { apiRequest, apiRequestWithMeta } from "./api.client";
 import type {
-  ICreateProduct,
-  IProduct,
-  IProductListResponse,
-} from "@/types/marketplace";
+  CreateInvestmentApplicationPayload,
+  CreateInvestmentProjectPayload,
+  InvestmentApplication,
+  InvestmentListResponse,
+  InvestmentProject,
+} from "@/types/investment";
 
-export interface MarketplaceQuery {
-  search?: string;
-
-  category?: string;
-
-  location?: string;
-
-  district?: string;
-
-  transactionType?: string;
-
-  productionMethod?: string;
-
-  minPrice?: number | string;
-
-  maxPrice?: number | string;
-
-  sort?: string;
-
-  page?: number;
-
-  limit?: number;
-
-  status?: string;
-}
-
-function buildQuery(
-  params: MarketplaceQuery
-) {
-  const query =
-    new URLSearchParams();
-
-  Object.entries(params).forEach(
-    ([key, value]) => {
-      if (
-        value !== undefined &&
-        value !== null &&
-        String(value).trim() !== ""
-      ) {
-        query.set(
-          key,
-          String(value)
-        );
-      }
-    }
-  );
-
-  return query.toString();
-}
-
-export async function getProducts(
-  params: MarketplaceQuery = {}
-): Promise<IProductListResponse> {
-  return apiRequest<IProductListResponse>(
-    "/marketplace/products",
-    "GET",
-    undefined,
-    buildQuery(params)
-  );
-}
-
-export async function getProductById(
-  id: string
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${id}`
-  );
-}
-
-export async function createProduct(
-  data: ICreateProduct
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    "/marketplace/products",
-    "POST",
-    data
-  );
-}
-
-export async function getMyProducts(
-  params: MarketplaceQuery = {}
-): Promise<IProductListResponse> {
-  return apiRequest<IProductListResponse>(
-    "/marketplace/my-listings",
-    "GET",
-    undefined,
-    buildQuery(params)
-  );
-}
-
-export async function updateProduct(
-  id: string,
-  data: Partial<ICreateProduct>
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${id}`,
-    "PATCH",
-    data
-  );
-}
-
-export async function deleteProduct(
-  id: string
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${id}`,
-    "DELETE"
-  );
-}
-
-export const MarketplaceService = {
-  getProducts,
-
-  getProductById,
-
-  createProduct,
-
-  getMyProducts,
-
-  updateProduct,
-
-  deleteProduct,
+const withMeta = async <T>(
+  endpoint: string,
+  queryString?: string
+): Promise<InvestmentListResponse<T>> => {
+  const result = await apiRequestWithMeta<T[]>(endpoint, "GET", undefined, queryString);
+  return {
+    data: result.data,
+    meta: {
+      page: Number(result.meta?.page || 1),
+      limit: Number(result.meta?.limit || result.data.length || 1),
+      total: Number(result.meta?.total || result.data.length),
+      totalPages: Number(result.meta?.totalPages || 1),
+    },
+  };
 };
+
+export const createInvestmentProject = (payload: CreateInvestmentProjectPayload) =>
+  apiRequest<InvestmentProject>("/investments", "POST", payload);
+
+export const getMyInvestmentProjects = () =>
+  apiRequest<InvestmentProject[]>("/investments/me");
+
+export const getMyInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/me/${projectId}`);
+
+export const updateMyInvestmentProject = (
+  projectId: string,
+  payload: Partial<CreateInvestmentProjectPayload>
+) => apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "PATCH", payload);
+
+export const deleteMyInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "DELETE");
+
+export const getApprovedInvestmentProjects = (queryString?: string) =>
+  withMeta<InvestmentProject>("/investments", queryString);
+
+export const getApprovedInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/${projectId}`);
+
+export const createInvestmentApplication = (
+  projectId: string,
+  payload: CreateInvestmentApplicationPayload
+) => apiRequest<InvestmentApplication>(`/investments/${projectId}/apply`, "POST", payload);
+
+export const getMyInvestmentApplications = () =>
+  apiRequest<InvestmentApplication[]>("/investments/my-investments");
+
+export const getMyInvestmentApplication = (applicationId: string) =>
+  apiRequest<InvestmentApplication>(`/investments/my-investments/${applicationId}`);
+
+export const submitBankInvestmentPayment = (
+  applicationId: string,
+  payload: { senderBankName: string; transactionReference: string; paymentProofUrl: string }
+) =>
+  apiRequest<InvestmentApplication>(
+    `/investments/my-investments/${applicationId}/bank-payment`,
+    "POST",
+    payload
+  );
+
+export const createInvestmentStripeCheckout = (applicationId: string) =>
+  apiRequest<{ sessionId: string; url: string | null }>(
+    `/investments/my-investments/${applicationId}/stripe-checkout`,
+    "POST"
+  );
+
+export const verifyInvestmentStripeCheckout = (applicationId: string, sessionId: string) =>
+  apiRequest<InvestmentApplication>(
+    `/investments/my-investments/${applicationId}/stripe-verify`,
+    "GET",
+    undefined,
+    `sessionId=${encodeURIComponent(sessionId)}`
+  );

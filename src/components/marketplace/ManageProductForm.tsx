@@ -1,23 +1,122 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  FormEvent,
+  type ReactNode,
+  useMemo,
+  useState,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  MapPin,
+  Package,
+  Save,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 
 import { MarketplaceService } from "@/services/marketplace.service";
 import {
+  BY_PRODUCT_USE_OPTIONS,
+  POULTRY_TYPE_OPTIONS,
+  PRODUCT_CATEGORIES,
+} from "@/types/marketplace";
+import type {
   ICreateProduct,
   IProduct,
-  PRODUCT_CATEGORIES,
   ProductCategory,
   ProductionMethod,
   TransactionType,
 } from "@/types/marketplace";
+import {
+  DIVISIONS,
+  getDistrictsByDivision,
+  getUpazilasByDistrict,
+} from "@/constants/bangladeshLocations";
+import ProductImageUpload from "./ProductImageUpload";
 
 interface Props {
   product: IProduct;
   onSaved?: (updated: IProduct) => void;
   onCancel?: () => void;
 }
+
+type FormState = {
+  title: string;
+  description: string;
+  price: string;
+  category: ProductCategory;
+  transactionType: TransactionType;
+  productionMethod: ProductionMethod;
+  quantity: string;
+  unit: string;
+  sellerContact: string;
+  location: string;
+  division: string;
+  district: string;
+  upazila: string;
+  poultryType: string;
+  breed: string;
+  ageWeeks: string;
+  averageWeightKg: string;
+  byProductUses: string[];
+};
+
+const STATUS_STYLES: Record<
+  string,
+  {
+    label: string;
+    className: string;
+    icon: typeof Clock3;
+    message: string;
+  }
+> = {
+  pending: {
+    label: "Pending review",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-800",
+    icon: Clock3,
+    message:
+      "This listing is waiting for admin approval and is not public yet.",
+  },
+  available: {
+    label: "Approved & live",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-800",
+    icon: ShieldCheck,
+    message:
+      "This listing is live. Content, price, image or location changes will send it back for admin review. Stock/contact-only changes can stay live.",
+  },
+  out_of_stock: {
+    label: "Out of stock",
+    className:
+      "border-orange-200 bg-orange-50 text-orange-800",
+    icon: AlertTriangle,
+    message:
+      "This listing is approved but currently out of stock. Increase stock to make it available again.",
+  },
+  rejected: {
+    label: "Rejected",
+    className:
+      "border-rose-200 bg-rose-50 text-rose-800",
+    icon: AlertTriangle,
+    message:
+      "Update the rejected listing and save it to submit the corrected content for review again.",
+  },
+  disabled: {
+    label: "Disabled by admin",
+    className:
+      "border-slate-300 bg-slate-100 text-slate-700",
+    icon: AlertTriangle,
+    message:
+      "You may update the information, but the listing stays disabled until an admin restores it.",
+  },
+};
 
 export default function ManageProductForm({
   product,
@@ -26,192 +125,199 @@ export default function ManageProductForm({
 }: Props) {
   const router = useRouter();
 
-  const [title, setTitle] = useState(
-    product.title || ""
+  const [form, setForm] = useState<FormState>({
+    title: product.title || "",
+    description: product.description || "",
+    price: String(product.price ?? 0),
+    category: product.category || "crops",
+    transactionType: product.transactionType || "sale",
+    productionMethod:
+      product.productionMethod || "conventional",
+    quantity: String(product.quantity ?? 0),
+    unit: product.unit || "kg",
+    sellerContact: product.sellerContact || "",
+    location: product.location || "",
+    division: product.division || "",
+    district: product.district || "",
+    upazila: product.upazila || "",
+    poultryType:
+      product.poultryDetails?.poultryType || "",
+    breed: product.poultryDetails?.breed || "",
+    ageWeeks:
+      product.poultryDetails?.ageWeeks !== undefined
+        ? String(product.poultryDetails.ageWeeks)
+        : "",
+    averageWeightKg:
+      product.poultryDetails?.averageWeightKg !== undefined
+        ? String(product.poultryDetails.averageWeightKg)
+        : "",
+    byProductUses: product.byProductUses || [],
+  });
+
+  const [images, setImages] = useState<string[]>(
+    product.images || []
+  );
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const districtOptions = useMemo(
+    () => getDistrictsByDivision(form.division),
+    [form.division]
   );
 
-  const [category, setCategory] =
-    useState<ProductCategory>(
-      product.category || "crops"
-    );
-
-  const [description, setDescription] =
-    useState(product.description || "");
-
-  const [price, setPrice] = useState(
-    product.price !== undefined
-      ? String(product.price)
-      : ""
+  const upazilaOptions = useMemo(
+    () =>
+      getUpazilasByDistrict(
+        form.division,
+        form.district
+      ),
+    [form.division, form.district]
   );
 
-  const [quantity, setQuantity] =
-    useState(
-      product.quantity !== undefined
-        ? String(product.quantity)
-        : ""
-    );
+  const effectiveStatus =
+    !product.approvedAt &&
+    (product.status === "available" ||
+      product.status === "out_of_stock")
+      ? "pending"
+      : product.status;
 
-  const [unit, setUnit] = useState(
-    product.unit || ""
-  );
+  const status =
+    STATUS_STYLES[effectiveStatus] ||
+    STATUS_STYLES.pending;
+  const StatusIcon = status.icon;
 
-  const [location, setLocation] =
-    useState(product.location || "");
+  const update = <K extends keyof FormState>(
+    key: K,
+    value: FormState[K]
+  ) => {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
 
-  const [division, setDivision] =
-    useState(product.division || "");
+  const toggleByProductUse = (value: string) => {
+    setForm((current) => ({
+      ...current,
+      byProductUses: current.byProductUses.includes(value)
+        ? current.byProductUses.filter(
+            (item) => item !== value
+          )
+        : [...current.byProductUses, value],
+    }));
+  };
 
-  const [district, setDistrict] =
-    useState(product.district || "");
+  const validate = () => {
+    if (!form.title.trim()) {
+      return "Product name is required.";
+    }
 
-  const [upazila, setUpazila] =
-    useState(product.upazila || "");
+    if (!form.description.trim()) {
+      return "Product description is required.";
+    }
 
-  const [productionMethod, setProductionMethod] =
-    useState<ProductionMethod>(
-      product.productionMethod ||
-        "conventional"
-    );
+    if (!form.unit.trim()) {
+      return "Unit is required.";
+    }
 
-  const [transactionType, setTransactionType] =
-    useState<TransactionType>(
-      product.transactionType || "sale"
-    );
+    if (
+      !Number.isFinite(Number(form.quantity)) ||
+      Number(form.quantity) < 0
+    ) {
+      return "Quantity cannot be negative.";
+    }
 
-  const [images, setImages] =
-    useState<string[]>(
-      product.images || []
-    );
+    if (
+      form.transactionType === "sale" &&
+      (!Number.isFinite(Number(form.price)) ||
+        Number(form.price) <= 0)
+    ) {
+      return "Sale products need a price greater than 0.";
+    }
 
-  const [saving, setSaving] =
-    useState(false);
+    if (
+      form.category === "poultry" &&
+      !form.poultryType
+    ) {
+      return "Please select a poultry type.";
+    }
 
-  const [error, setError] =
-    useState("");
+    return "";
+  };
 
-  const [success, setSuccess] =
-    useState("");
+  const buildPayload = (): Partial<ICreateProduct> => {
+    const payload: Partial<ICreateProduct> = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      price:
+        form.transactionType === "free"
+          ? 0
+          : Number(form.price),
+      category: form.category,
+      transactionType: form.transactionType,
+      productionMethod: form.productionMethod,
+      quantity: Number(form.quantity),
+      unit: form.unit.trim(),
+      images,
+      sellerContact:
+        form.sellerContact.trim() || undefined,
+      location: form.location.trim() || undefined,
+      division: form.division.trim() || undefined,
+      district: form.district.trim() || undefined,
+      upazila: form.upazila.trim() || undefined,
+      poultryDetails:
+        form.category === "poultry"
+          ? {
+              poultryType: form.poultryType || undefined,
+              breed: form.breed.trim() || undefined,
+              ageWeeks:
+                form.ageWeeks === ""
+                  ? undefined
+                  : Number(form.ageWeeks),
+              averageWeightKg:
+                form.averageWeightKg === ""
+                  ? undefined
+                  : Number(form.averageWeightKg),
+            }
+          : undefined,
+      byProductUses:
+        form.category === "by_products"
+          ? form.byProductUses
+          : [],
+    };
 
-  async function handleSubmit(
+    return payload;
+  };
+
+  const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
-  ) {
+  ) => {
     event.preventDefault();
 
-    setError("");
-    setSuccess("");
+    const validationError = validate();
 
-    if (!title.trim()) {
-      setError(
-        "Product name is required."
-      );
-      return;
-    }
-
-    if (!description.trim()) {
-      setError(
-        "Product description is required."
-      );
-      return;
-    }
-
-    if (
-      !quantity ||
-      Number(quantity) <= 0
-    ) {
-      setError(
-        "Please enter a valid quantity."
-      );
-      return;
-    }
-
-    if (
-      transactionType === "sale" &&
-      (!price ||
-        Number(price) <= 0)
-    ) {
-      setError(
-        "Please enter a valid price."
-      );
-      return;
-    }
-
-    if (!location.trim()) {
-      setError(
-        "Location is required."
-      );
-      return;
-    }
-
-    if (!division.trim()) {
-      setError(
-        "Division is required."
-      );
-      return;
-    }
-
-    if (!district.trim()) {
-      setError(
-        "District is required."
-      );
-      return;
-    }
-
-    if (!upazila.trim()) {
-      setError(
-        "Upazila is required."
-      );
+    if (validationError) {
+      setError(validationError);
+      setSuccess("");
       return;
     }
 
     try {
       setSaving(true);
+      setError("");
+      setSuccess("");
 
-      const payload: Partial<ICreateProduct> =
-        {
-          title: title.trim(),
-
-          category,
-
-          description:
-            description.trim(),
-
-          quantity:
-            Number(quantity),
-
-          unit: unit.trim(),
-
-          location:
-            location.trim(),
-
-          division:
-            division.trim(),
-
-          district:
-            district.trim(),
-
-          upazila:
-            upazila.trim(),
-
-          productionMethod,
-
-          transactionType,
-
-          images,
-        };
-
-      payload.price =
-        transactionType === "sale"
-          ? Number(price)
-          : 0;
-
-      const updated =
-        await MarketplaceService.updateProduct(
-          product._id,
-          payload
-        );
+      const updated = await MarketplaceService.updateProduct(
+        product._id,
+        buildPayload()
+      );
 
       setSuccess(
-        "Product updated successfully."
+        updated.status === "pending"
+          ? "Changes saved. This listing is now waiting for admin review."
+          : "Product updated successfully."
       );
 
       if (onSaved) {
@@ -219,399 +325,538 @@ export default function ManageProductForm({
         return;
       }
 
-      setTimeout(() => {
-        router.push(
-          "/marketplace?tab=manage"
-        );
-
-        router.refresh();
-      }, 700);
-    } catch (err: any) {
+      router.push("/marketplace/listings");
+      router.refresh();
+    } catch (err) {
       setError(
-        err?.message ||
-          "Failed to update product. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Failed to update product."
       );
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function handleDelete() {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this product?"
-      );
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Delete "${product.title}"? This removes the listing from the marketplace.`
+    );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
-      setSaving(true);
+      setDeleting(true);
       setError("");
 
-      await MarketplaceService.deleteProduct(
-        product._id
-      );
+      await MarketplaceService.deleteProduct(product._id);
 
-      router.push(
-        "/marketplace?tab=manage"
-      );
-
+      router.push("/marketplace/listings");
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       setError(
-        err?.message ||
-          "Failed to delete product."
+        err instanceof Error
+          ? err.message
+          : "Failed to delete product."
       );
     } finally {
-      setSaving(false);
+      setDeleting(false);
     }
-  }
+  };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-    >
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Manage Product
-        </h2>
-
-        <p className="mt-1 text-sm text-gray-500">
-          Update your marketplace listing.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {success}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {/* PRODUCT NAME */}
-
-        <div className="md:col-span-2">
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Product Name
-          </label>
-
-          <input
-            value={title}
-            onChange={(event) =>
-              setTitle(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D] focus:ring-2 focus:ring-green-100"
-            placeholder="Enter product name"
-            required
-          />
-        </div>
-
-        {/* CATEGORY */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Category
-          </label>
-
-          <select
-            value={category}
-            onChange={(event) =>
-              setCategory(
-                event.target
-                  .value as ProductCategory
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm outline-none focus:border-[#0B513D]"
-          >
-            {PRODUCT_CATEGORIES.map(
-              (item) => (
-                <option
-                  key={item.value}
-                  value={item.value}
-                >
-                  {item.label}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        {/* TRANSACTION TYPE */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Transaction Type
-          </label>
-
-          <select
-            value={
-              transactionType
-            }
-            onChange={(event) =>
-              setTransactionType(
-                event.target
-                  .value as TransactionType
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm outline-none focus:border-[#0B513D]"
-          >
-            <option value="sale">
-              Sale
-            </option>
-
-            <option value="free">
-              Free
-            </option>
-          </select>
-        </div>
-
-        {/* DESCRIPTION */}
-
-        <div className="md:col-span-2">
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Description
-          </label>
-
-          <textarea
-            value={description}
-            onChange={(event) =>
-              setDescription(
-                event.target.value
-              )
-            }
-            rows={5}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#0B513D] focus:ring-2 focus:ring-green-100"
-            placeholder="Describe your product"
-            required
-          />
-        </div>
-
-        {/* QUANTITY */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Quantity
-          </label>
-
-          <input
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(event) =>
-              setQuantity(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            required
-          />
-        </div>
-
-        {/* UNIT */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Unit
-          </label>
-
-          <input
-            value={unit}
-            onChange={(event) =>
-              setUnit(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            placeholder="kg, ton, piece..."
-            required
-          />
-        </div>
-
-        {/* PRICE */}
-
-        {transactionType ===
-          "sale" && (
+    <main className="min-h-screen bg-[#f5f8f2] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
-              Price
-            </label>
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(event) =>
-                setPrice(
-                  event.target.value
-                )
+            <button
+              type="button"
+              onClick={() =>
+                onCancel
+                  ? onCancel()
+                  : router.push("/marketplace/listings")
               }
-              className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-              required
-            />
+              className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-emerald-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to my listings
+            </button>
+
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
+              Edit Product
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Update your listing, stock, photos and location.
+            </p>
+          </div>
+
+          <div
+            className={`inline-flex max-w-md items-start gap-2 rounded-2xl border px-4 py-3 text-sm ${status.className}`}
+          >
+            <StatusIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-bold">{status.label}</p>
+              <p className="mt-0.5 text-xs leading-5 opacity-80">
+                {status.message}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {product.rejectionReason && (
+          <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p className="font-bold">Admin feedback</p>
+            <p className="mt-1">{product.rejectionReason}</p>
           </div>
         )}
 
-        {/* PRODUCTION METHOD */}
+        {error && (
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Production Method
-          </label>
+        {success && (
+          <div className="mb-5 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+            <CheckCircle2 className="h-5 w-5" />
+            {success}
+          </div>
+        )}
 
-          <select
-            value={
-              productionMethod
-            }
-            onChange={(event) =>
-              setProductionMethod(
-                event.target
-                  .value as ProductionMethod
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm outline-none focus:border-[#0B513D]"
-          >
-            <option value="conventional">
-              Conventional
-            </option>
-
-            <option value="organic">
-              Organic
-            </option>
-
-            <option value="natural">
-              Natural
-            </option>
-          </select>
-        </div>
-
-        {/* LOCATION */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Location
-          </label>
-
-          <input
-            value={location}
-            onChange={(event) =>
-              setLocation(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            placeholder="Village / Union / Address"
-            required
-          />
-        </div>
-
-        {/* DIVISION */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Division
-          </label>
-
-          <input
-            value={division}
-            onChange={(event) =>
-              setDivision(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            placeholder="Division"
-            required
-          />
-        </div>
-
-        {/* DISTRICT */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            District
-          </label>
-
-          <input
-            value={district}
-            onChange={(event) =>
-              setDistrict(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            placeholder="District"
-            required
-          />
-        </div>
-
-        {/* UPAZILA */}
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700">
-            Upazila
-          </label>
-
-          <input
-            value={upazila}
-            onChange={(event) =>
-              setUpazila(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm outline-none focus:border-[#0B513D]"
-            placeholder="Upazila"
-            required
-          />
-        </div>
-      </div>
-
-      {/* ACTIONS */}
-
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={saving}
-          className="rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
         >
-          Delete Product
-        </button>
-
-        <div className="flex gap-3">
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={saving}
-              className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          <div className="space-y-6">
+            <Section
+              icon={<Package className="h-5 w-5" />}
+              title="Product information"
+              description="Keep the buyer-facing information clear and accurate."
             >
-              Cancel
-            </button>
-          )}
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field
+                  label="Product name"
+                  className="sm:col-span-2"
+                >
+                  <input
+                    value={form.title}
+                    onChange={(e) => update("title", e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Fresh Aman rice"
+                    required
+                  />
+                </Field>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-[#0B513D] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#083c2d] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving
-              ? "Saving..."
-              : "Save Changes"}
-          </button>
+                <Field label="Category">
+                  <select
+                    value={form.category}
+                    onChange={(e) =>
+                      update(
+                        "category",
+                        e.target.value as ProductCategory
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    {PRODUCT_CATEGORIES.map((item) => (
+                      <option
+                        key={item.value}
+                        value={item.value}
+                      >
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Production method">
+                  <select
+                    value={form.productionMethod}
+                    onChange={(e) =>
+                      update(
+                        "productionMethod",
+                        e.target.value as ProductionMethod
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="conventional">
+                      Conventional
+                    </option>
+                    <option value="organic">Organic</option>
+                    <option value="natural">Natural</option>
+                  </select>
+                </Field>
+
+                <Field
+                  label="Description"
+                  className="sm:col-span-2"
+                >
+                  <textarea
+                    value={form.description}
+                    onChange={(e) =>
+                      update("description", e.target.value)
+                    }
+                    rows={5}
+                    className={`${inputClass} h-auto py-3`}
+                    placeholder="Describe quality, variety, harvest condition and other useful details."
+                    required
+                  />
+                </Field>
+              </div>
+            </Section>
+
+            <Section
+              title="Price & inventory"
+              description="Stock-only changes on an approved product do not require a new content review."
+            >
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="Transaction">
+                  <select
+                    value={form.transactionType}
+                    onChange={(e) =>
+                      update(
+                        "transactionType",
+                        e.target.value as TransactionType
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="sale">For sale</option>
+                    <option value="free">Free</option>
+                  </select>
+                </Field>
+
+                <Field label="Price (৳)">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={form.transactionType === "free"}
+                    value={
+                      form.transactionType === "free"
+                        ? "0"
+                        : form.price
+                    }
+                    onChange={(e) => update("price", e.target.value)}
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field label="Quantity">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.quantity}
+                    onChange={(e) =>
+                      update("quantity", e.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field label="Unit">
+                  <input
+                    value={form.unit}
+                    onChange={(e) => update("unit", e.target.value)}
+                    className={inputClass}
+                    placeholder="kg, piece, bag"
+                  />
+                </Field>
+              </div>
+            </Section>
+
+            {form.category === "poultry" && (
+              <Section
+                title="Poultry details"
+                description="These values match the marketplace backend options."
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Poultry type">
+                    <select
+                      value={form.poultryType}
+                      onChange={(e) =>
+                        update("poultryType", e.target.value)
+                      }
+                      className={inputClass}
+                      required
+                    >
+                      <option value="">Select type</option>
+                      {POULTRY_TYPE_OPTIONS.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field label="Breed">
+                    <input
+                      value={form.breed}
+                      onChange={(e) => update("breed", e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+
+                  <Field label="Age (weeks)">
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.ageWeeks}
+                      onChange={(e) =>
+                        update("ageWeeks", e.target.value)
+                      }
+                      className={inputClass}
+                    />
+                  </Field>
+
+                  <Field label="Average weight (kg)">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.averageWeightKg}
+                      onChange={(e) =>
+                        update(
+                          "averageWeightKg",
+                          e.target.value
+                        )
+                      }
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              </Section>
+            )}
+
+            {form.category === "by_products" && (
+              <Section
+                title="By-product uses"
+                description="Select every relevant use."
+              >
+                <div className="flex flex-wrap gap-2">
+                  {BY_PRODUCT_USE_OPTIONS.map((option) => {
+                    const selected =
+                      form.byProductUses.includes(option.value);
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          toggleByProductUse(option.value)
+                        }
+                        className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
+                          selected
+                            ? "border-emerald-600 bg-emerald-600 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            <Section
+              icon={<MapPin className="h-5 w-5" />}
+              title="Location & contact"
+              description="Help buyers understand where the product is located."
+            >
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Division">
+                  <select
+                    value={form.division}
+                    onChange={(e) => {
+                      update("division", e.target.value);
+                      update("district", "");
+                      update("upazila", "");
+                    }}
+                    className={inputClass}
+                  >
+                    <option value="">Select division</option>
+                    {DIVISIONS.map((division) => (
+                      <option key={division} value={division}>
+                        {division}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="District">
+                  <select
+                    value={form.district}
+                    onChange={(e) => {
+                      update("district", e.target.value);
+                      update("upazila", "");
+                    }}
+                    className={inputClass}
+                    disabled={!form.division}
+                  >
+                    <option value="">Select district</option>
+                    {districtOptions.map((district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Upazila">
+                  <select
+                    value={form.upazila}
+                    onChange={(e) =>
+                      update("upazila", e.target.value)
+                    }
+                    className={inputClass}
+                    disabled={!form.district}
+                  >
+                    <option value="">Select upazila</option>
+                    {upazilaOptions.map((upazila) => (
+                      <option key={upazila} value={upazila}>
+                        {upazila}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Seller contact">
+                  <input
+                    value={form.sellerContact}
+                    onChange={(e) =>
+                      update("sellerContact", e.target.value)
+                    }
+                    className={inputClass}
+                    placeholder="Phone number"
+                  />
+                </Field>
+
+                <Field
+                  label="Pickup / product location"
+                  className="sm:col-span-2"
+                >
+                  <input
+                    value={form.location}
+                    onChange={(e) =>
+                      update("location", e.target.value)
+                    }
+                    className={inputClass}
+                    placeholder="Village, market, road or pickup point"
+                  />
+                </Field>
+              </div>
+            </Section>
+          </div>
+
+          <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+            <Section
+              title="Product photos"
+              description="Up to 5 images. The first image is used as the cover."
+            >
+              <ProductImageUpload
+                images={images}
+                setImages={setImages}
+              />
+            </Section>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-slate-900">
+                Save changes
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Approved listings remain editable. Changes that affect what buyers see are sent to admin review again.
+              </p>
+
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save Product"}
+              </button>
+
+              <button
+                type="button"
+                disabled={saving || deleting}
+                onClick={handleDelete}
+                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? "Deleting..." : "Delete Listing"}
+              </button>
+
+              <Link
+                href="/marketplace/listings"
+                className="mt-3 block text-center text-xs font-semibold text-slate-500 hover:text-emerald-700"
+              >
+                Cancel and return to listings
+              </Link>
+            </div>
+          </aside>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+const inputClass =
+  "mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
+
+function Section({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-start gap-3">
+        {icon && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            {icon}
+          </div>
+        )}
+        <div>
+          <h2 className="font-bold text-slate-950">{title}</h2>
+          {description && (
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              {description}
+            </p>
+          )}
         </div>
       </div>
-    </form>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  className = "",
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className={className}>
+      <span className="text-sm font-semibold text-slate-700">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

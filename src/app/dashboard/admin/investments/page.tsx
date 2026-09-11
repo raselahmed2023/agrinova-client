@@ -1,759 +1,120 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
+  BadgeCheck,
+  Banknote,
   CheckCircle2,
   Clock3,
-  Eye,
+  ExternalLink,
   HandCoins,
-  MapPin,
   Search,
+  ShieldCheck,
+  UserRoundCheck,
   XCircle,
 } from "lucide-react";
 
-import {
-  investmentAdminService,
-} from "@/services/admin.investment.service";
+import { investmentAdminService } from "@/services/admin.investment.service";
+import type { InvestmentApplication, InvestmentProject } from "@/types/investment";
 
-import type {
-  InvestmentProject,
-} from "@/types/investment";
+const money = (value: number) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
+const readable = (value: string) => value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 
-const formatMoney =
-  (value: number) =>
-    `৳${Number(value || 0).toLocaleString(
-      "en-BD"
-    )}`;
-
-const categoryLabel =
-  (value: string) =>
-    value
-      .split("_")
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1)
-      )
-      .join(" ");
+type Tab = "PROJECTS" | "APPLICATIONS";
 
 export default function AdminInvestmentsPage() {
-  const [
-    projects,
-    setProjects,
-  ] =
-    useState<InvestmentProject[]>(
-      []
-    );
+  const [tab, setTab] = useState<Tab>("PROJECTS");
+  const [projects, setProjects] = useState<InvestmentProject[]>([]);
+  const [applications, setApplications] = useState<InvestmentApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [rejecting, setRejecting] = useState<{ type: "PROJECT" | "APPLICATION" | "PAYMENT"; id: string } | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
 
-  const [
-    selected,
-    setSelected,
-  ] =
-    useState<InvestmentProject | null>(
-      null
-    );
-
-  const [
-    loading,
-    setLoading,
-  ] =
-    useState(true);
-
-  const [
-    actionLoading,
-    setActionLoading,
-  ] =
-    useState(false);
-
-  const [
-    status,
-    setStatus,
-  ] =
-    useState("");
-
-  const [
-    search,
-    setSearch,
-  ] =
-    useState("");
-
-  const loadProjects =
-    async () => {
-      try {
-        setLoading(true);
-
-        const query =
-          new URLSearchParams();
-
-        query.set(
-          "limit",
-          "50"
-        );
-
-        if (status) {
-          query.set(
-            "status",
-            status
-          );
-        }
-
-        if (search) {
-          query.set(
-            "search",
-            search
-          );
-        }
-
-        const result =
-          await investmentAdminService.getProjects(
-            query.toString()
-          );
-
-        setProjects(
-          result.data
-        );
-
-        if (
-          selected
-        ) {
-          const refreshed =
-            result.data.find(
-              (item) =>
-                item._id ===
-                selected._id
-            );
-
-          setSelected(
-            refreshed ||
-              null
-          );
-        }
-      } catch (err) {
-        alert(
-          err instanceof Error
-            ? err.message
-            : "Failed to load projects"
-        );
-      } finally {
-        setLoading(false);
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const query = new URLSearchParams({ limit: "100" });
+      if (search.trim()) query.set("search", search.trim());
+      if (status) tab === "PROJECTS" ? query.set("status", status) : query.set(status.startsWith("PAYMENT:") ? "paymentStatus" : "status", status.replace("PAYMENT:", ""));
+      if (tab === "PROJECTS") {
+        const result = await investmentAdminService.getProjects(query.toString());
+        setProjects(result.data);
+      } else {
+        const result = await investmentAdminService.getApplications(query.toString());
+        setApplications(result.data);
       }
-    };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load investment review data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  useEffect(() => {
-    loadProjects();
-  }, [status]);
+  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tab, status]);
 
-  const handleApprove =
-    async (
-      projectId: string
-    ) => {
-      if (
-        !confirm(
-          "Approve this investment project?"
-        )
-      ) {
-        return;
-      }
+  const counts = useMemo(() => ({
+    projectPending: projects.filter((item) => item.status === "PENDING_REVIEW").length,
+    appPending: applications.filter((item) => item.status === "PENDING_REVIEW").length,
+    bankPending: applications.filter((item) => item.paymentStatus === "PENDING_VERIFICATION").length,
+  }), [projects, applications]);
 
-      try {
-        setActionLoading(
-          true
-        );
+  const approveProject = async (id: string) => {
+    try { setBusyId(id); setError(""); await investmentAdminService.approveProject(id); setMessage("Project approved and farmer notified."); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Project approval failed"); } finally { setBusyId(""); }
+  };
 
-        await investmentAdminService.approveProject(
-          projectId
-        );
+  const approveApplication = async (id: string) => {
+    try { setBusyId(id); setError(""); await investmentAdminService.reviewApplication(id, "APPROVED"); setMessage("Investment decision approved. Investor can now complete payment and both farmers were notified."); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Application approval failed"); } finally { setBusyId(""); }
+  };
 
-        setSelected(
-          null
-        );
+  const confirmBankPayment = async (id: string) => {
+    try { setBusyId(id); setError(""); await investmentAdminService.reviewBankPayment(id, "PAID"); setMessage("Bank transfer confirmed. Funding totals and notifications were updated."); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Payment confirmation failed"); } finally { setBusyId(""); }
+  };
 
-        await loadProjects();
-      } catch (err) {
-        alert(
-          err instanceof Error
-            ? err.message
-            : "Approval failed"
-        );
-      } finally {
-        setActionLoading(
-          false
-        );
-      }
-    };
-
-  const handleReject =
-    async (
-      projectId: string
-    ) => {
-      const reason =
-        prompt(
-          "Enter rejection reason:"
-        );
-
-      if (
-        !reason?.trim()
-      ) {
-        return;
-      }
-
-      try {
-        setActionLoading(
-          true
-        );
-
-        await investmentAdminService.rejectProject(
-          projectId,
-          reason
-        );
-
-        setSelected(
-          null
-        );
-
-        await loadProjects();
-      } catch (err) {
-        alert(
-          err instanceof Error
-            ? err.message
-            : "Rejection failed"
-        );
-      } finally {
-        setActionLoading(
-          false
-        );
-      }
-    };
+  const submitReject = async () => {
+    if (!rejecting || !reviewNote.trim()) return;
+    try {
+      setBusyId(rejecting.id); setError("");
+      if (rejecting.type === "PROJECT") await investmentAdminService.rejectProject(rejecting.id, reviewNote.trim());
+      if (rejecting.type === "APPLICATION") await investmentAdminService.reviewApplication(rejecting.id, "REJECTED", reviewNote.trim());
+      if (rejecting.type === "PAYMENT") await investmentAdminService.reviewBankPayment(rejecting.id, "PAYMENT_REJECTED", reviewNote.trim());
+      setMessage(rejecting.type === "PAYMENT" ? "Payment proof rejected and investor notified." : "Review decision saved and notification sent.");
+      setRejecting(null); setReviewNote(""); await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Review failed"); } finally { setBusyId(""); }
+  };
 
   return (
     <div className="p-5 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <HandCoins className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold text-slate-950">
-                Investment Projects
-              </h1>
-
-              <p className="text-sm text-slate-500">
-                Review farmer investment project submissions.
-              </p>
-            </div>
-          </div>
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><HandCoins className="h-6 w-6" /></div><div><h1 className="text-2xl font-black text-slate-950">Investment Control Center</h1><p className="mt-1 text-sm text-slate-500">Review funding projects, investor decisions and bank payment proof.</p></div></div></div>
+          <div className="flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm"><button onClick={() => { setTab("PROJECTS"); setStatus(""); }} className={`rounded-xl px-4 py-2 text-sm font-bold ${tab === "PROJECTS" ? "bg-slate-950 text-white" : "text-slate-500"}`}>Project review</button><button onClick={() => { setTab("APPLICATIONS"); setStatus(""); }} className={`rounded-xl px-4 py-2 text-sm font-bold ${tab === "APPLICATIONS" ? "bg-slate-950 text-white" : "text-slate-500"}`}>Investor applications</button></div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
-          <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 px-4">
-            <Search className="h-4 w-4 text-slate-400" />
+        <div className="grid gap-4 md:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5"><Clock3 className="h-5 w-5 text-amber-600" /><p className="mt-3 text-xs font-bold uppercase text-slate-400">Pending projects loaded</p><p className="mt-1 text-2xl font-black">{counts.projectPending}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><UserRoundCheck className="h-5 w-5 text-sky-600" /><p className="mt-3 text-xs font-bold uppercase text-slate-400">Pending applications loaded</p><p className="mt-1 text-2xl font-black">{counts.appPending}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><Banknote className="h-5 w-5 text-emerald-600" /><p className="mt-3 text-xs font-bold uppercase text-slate-400">Bank proofs loaded</p><p className="mt-1 text-2xl font-black">{counts.bankPending}</p></div></div>
 
-            <input
-              value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
-              onKeyDown={(e) => {
-                if (
-                  e.key ===
-                  "Enter"
-                ) {
-                  loadProjects();
-                }
-              }}
-              placeholder="Search project, farmer or district..."
-              className="w-full py-2.5 text-sm outline-none"
-            />
+        {message && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800">{message}</div>}
+        {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">{error}</div>}
 
-            <button
-              type="button"
-              onClick={
-                loadProjects
-              }
-              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-            >
-              Search
-            </button>
-          </div>
-
-          <select
-            value={status}
-            onChange={(e) =>
-              setStatus(
-                e.target.value
-              )
-            }
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none"
-          >
-            <option value="">
-              All Status
-            </option>
-
-            <option value="PENDING_REVIEW">
-              Pending Review
-            </option>
-
-            <option value="APPROVED">
-              Approved
-            </option>
-
-            <option value="REJECTED">
-              Rejected
-            </option>
-          </select>
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_230px_auto]">
+          <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void load()} placeholder={tab === "PROJECTS" ? "Search project, farmer, district..." : "Search application, project, investor..."} className="w-full py-2.5 text-sm outline-none" /></label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none"><option value="">All statuses</option>{tab === "PROJECTS" ? <><option value="PENDING_REVIEW">Pending review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></> : <><option value="PENDING_REVIEW">Application pending</option><option value="APPROVED">Application approved</option><option value="REJECTED">Application rejected</option><option value="PAYMENT:PENDING_VERIFICATION">Bank proof pending</option><option value="PAYMENT:PAID">Paid</option></>}</select>
+          <button onClick={() => void load()} className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-black text-white">Search</button>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-4">
-                    Project
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Farmer
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Investment
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Location
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Status
-                  </th>
-
-                  <th className="px-5 py-4 text-right">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-5 py-12 text-center text-slate-400"
-                    >
-                      Loading projects...
-                    </td>
-                  </tr>
-                ) : projects.length ===
-                  0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-5 py-12 text-center text-slate-400"
-                    >
-                      No investment projects found.
-                    </td>
-                  </tr>
-                ) : (
-                  projects.map(
-                    (project) => (
-                      <tr
-                        key={
-                          project._id
-                        }
-                        className="hover:bg-slate-50/70"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            {project.projectImage ? (
-                              <img
-                                src={
-                                  project.projectImage
-                                }
-                                alt=""
-                                className="h-12 w-16 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-16 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                                <HandCoins className="h-5 w-5" />
-                              </div>
-                            )}
-
-                            <div>
-                              <p className="font-semibold text-slate-900">
-                                {
-                                  project.projectName
-                                }
-                              </p>
-
-                              <p className="text-xs text-slate-400">
-                                {
-                                  project.projectCode
-                                }
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-slate-800">
-                            {
-                              project.farmerName ||
-                              "N/A"
-                            }
-                          </p>
-
-                          <p className="text-xs text-slate-400">
-                            {
-                              project.farmerEmail
-                            }
-                          </p>
-                        </td>
-
-                        <td className="px-5 py-4 font-semibold text-slate-800">
-                          {formatMoney(
-                            project.requiredInvestment
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-500">
-                          {
-                            project.district
-                          }
-                          ,{" "}
-                          {
-                            project.division
-                          }
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {project.status ===
-                          "APPROVED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Approved
-                            </span>
-                          ) : project.status ===
-                            "REJECTED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
-                              <XCircle className="h-3.5 w-3.5" />
-                              Rejected
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              Pending
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelected(
-                                project
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {selected && (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <div>
-                <h2 className="font-bold text-slate-950">
-                  Project Review
-                </h2>
-
-                <p className="text-xs text-slate-400">
-                  {
-                    selected.projectCode
-                  }
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setSelected(
-                    null
-                  )
-                }
-                className="text-sm font-medium text-slate-500 hover:text-slate-900"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="grid gap-6 p-5 lg:grid-cols-[320px_1fr]">
-              <div>
-                {selected.projectImage ? (
-                  <img
-                    src={
-                      selected.projectImage
-                    }
-                    alt={
-                      selected.projectName
-                    }
-                    className="h-64 w-full rounded-2xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-64 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                    <HandCoins className="h-16 w-16" />
-                  </div>
-                )}
-
-                <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs text-slate-400">
-                    Farmer
-                  </p>
-
-                  <p className="mt-1 font-semibold text-slate-900">
-                    {
-                      selected.farmerName ||
-                      "N/A"
-                    }
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    {
-                      selected.farmerEmail
-                    }
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      {categoryLabel(
-                        selected.category
-                      )}
-                    </span>
-
-                    <h3 className="mt-3 text-2xl font-bold text-slate-950">
-                      {
-                        selected.projectName
-                      }
-                    </h3>
-                  </div>
-
-                  <span className="text-sm font-semibold text-slate-500">
-                    {
-                      selected.status
-                    }
-                  </span>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <Info
-                    label="Required Investment"
-                    value={formatMoney(
-                      selected.requiredInvestment
-                    )}
-                  />
-
-                  <Info
-                    label="Own Contribution"
-                    value={formatMoney(
-                      selected.ownContribution
-                    )}
-                  />
-
-                  <Info
-                    label="Duration"
-                    value={
-                      selected.duration
-                    }
-                  />
-
-                  <Info
-                    label="Expected Return"
-                    value={
-                      selected.expectedReturn
-                    }
-                  />
-
-                  <Info
-                    label="Estimated Revenue"
-                    value={formatMoney(
-                      selected.estimatedRevenue
-                    )}
-                  />
-
-                  <Info
-                    label="Estimated Cost"
-                    value={formatMoney(
-                      selected.estimatedCost
-                    )}
-                  />
-
-                  <Info
-                    label="Estimated Profit"
-                    value={formatMoney(
-                      selected.estimatedProfit
-                    )}
-                  />
-
-                  <Info
-                    label="Profit Sharing"
-                    value={
-                      selected.profitSharing
-                    }
-                  />
-                </div>
-
-                <div className="mt-5 rounded-xl bg-slate-50 p-4">
-                  <p className="flex items-center gap-1 text-xs text-slate-400">
-                    <MapPin className="h-3.5 w-3.5" />
-                    Location
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-slate-800">
-                    {
-                      selected.address
-                    }
-                    ,{" "}
-                    {
-                      selected.upazila
-                    }
-                    ,{" "}
-                    {
-                      selected.district
-                    }
-                    ,{" "}
-                    {
-                      selected.division
-                    }
-                  </p>
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-sm font-semibold text-slate-800">
-                    Description
-                  </p>
-
-                  <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-500">
-                    {
-                      selected.description
-                    }
-                  </p>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <Info
-                    label="NID Number"
-                    value={
-                      selected.nidNumber ||
-                      "Not provided"
-                    }
-                  />
-
-                  <Info
-                    label="Submitted"
-                    value={new Date(
-                      selected.createdAt
-                    ).toLocaleDateString(
-                      "en-BD"
-                    )}
-                  />
-                </div>
-
-                {selected.adminNote && (
-                  <div className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">
-                    <strong>
-                      Admin Note:
-                    </strong>{" "}
-                    {
-                      selected.adminNote
-                    }
-                  </div>
-                )}
-
-                {selected.status ===
-                  "PENDING_REVIEW" && (
-                  <div className="mt-7 flex flex-wrap gap-3 border-t border-slate-100 pt-6">
-                    <button
-                      type="button"
-                      disabled={
-                        actionLoading
-                      }
-                      onClick={() =>
-                        handleApprove(
-                          selected._id
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Approve Project
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={
-                        actionLoading
-                      }
-                      onClick={() =>
-                        handleReject(
-                          selected._id
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Reject Project
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {loading ? <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center text-sm text-slate-500">Loading review queue...</div> : tab === "PROJECTS" ? (
+          <div className="grid gap-5 xl:grid-cols-2">{projects.length === 0 ? <div className="col-span-full rounded-3xl border border-dashed border-slate-300 bg-white p-14 text-center text-sm text-slate-500">No investment projects match this filter.</div> : projects.map((project) => <article key={project._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-black ${project.status === "PENDING_REVIEW" ? "bg-amber-50 text-amber-700" : project.status === "APPROVED" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{readable(project.status)}</span><span className="text-xs font-bold text-slate-400">{project.projectCode}</span></div><h2 className="mt-3 text-xl font-black text-slate-950">{project.projectName}</h2><p className="mt-1 text-sm text-slate-500">{project.farmerName} · {project.farmName || "Farm"} · {project.district}</p></div><ShieldCheck className="h-6 w-6 text-emerald-600" /></div><div className="mt-5 grid grid-cols-3 gap-2"><div className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] text-slate-400">Goal</p><p className="mt-1 text-sm font-black">{money(project.requiredInvestment)}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] text-slate-400">Minimum</p><p className="mt-1 text-sm font-black">{money(project.minimumInvestment)}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] text-slate-400">Return est.</p><p className="mt-1 text-sm font-black">{project.expectedReturnPercent}%</p></div></div><p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{project.description}</p>{project.adminNote && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><strong>Admin note:</strong> {project.adminNote}</div>}{project.status === "PENDING_REVIEW" && <div className="mt-5 flex gap-3"><button disabled={busyId === project._id} onClick={() => void approveProject(project._id)} className="flex-1 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Approve & publish</button><button onClick={() => { setRejecting({ type: "PROJECT", id: project._id }); setReviewNote(""); }} className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-black text-red-700">Reject</button></div>}</article>)}</div>
+        ) : (
+          <div className="space-y-5">{applications.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-14 text-center text-sm text-slate-500">No investor applications match this filter.</div> : applications.map((app) => <article key={app._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-black ${app.status === "PENDING_REVIEW" ? "bg-amber-50 text-amber-700" : app.status === "APPROVED" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{readable(app.status)}</span><span className={`rounded-full px-3 py-1 text-xs font-black ${app.paymentStatus === "PAID" ? "bg-emerald-50 text-emerald-700" : app.paymentStatus === "PENDING_VERIFICATION" ? "bg-sky-50 text-sky-700" : "bg-slate-100 text-slate-600"}`}>{readable(app.paymentStatus)}</span><span className="text-xs font-bold text-slate-400">{app.applicationCode}</span></div><h2 className="mt-3 text-xl font-black text-slate-950">{app.projectName}</h2><div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4"><div><p className="text-xs text-slate-400">Investor</p><p className="font-bold text-slate-800">{app.investorName || app.investorEmail}</p></div><div><p className="text-xs text-slate-400">Project owner</p><p className="font-bold text-slate-800">{app.projectOwnerName || app.projectOwnerEmail}</p></div><div><p className="text-xs text-slate-400">Amount</p><p className="font-black text-slate-900">{money(app.amount)}</p></div><div><p className="text-xs text-slate-400">Payment method</p><p className="font-bold text-slate-800">{app.paymentMethod === "STRIPE" ? "Stripe" : "Bank transfer"}</p></div></div>{app.note && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><strong>Investor note:</strong> {app.note}</p>}{app.adminNote && <p className="mt-3 text-sm text-red-700"><strong>Review note:</strong> {app.adminNote}</p>}</div><div className="w-full space-y-2 lg:w-56">{app.status === "PENDING_REVIEW" && <><button disabled={busyId === app._id} onClick={() => void approveApplication(app._id)} className="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Approve investment</button><button onClick={() => { setRejecting({ type: "APPLICATION", id: app._id }); setReviewNote(""); }} className="w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-black text-red-700">Reject investment</button></>}{app.paymentStatus === "PENDING_VERIFICATION" && <><a href={app.paymentProofUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700">View proof <ExternalLink className="h-4 w-4" /></a><button disabled={busyId === app._id} onClick={() => void confirmBankPayment(app._id)} className="w-full rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Confirm transfer</button><button onClick={() => { setRejecting({ type: "PAYMENT", id: app._id }); setReviewNote(""); }} className="w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-black text-red-700">Reject proof</button></>}{app.paymentStatus === "PAID" && <div className="rounded-xl bg-emerald-50 p-3 text-center text-sm font-black text-emerald-700"><CheckCircle2 className="mx-auto mb-1 h-5 w-5" /> Confirmed paid</div>}</div></div>{app.paymentStatus === "PENDING_VERIFICATION" && <div className="mt-5 grid gap-3 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs text-sky-600">Sender bank</p><p className="font-bold text-sky-950">{app.senderBankName || "—"}</p></div><div><p className="text-xs text-sky-600">Transaction reference</p><p className="font-bold text-sky-950">{app.transactionReference || "—"}</p></div><div><p className="text-xs text-sky-600">Amount expected</p><p className="font-black text-sky-950">{money(app.amount)}</p></div></div>}</article>)}</div>
         )}
       </div>
-    </div>
-  );
-}
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 p-4">
-      <p className="text-xs text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-semibold text-slate-900">
-        {value}
-      </p>
+      {rejecting && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-700"><XCircle className="h-5 w-5" /></div><h2 className="mt-4 text-xl font-black text-slate-950">{rejecting.type === "PAYMENT" ? "Reject payment proof" : "Reject submission"}</h2><p className="mt-2 text-sm leading-6 text-slate-500">Give a clear reason. The farmer will receive this in their notification/status area.</p><textarea autoFocus value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} rows={4} placeholder="Reason for rejection..." className="mt-4 w-full rounded-2xl border border-slate-200 p-3 text-sm outline-none focus:border-red-400" /><div className="mt-5 flex justify-end gap-3"><button onClick={() => { setRejecting(null); setReviewNote(""); }} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button disabled={!reviewNote.trim() || busyId === rejecting.id} onClick={() => void submitReject()} className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save rejection</button></div></div></div>}
     </div>
   );
 }

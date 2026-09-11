@@ -94,6 +94,10 @@ const STATUS_OPTIONS: {
     label: "Out of Stock",
   },
   {
+    value: "rejected",
+    label: "Rejected",
+  },
+  {
     value: "disabled",
     label: "Disabled",
   },
@@ -129,6 +133,8 @@ function StatusBadge({
       "bg-emerald-50 text-emerald-700 border-emerald-200",
     out_of_stock:
       "bg-orange-50 text-orange-700 border-orange-200",
+    rejected:
+      "bg-rose-50 text-rose-700 border-rose-200",
     disabled:
       "bg-red-50 text-red-700 border-red-200",
   };
@@ -147,6 +153,18 @@ function StatusBadge({
         )}
     </span>
   );
+}
+
+function getEffectiveStatus(product: IProduct): ProductStatus {
+  if (
+    !product.approvedAt &&
+    (product.status === "available" ||
+      product.status === "out_of_stock")
+  ) {
+    return "pending";
+  }
+
+  return product.status;
 }
 
 export default function AdminMarketplacePage() {
@@ -703,7 +721,7 @@ export default function AdminMarketplacePage() {
                       <td className="px-5 py-4">
                         <StatusBadge
                           status={
-                            product.status
+                            getEffectiveStatus(product)
                           }
                         />
                       </td>
@@ -876,7 +894,7 @@ export default function AdminMarketplacePage() {
 
                     <StatusBadge
                       status={
-                        selected.status
+                        getEffectiveStatus(selected)
                       }
                     />
                   </div>
@@ -969,7 +987,7 @@ export default function AdminMarketplacePage() {
               )}
 
               {/* Reject input */}
-              {selected.status ===
+              {getEffectiveStatus(selected) ===
                 "pending" && (
                 <div className="mt-5">
                   <label className="text-sm font-semibold text-slate-800">
@@ -994,7 +1012,7 @@ export default function AdminMarketplacePage() {
 
               {/* Actions */}
               <div className="mt-6 flex flex-wrap gap-2">
-                {selected.status ===
+                {getEffectiveStatus(selected) ===
                   "pending" && (
                   <>
                     <button
@@ -1043,8 +1061,10 @@ export default function AdminMarketplacePage() {
                   </>
                 )}
 
-                {selected.status ===
-                  "available" && (
+                {(getEffectiveStatus(selected) ===
+                  "available" ||
+                  getEffectiveStatus(selected) ===
+                    "out_of_stock") && (
                   <button
                     type="button"
                     disabled={
@@ -1068,8 +1088,10 @@ export default function AdminMarketplacePage() {
                   </button>
                 )}
 
-                {selected.status ===
-                  "disabled" && (
+                {(getEffectiveStatus(selected) ===
+                  "disabled" ||
+                  getEffectiveStatus(selected) ===
+                    "rejected") && (
                   <button
                     type="button"
                     disabled={

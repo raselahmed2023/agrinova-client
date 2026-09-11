@@ -1,1310 +1,358 @@
 "use client";
 
 import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
   CheckCircle2,
   Clock3,
-  FileImage,
-  FileText,
   HandCoins,
-  MapPin,
-  Upload,
+  ImagePlus,
+  Leaf,
+  Loader2,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  UploadCloud,
   XCircle,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
+import { getMyFarms } from "@/services/farm.service";
 import {
   createInvestmentProject,
   getMyInvestmentProjects,
 } from "@/services/investment.service";
-
+import type { IFarm } from "@/types/farm";
 import type {
   CreateInvestmentProjectPayload,
+  InvestmentCategory,
   InvestmentProject,
 } from "@/types/investment";
 
-import {
-  DIVISIONS,
-  getDistrictsByDivision,
-  getUpazilasByDistrict,
-} from "@/constants/bangladeshLocations";
+const categories: { value: InvestmentCategory; label: string }[] = [
+  { value: "vegetable_farming", label: "Vegetable farming" },
+  { value: "organic_farming", label: "Organic farming" },
+  { value: "poultry", label: "Poultry" },
+  { value: "livestock", label: "Livestock" },
+  { value: "fishery", label: "Fishery" },
+  { value: "greenhouse", label: "Greenhouse" },
+  { value: "irrigation", label: "Irrigation" },
+  { value: "equipment", label: "Equipment" },
+  { value: "technology", label: "Technology" },
+  { value: "other", label: "Other" },
+];
 
-const initialForm:
-  CreateInvestmentProjectPayload = {
+const initialForm: CreateInvestmentProjectPayload = {
+  farmId: "",
   projectName: "",
-  category: "organic_farming",
-
-  requiredInvestment: 0,
+  category: "vegetable_farming",
+  requiredInvestment: 100000,
+  minimumInvestment: 5000,
   ownContribution: 0,
-
-  duration: "",
-  expectedReturn: "",
-  profitSharing: "",
-
-  estimatedRevenue: 0,
-  estimatedCost: 0,
-  estimatedProfit: 0,
-
-  division: "",
-  district: "",
-  upazila: "",
-  address: "",
-
+  durationMonths: 6,
+  expectedReturnPercent: 10,
+  investorSharePercent: 20,
   description: "",
-
-  projectImage: "",
-
-  nidNumber: "",
-  nidFrontImage: "",
-
-  supportingDocument: "",
+  useOfFunds: "",
 };
 
-const uploadToImgBB =
-  async (
-    file: File
-  ): Promise<string> => {
-    const apiKey =
-      process.env
-        .NEXT_PUBLIC_IMGBB_API_KEY;
+const money = (value: number) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
 
-    if (!apiKey) {
-      throw new Error(
-        "ImgBB API key is not configured"
-      );
-    }
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "image",
-      file
-    );
-
-    const response =
-      await fetch(
-        `https://api.imgbb.com/1/upload?key=${apiKey}`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-    const result =
-      await response.json();
-
-    if (
-      !response.ok ||
-      !result?.success ||
-      !result?.data?.url
-    ) {
-      throw new Error(
-        "Failed to upload image"
-      );
-    }
-
-    return result.data.url;
-  };
-
-const formatMoney = (
-  value: number
-) =>
-  `৳${Number(value || 0).toLocaleString(
-    "en-BD"
-  )}`;
-
-const getStatus = (
-  project: InvestmentProject
-) => {
-  if (
-    project.status ===
-    "APPROVED"
-  ) {
-    return {
-      label:
-        "Approved",
-      icon: CheckCircle2,
-      className:
-        "bg-emerald-50 text-emerald-700",
-    };
+const statusUI = (status: InvestmentProject["status"]) => {
+  if (status === "APPROVED") {
+    return { label: "Approved & public", icon: CheckCircle2, className: "bg-emerald-50 text-emerald-700" };
   }
-
-  if (
-    project.status ===
-    "REJECTED"
-  ) {
-    return {
-      label:
-        "Rejected",
-      icon: XCircle,
-      className:
-        "bg-red-50 text-red-700",
-    };
+  if (status === "REJECTED") {
+    return { label: "Rejected", icon: XCircle, className: "bg-red-50 text-red-700" };
   }
-
-  return {
-    label:
-      "Pending Review",
-    icon: Clock3,
-    className:
-      "bg-amber-50 text-amber-700",
-  };
+  return { label: "Pending admin review", icon: Clock3, className: "bg-amber-50 text-amber-700" };
 };
 
-export default function InvestmentPage() {
-  const [
-    formData,
-    setFormData,
-  ] =
-    useState<CreateInvestmentProjectPayload>(
-      initialForm
-    );
+async function uploadImage(file: File) {
+  const body = new FormData();
+  body.append("image", file);
+  const response = await fetch("/api/upload", { method: "POST", body });
+  const result = await response.json();
+  if (!response.ok || !result?.success || !result?.url) {
+    throw new Error(result?.message || "Image upload failed");
+  }
+  return String(result.url);
+}
 
-  const [
-    projects,
-    setProjects,
-  ] =
-    useState<InvestmentProject[]>(
-      []
-    );
+export default function NeedInvestmentPage() {
+  const [farms, setFarms] = useState<IFarm[]>([]);
+  const [projects, setProjects] = useState<InvestmentProject[]>([]);
+  const [form, setForm] = useState<CreateInvestmentProjectPayload>(initialForm);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const [
-    loadingProjects,
-    setLoadingProjects,
-  ] =
-    useState(true);
+  const activeFarms = useMemo(() => farms.filter((farm) => farm.status === "Active"), [farms]);
+  const selectedFarm = useMemo(
+    () => activeFarms.find((farm) => farm._id === form.farmId) || null,
+    [activeFarms, form.farmId]
+  );
 
-  const [
-    submitting,
-    setSubmitting,
-  ] =
-    useState(false);
-
-  const [
-    error,
-    setError,
-  ] =
-    useState("");
-
-  const [
-    success,
-    setSuccess,
-  ] =
-    useState("");
-
-  const [
-    submitStatus,
-    setSubmitStatus,
-  ] =
-    useState("");
-
-  const [
-    projectImageFile,
-    setProjectImageFile,
-  ] =
-    useState<File | null>(
-      null
-    );
-
-  const [
-    nidImageFile,
-    setNidImageFile,
-  ] =
-    useState<File | null>(
-      null
-    );
-
-  const [
-    supportingDocumentFile,
-    setSupportingDocumentFile,
-  ] =
-    useState<File | null>(
-      null
-    );
-
-  const [
-    projectImagePreview,
-    setProjectImagePreview,
-  ] =
-    useState("");
-
-  const districts =
-    useMemo(
-      () =>
-        getDistrictsByDivision(
-          formData.division
-        ),
-      [formData.division]
-    );
-
-  const upazilas =
-    useMemo(
-      () =>
-        getUpazilasByDistrict(
-          formData.division,
-          formData.district
-        ),
-      [
-        formData.division,
-        formData.district,
-      ]
-    );
-
-  const loadProjects =
-    async () => {
-      try {
-        setLoadingProjects(
-          true
-        );
-
-        const data =
-          await getMyInvestmentProjects();
-
-        setProjects(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingProjects(
-          false
-        );
-      }
-    };
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [farmData, projectData] = await Promise.all([getMyFarms(), getMyInvestmentProjects()]);
+      setFarms(farmData);
+      setProjects(projectData);
+      setForm((current) => ({
+        ...current,
+        farmId:
+          current.farmId && farmData.some((farm) => farm._id === current.farmId)
+            ? current.farmId
+            : farmData.find((farm) => farm.status === "Active")?._id || "",
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load investment workspace");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadProjects();
+    void load();
   }, []);
 
-  const handleChange = (
-    e:
-      React.ChangeEvent<
-        HTMLInputElement |
-          HTMLSelectElement |
-          HTMLTextAreaElement
-      >
-  ) => {
-    const {
-      name,
-      value,
-    } = e.target;
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
-    const numericFields = [
-      "requiredInvestment",
-      "ownContribution",
-      "estimatedRevenue",
-      "estimatedCost",
-      "estimatedProfit",
-    ];
+  const update = <K extends keyof CreateInvestmentProjectPayload>(
+    key: K,
+    value: CreateInvestmentProjectPayload[K]
+  ) => setForm((current) => ({ ...current, [key]: value }));
 
-    if (
-      numericFields.includes(
-        name
-      )
-    ) {
-      setFormData(
-        (prev) => ({
-          ...prev,
-          [name]:
-            value === ""
-              ? 0
-              : Number(value),
-        })
-      );
-
+  const handleImage = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      setError("Use a JPG, PNG or WEBP image under 5MB.");
       return;
     }
-
-    if (
-      name ===
-      "division"
-    ) {
-      setFormData(
-        (prev) => ({
-          ...prev,
-          division:
-            value,
-          district: "",
-          upazila: "",
-        })
-      );
-
-      return;
-    }
-
-    if (
-      name ===
-      "district"
-    ) {
-      setFormData(
-        (prev) => ({
-          ...prev,
-          district:
-            value,
-          upazila: "",
-        })
-      );
-
-      return;
-    }
-
-    setFormData(
-      (prev) => ({
-        ...prev,
-        [name]: value,
-      })
-    );
+    if (preview) URL.revokeObjectURL(preview);
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
+    setError("");
   };
 
-  const validateFile = (
-    file: File
-  ) => {
-    const allowed = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-    ];
-
-    if (
-      !allowed.includes(
-        file.type
-      )
-    ) {
-      throw new Error(
-        "Only JPG, JPEG or PNG files are allowed."
-      );
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.farmId) {
+      setError("Select one of your active farms first.");
+      return;
     }
 
-    if (
-      file.size >
-      5 * 1024 * 1024
-    ) {
-      throw new Error(
-        "Each file must be less than 5MB."
-      );
+    try {
+      setSubmitting(true);
+      setError("");
+      setMessage("");
+      let projectImage: string | undefined;
+      if (imageFile) projectImage = await uploadImage(imageFile);
+
+      await createInvestmentProject({ ...form, projectImage });
+      setMessage("Funding request submitted. Admin will review it before it appears publicly.");
+      setImageFile(null);
+      if (preview) URL.revokeObjectURL(preview);
+      setPreview("");
+      setForm({ ...initialForm, farmId: form.farmId });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to submit funding request");
+    } finally {
+      setSubmitting(false);
     }
   };
-
-  const handleProjectImage =
-    (
-      e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-      const file =
-        e.target.files?.[0];
-
-      if (!file) return;
-
-      try {
-        validateFile(file);
-
-        setError("");
-
-        setProjectImageFile(
-          file
-        );
-
-        if (
-          projectImagePreview
-        ) {
-          URL.revokeObjectURL(
-            projectImagePreview
-          );
-        }
-
-        setProjectImagePreview(
-          URL.createObjectURL(
-            file
-          )
-        );
-      } catch (err) {
-        setProjectImageFile(
-          null
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Invalid image"
-        );
-      }
-    };
-
-  const handleFile =
-    (
-      e: React.ChangeEvent<HTMLInputElement>,
-      setter: (
-        file: File | null
-      ) => void
-    ) => {
-      const file =
-        e.target.files?.[0];
-
-      if (!file) return;
-
-      try {
-        validateFile(file);
-
-        setError("");
-
-        setter(file);
-      } catch (err) {
-        setter(null);
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Invalid file"
-        );
-      }
-    };
-
-  const resetForm =
-    () => {
-      if (
-        projectImagePreview
-      ) {
-        URL.revokeObjectURL(
-          projectImagePreview
-        );
-      }
-
-      setFormData(
-        initialForm
-      );
-
-      setProjectImageFile(
-        null
-      );
-
-      setNidImageFile(
-        null
-      );
-
-      setSupportingDocumentFile(
-        null
-      );
-
-      setProjectImagePreview(
-        ""
-      );
-    };
-
-  const handleSubmit =
-    async (
-      e: React.FormEvent
-    ) => {
-      e.preventDefault();
-
-      if (submitting) return;
-
-      try {
-        setSubmitting(true);
-
-        setError("");
-        setSuccess("");
-
-        let projectImage =
-          "";
-
-        let nidFrontImage =
-          "";
-
-        let supportingDocument =
-          "";
-
-        if (
-          projectImageFile
-        ) {
-          setSubmitStatus(
-            "Uploading project image..."
-          );
-
-          projectImage =
-            await uploadToImgBB(
-              projectImageFile
-            );
-        }
-
-        if (
-          nidImageFile
-        ) {
-          setSubmitStatus(
-            "Uploading NID image..."
-          );
-
-          nidFrontImage =
-            await uploadToImgBB(
-              nidImageFile
-            );
-        }
-
-        if (
-          supportingDocumentFile
-        ) {
-          setSubmitStatus(
-            "Uploading supporting document..."
-          );
-
-          supportingDocument =
-            await uploadToImgBB(
-              supportingDocumentFile
-            );
-        }
-
-        setSubmitStatus(
-          "Submitting project for review..."
-        );
-
-        await createInvestmentProject(
-          {
-            ...formData,
-
-            projectImage:
-              projectImage ||
-              undefined,
-
-            nidFrontImage:
-              nidFrontImage ||
-              undefined,
-
-            supportingDocument:
-              supportingDocument ||
-              undefined,
-          }
-        );
-
-        setSuccess(
-          "Investment project submitted successfully. It is now waiting for admin review."
-        );
-
-        resetForm();
-
-        await loadProjects();
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to submit project"
-        );
-      } finally {
-        setSubmitting(false);
-        setSubmitStatus("");
-      }
-    };
 
   return (
     <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-
-        <section>
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-              <HandCoins className="h-6 w-6" />
-            </div>
-
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-800 p-6 text-white shadow-xl sm:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
             <div>
-              <h1 className="text-2xl font-bold text-slate-950">
-                Need Investment
-              </h1>
-
-              <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                Submit your farming project to AgriNova. Approved projects can be displayed in the public investment section.
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/15">
+                <Sparkles className="h-4 w-4" />
+                Farmer Funding Workspace
+              </div>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Need investment for a farm?</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-50/85 sm:text-base">
+                Choose an existing farm, explain the funding goal, and submit one clear proposal. AgriNova Admin reviews it before investors can see it.
               </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+                <p className="text-2xl font-bold">{projects.length}</p>
+                <p className="mt-1 text-xs text-emerald-100">Total requests</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+                <p className="text-2xl font-bold">{projects.filter((p) => p.status === "APPROVED").length}</p>
+                <p className="mt-1 text-xs text-emerald-100">Approved</p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-5 sm:px-7">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Create Investment Project
-            </h2>
+        {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {message && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{message}</div>}
 
-            <p className="mt-1 text-sm text-slate-500">
-              All submitted projects are reviewed by AgriNova admin before publication.
-            </p>
-          </div>
-
-          <form
-            onSubmit={
-              handleSubmit
-            }
-            className="p-5 sm:p-7"
-          >
-            {error && (
-              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {success}
-              </div>
-            )}
-
-            <div className="grid gap-5 lg:grid-cols-2">
-
+        <div className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
+          <form onSubmit={submit} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Project Name
-                </label>
-
-                <input
-                  name="projectName"
-                  value={
-                    formData.projectName
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="Modern Vegetable Farming Project"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
+                <h2 className="text-xl font-bold text-slate-950">Funding request</h2>
+                <p className="mt-1 text-sm text-slate-500">Only the information investors actually need.</p>
               </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Category
-                </label>
-
-                <select
-                  name="category"
-                  value={
-                    formData.category
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                >
-                  <option value="organic_farming">
-                    Organic Farming
-                  </option>
-
-                  <option value="poultry">
-                    Poultry
-                  </option>
-
-                  <option value="vegetable_farming">
-                    Vegetable Farming
-                  </option>
-
-                  <option value="greenhouse">
-                    Greenhouse
-                  </option>
-
-                  <option value="irrigation">
-                    Irrigation
-                  </option>
-
-                  <option value="equipment">
-                    Equipment
-                  </option>
-
-                  <option value="technology">
-                    Technology
-                  </option>
-
-                  <option value="other">
-                    Other
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Required Investment
-                </label>
-
-                <input
-                  type="number"
-                  name="requiredInvestment"
-                  min="1"
-                  value={
-                    formData.requiredInvestment ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="500000"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Farmer's Own Contribution
-                </label>
-
-                <input
-                  type="number"
-                  name="ownContribution"
-                  min="0"
-                  value={
-                    formData.ownContribution ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="100000"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Duration
-                </label>
-
-                <input
-                  name="duration"
-                  value={
-                    formData.duration
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="8 months"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Expected Return
-                </label>
-
-                <input
-                  name="expectedReturn"
-                  value={
-                    formData.expectedReturn
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="Estimated 12%"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Profit Sharing
-                </label>
-
-                <input
-                  name="profitSharing"
-                  value={
-                    formData.profitSharing
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="Farmer 70% / Investor 30%"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Estimated Revenue
-                </label>
-
-                <input
-                  type="number"
-                  name="estimatedRevenue"
-                  min="0"
-                  value={
-                    formData.estimatedRevenue ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="800000"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Estimated Cost
-                </label>
-
-                <input
-                  type="number"
-                  name="estimatedCost"
-                  min="0"
-                  value={
-                    formData.estimatedCost ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="500000"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Estimated Profit
-                </label>
-
-                <input
-                  type="number"
-                  name="estimatedProfit"
-                  min="0"
-                  value={
-                    formData.estimatedProfit ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="300000"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Division
-                </label>
-
-                <select
-                  name="division"
-                  value={
-                    formData.division
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                >
-                  <option value="">
-                    Select Division
-                  </option>
-
-                  {DIVISIONS.map(
-                    (division) => (
-                      <option
-                        key={
-                          division
-                        }
-                        value={
-                          division
-                        }
-                      >
-                        {division}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  District
-                </label>
-
-                <select
-                  name="district"
-                  value={
-                    formData.district
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  disabled={
-                    !formData.division
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none disabled:bg-slate-50 focus:border-emerald-600"
-                >
-                  <option value="">
-                    Select District
-                  </option>
-
-                  {districts.map(
-                    (district) => (
-                      <option
-                        key={
-                          district
-                        }
-                        value={
-                          district
-                        }
-                      >
-                        {district}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Upazila
-                </label>
-
-                <select
-                  name="upazila"
-                  value={
-                    formData.upazila
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  disabled={
-                    !formData.district
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none disabled:bg-slate-50 focus:border-emerald-600"
-                >
-                  <option value="">
-                    Select Upazila
-                  </option>
-
-                  {upazilas.map(
-                    (upazila) => (
-                      <option
-                        key={
-                          upazila
-                        }
-                        value={
-                          upazila
-                        }
-                      >
-                        {upazila}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Address
-                </label>
-
-                <input
-                  name="address"
-                  value={
-                    formData.address
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="Village, Union, Road..."
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  NID Number
-                </label>
-
-                <input
-                  name="nidNumber"
-                  value={
-                    formData.nidNumber
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  placeholder="Farmer NID number"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Project Image
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 p-4">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg"
-                    className="hidden"
-                    onChange={
-                      handleProjectImage
-                    }
-                  />
-
-                  {projectImagePreview ? (
-                    <img
-                      src={
-                        projectImagePreview
-                      }
-                      alt="Project preview"
-                      className="h-20 w-28 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                      <Upload className="h-5 w-5" />
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Upload project image
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                      JPG, JPEG or PNG · Max 5MB
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  NID Front Image
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFile(
-                        e,
-                        setNidImageFile
-                      )
-                    }
-                  />
-
-                  <FileImage className="h-5 w-5 text-slate-500" />
-
-                  <span className="truncate text-sm text-slate-600">
-                    {nidImageFile
-                      ? nidImageFile.name
-                      : "Upload NID image"}
-                  </span>
-                </label>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Supporting Document
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFile(
-                        e,
-                        setSupportingDocumentFile
-                      )
-                    }
-                  />
-
-                  <FileText className="h-5 w-5 text-slate-500" />
-
-                  <span className="truncate text-sm text-slate-600">
-                    {supportingDocumentFile
-                      ? supportingDocumentFile.name
-                      : "Upload supporting document"}
-                  </span>
-                </label>
-              </div>
-
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Project Description
-                </label>
-
-                <textarea
-                  name="description"
-                  value={
-                    formData.description
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  required
-                  rows={6}
-                  placeholder="Describe the project, farming plan, investment need and expected outcome..."
-                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-600"
-                />
-              </div>
+              <ShieldCheck className="h-6 w-6 text-emerald-700" />
             </div>
 
-            {submitStatus && (
-              <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                {submitStatus}
-              </div>
-            )}
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              <Field label="Farm" className="sm:col-span-2">
+                <select value={form.farmId} onChange={(e) => update("farmId", e.target.value)} className={inputClass} required>
+                  <option value="">Select an active farm</option>
+                  {activeFarms.map((farm) => <option key={farm._id} value={farm._id}>{farm.name} · {farm.district}</option>)}
+                </select>
+                {selectedFarm && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                    <Leaf className="h-3.5 w-3.5 text-emerald-600" />
+                    {selectedFarm.farmType} · {selectedFarm.upazila}, {selectedFarm.district}, {selectedFarm.division}
+                  </p>
+                )}
+              </Field>
 
-            <div className="mt-6 flex justify-end border-t border-slate-100 pt-6">
-              <button
-                type="submit"
-                disabled={
-                  submitting
-                }
-                className="rounded-xl bg-emerald-700 px-7 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting
-                  ? "Submitting..."
-                  : "Submit for Admin Review"}
+              <Field label="Project title" className="sm:col-span-2">
+                <input value={form.projectName} onChange={(e) => update("projectName", e.target.value)} className={inputClass} placeholder="e.g. Winter vegetable expansion" required />
+              </Field>
+
+              <Field label="Category">
+                <select value={form.category} onChange={(e) => update("category", e.target.value as InvestmentCategory)} className={inputClass}>
+                  {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </Field>
+
+              <Field label="Project duration (months)">
+                <input type="number" min={1} max={120} value={form.durationMonths} onChange={(e) => update("durationMonths", Number(e.target.value))} className={inputClass} required />
+              </Field>
+
+              <Field label="Funding goal (BDT)">
+                <input type="number" min={1} value={form.requiredInvestment} onChange={(e) => update("requiredInvestment", Number(e.target.value))} className={inputClass} required />
+              </Field>
+
+              <Field label="Minimum single investment (BDT)">
+                <input type="number" min={1} value={form.minimumInvestment} onChange={(e) => update("minimumInvestment", Number(e.target.value))} className={inputClass} required />
+              </Field>
+
+              <Field label="Your own contribution (BDT)">
+                <input type="number" min={0} value={form.ownContribution || 0} onChange={(e) => update("ownContribution", Number(e.target.value))} className={inputClass} />
+              </Field>
+
+              <Field label="Expected project return (%)">
+                <input type="number" min={0} max={100} step="0.1" value={form.expectedReturnPercent} onChange={(e) => update("expectedReturnPercent", Number(e.target.value))} className={inputClass} required />
+              </Field>
+
+              <Field label="Investor profit share (%)" className="sm:col-span-2">
+                <input type="number" min={0} max={100} step="0.1" value={form.investorSharePercent} onChange={(e) => update("investorSharePercent", Number(e.target.value))} className={inputClass} required />
+              </Field>
+
+              <Field label="Project summary" className="sm:col-span-2">
+                <textarea value={form.description} onChange={(e) => update("description", e.target.value)} className={`${inputClass} min-h-28 resize-y py-3`} placeholder="What will the project do and why is funding needed?" required />
+              </Field>
+
+              <Field label="How the investment will be used" className="sm:col-span-2">
+                <textarea value={form.useOfFunds} onChange={(e) => update("useOfFunds", e.target.value)} className={`${inputClass} min-h-24 resize-y py-3`} placeholder="Example: seeds, feed, irrigation equipment, labor, storage..." required />
+              </Field>
+
+              <Field label="Project image" className="sm:col-span-2">
+                <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 transition hover:border-emerald-400 hover:bg-emerald-50/40">
+                  {preview ? <img src={preview} alt="Project preview" className="h-20 w-28 rounded-xl object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><ImagePlus className="h-6 w-6" /></span>}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-slate-800">{imageFile?.name || "Upload a clear farm/project image"}</span>
+                    <span className="mt-1 block text-xs text-slate-500">JPG, PNG or WEBP · max 5MB</span>
+                  </span>
+                  <UploadCloud className="h-5 w-5 text-slate-400" />
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => handleImage(e.target.files?.[0])} />
+                </label>
+              </Field>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
+              Expected returns are estimates, not guarantees. Admin review checks completeness and platform eligibility; it does not guarantee project performance.
+            </div>
+
+            <button type="submit" disabled={submitting || loading || activeFarms.length === 0} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <HandCoins className="h-4 w-4" />}
+              {submitting ? "Submitting for review..." : "Submit funding request"}
+            </button>
+          </form>
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-950">My funding projects</h2>
+                <p className="mt-1 text-sm text-slate-500">Track review and funding progress.</p>
+              </div>
+              <button type="button" onClick={() => void load()} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50" aria-label="Refresh">
+                <RefreshCw className="h-4 w-4" />
               </button>
             </div>
-          </form>
-        </section>
 
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-slate-950">
-              My Investment Projects
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Track the review status of projects you have submitted.
-            </p>
-          </div>
-
-          {loadingProjects ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-              Loading your projects...
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-              <p className="font-semibold text-slate-800">
-                No investment projects yet
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Submit your first farming project above.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {projects.map(
-                (project) => {
-                  const status =
-                    getStatus(
-                      project
-                    );
-
-                  const Icon =
-                    status.icon;
-
-                  return (
-                    <article
-                      key={
-                        project._id
-                      }
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                    >
-                      {project.projectImage ? (
-                        <img
-                          src={
-                            project.projectImage
-                          }
-                          alt={
-                            project.projectName
-                          }
-                          className="h-48 w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-48 items-center justify-center bg-emerald-50 text-emerald-700">
-                          <HandCoins className="h-12 w-12" />
+            {loading ? (
+              <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500"><Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />Loading...</div>
+            ) : projects.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <HandCoins className="mx-auto h-9 w-9 text-slate-300" />
+                <p className="mt-3 font-semibold text-slate-800">No funding requests yet</p>
+                <p className="mt-1 text-sm text-slate-500">Your submitted projects will appear here.</p>
+              </div>
+            ) : (
+              projects.map((project) => {
+                const status = statusUI(project.status);
+                const StatusIcon = status.icon;
+                const percent = Math.min(Math.round((Number(project.fundedAmount || 0) / Math.max(Number(project.requiredInvestment || 1), 1)) * 100), 100);
+                return (
+                  <article key={project._id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <div className="flex gap-4 p-5">
+                      {project.projectImage ? <img src={project.projectImage} alt={project.projectName} className="h-24 w-28 shrink-0 rounded-2xl object-cover" /> : <div className="flex h-24 w-28 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><HandCoins className="h-8 w-8" /></div>}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-medium text-slate-400">{project.projectCode}</p>
+                            <h3 className="mt-1 truncate font-bold text-slate-900">{project.projectName}</h3>
+                            <p className="mt-1 text-xs text-slate-500">{project.farmName || "Farm"} · {project.district}</p>
+                          </div>
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${status.className}`}><StatusIcon className="h-3.5 w-3.5" />{status.label}</span>
                         </div>
-                      )}
-
-                      <div className="p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-semibold text-slate-950">
-                            {
-                              project.projectName
-                            }
-                          </h3>
-
-                          <span
-                            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {
-                              status.label
-                            }
-                          </span>
-                        </div>
-
-                        <div className="mt-4 space-y-2 text-sm text-slate-500">
-                          <p>
-                            Required:{" "}
-                            <strong className="text-slate-800">
-                              {formatMoney(
-                                project.requiredInvestment
-                              )}
-                            </strong>
-                          </p>
-
-                          <p className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {
-                              project.district
-                            }
-                            ,{" "}
-                            {
-                              project.division
-                            }
-                          </p>
-
-                          <p>
-                            Duration:{" "}
-                            {
-                              project.duration
-                            }
-                          </p>
-                        </div>
-
-                        {project.status ===
-                          "REJECTED" &&
-                          project.adminNote && (
-                            <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">
-                              <strong>
-                                Admin note:
-                              </strong>{" "}
-                              {
-                                project.adminNote
-                              }
-                            </div>
-                          )}
                       </div>
-                    </article>
-                  );
-                }
-              )}
-            </div>
-          )}
-        </section>
+                    </div>
+                    <div className="border-t border-slate-100 p-5">
+                      <div className="flex items-center justify-between text-xs text-slate-500"><span>{money(project.fundedAmount || 0)} funded</span><span>{money(project.requiredInvestment)}</span></div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${percent}%` }} /></div>
+                      <div className="mt-3 flex items-center justify-between text-xs"><span className="font-semibold text-emerald-700">{percent}% funded</span><span className="text-slate-400">Min {money(project.minimumInvestment || 1000)}</span></div>
+                      {project.status === "REJECTED" && project.adminNote && <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs leading-5 text-red-700"><strong>Admin feedback:</strong> {project.adminNote}</div>}
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </section>
+        </div>
       </div>
     </div>
+  );
+}
+
+const inputClass = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10";
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={className}>
+      <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
+      {children}
+    </label>
   );
 }

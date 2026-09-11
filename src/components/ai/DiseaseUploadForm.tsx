@@ -16,6 +16,8 @@ import {
 import Image from "next/image";
 import { ChangeEvent, DragEvent, useRef, useState } from "react";
 
+import { authClient } from "@/lib/auth-client";
+
 import DiseaseResult, {
   type DiseaseResultType,
 } from "./DiseaseResult";
@@ -134,10 +136,19 @@ export default function DiseaseUploadForm() {
         formData.append("cropName", cropName.trim());
       }
 
+      const { data: tokenData } = await authClient.token();
+
+      if (!tokenData?.token) {
+        throw new Error("Please sign in again to use disease detection.");
+      }
+
       const response = await fetch(
         `${API_URL}/ai/disease-detection`,
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+          },
           body: formData,
         }
       );

@@ -1,25 +1,13 @@
-import { apiRequest } from "./api.client";
+import {
+  apiRequest,
+  apiRequestWithMeta,
+} from "./api.client";
 
 import type {
   IProduct,
-  IProductListResponse,
   ProductCategory,
   ProductStatus,
 } from "@/types/marketplace";
-
-interface ProductQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-  category?: ProductCategory | "all";
-  status?: ProductStatus | "all";
-  transactionType?: string;
-  productionMethod?: string;
-  location?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sort?: string;
-}
 
 interface AdminProductQuery {
   page?: number;
@@ -44,138 +32,18 @@ function buildQuery(
 ): string {
   const searchParams = new URLSearchParams();
 
-  Object.entries(params).forEach(
-    ([key, value]) => {
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== ""
-      ) {
-        searchParams.set(
-          key,
-          String(value)
-        );
-      }
+  Object.entries(params).forEach(([key, value]) => {
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== ""
+    ) {
+      searchParams.set(key, String(value));
     }
-  );
+  });
 
   return searchParams.toString();
 }
-
-
-
-async function getProducts(
-  params: ProductQuery = {}
-): Promise<
-  IProduct[] | IProductListResponse
-> {
-  const queryString = buildQuery({
-    page: params.page,
-    limit: params.limit,
-    search: params.search,
-    category:
-      params.category === "all"
-        ? undefined
-        : params.category,
-    status:
-      params.status === "all"
-        ? undefined
-        : params.status,
-    transactionType:
-      params.transactionType,
-    productionMethod:
-      params.productionMethod,
-    location: params.location,
-    minPrice: params.minPrice,
-    maxPrice: params.maxPrice,
-    sort: params.sort,
-  });
-
-  return apiRequest<
-    IProduct[] | IProductListResponse
-  >(
-    "/marketplace/products",
-    "GET",
-    undefined,
-    queryString
-  );
-}
-
-async function getProductById(
-  productId: string
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${encodeURIComponent(
-      productId
-    )}`
-  );
-}
-
-
-
-async function getMyProducts(
-  params: {
-    page?: number;
-    limit?: number;
-    status?: ProductStatus | "all";
-  } = {}
-): Promise<
-  IProduct[] | IProductListResponse
-> {
-  const queryString = buildQuery({
-    page: params.page,
-    limit: params.limit,
-    status:
-      params.status === "all"
-        ? undefined
-        : params.status,
-  });
-
-  return apiRequest<
-    IProduct[] | IProductListResponse
-  >(
-    "/marketplace/my-listings",
-    "GET",
-    undefined,
-    queryString
-  );
-}
-
-async function createProduct(
-  payload: IProduct
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    "/marketplace/products",
-    "POST",
-    payload
-  );
-}
-
-async function updateProduct(
-  productId: string,
-  payload: Partial<IProduct>
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${encodeURIComponent(
-      productId
-    )}`,
-    "PATCH",
-    payload
-  );
-}
-
-async function deleteProduct(
-  productId: string
-): Promise<IProduct> {
-  return apiRequest<IProduct>(
-    `/marketplace/products/${encodeURIComponent(
-      productId
-    )}`,
-    "DELETE"
-  );
-}
-
-
 
 async function getAdminProducts(
   params: AdminProductQuery = {}
@@ -194,12 +62,29 @@ async function getAdminProducts(
     search: params.search,
   });
 
-  return apiRequest<AdminProductListResult>(
+  const response = await apiRequestWithMeta<IProduct[]>(
     "/admin/marketplace/products",
     "GET",
     undefined,
     queryString
   );
+
+  const data = Array.isArray(response.data)
+    ? response.data
+    : [];
+
+  return {
+    data,
+    meta: {
+      page: Number(response.meta?.page || params.page || 1),
+      limit: Number(response.meta?.limit || params.limit || 10),
+      total: Number(response.meta?.total ?? data.length),
+      totalPages: Math.max(
+        Number(response.meta?.totalPages || 1),
+        1
+      ),
+    },
+  };
 }
 
 async function getAdminProductById(
@@ -232,9 +117,7 @@ async function rejectProduct(
       productId
     )}/reject`,
     "PATCH",
-    {
-      reason,
-    }
+    { reason }
   );
 }
 
@@ -271,19 +154,7 @@ async function removeProduct(
   );
 }
 
-
 export const MarketplaceService = {
-  // Public
-  getProducts,
-  getProductById,
-
-  // Farmer / Seller
-  getMyProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-
-  // Admin
   getAdminProducts,
   getAdminProductById,
   approveProduct,
@@ -293,6 +164,4 @@ export const MarketplaceService = {
   removeProduct,
 };
 
-// Backward-compatible lowercase export
-export const marketplaceService =
-  MarketplaceService;
+export const marketplaceService = MarketplaceService;

@@ -1,3 +1,5 @@
+import { authClient } from "@/lib/auth-client";
+
 export interface TreatmentRecommendationRequest {
   cropType: string;
   problemTitle: string;
@@ -17,110 +19,104 @@ export interface TreatmentRecommendationResponse {
   treatmentMode: string;
 }
 
-const getApiUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-};
+const getApiUrl = () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const futureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split("T")[0];
 
-// Fallback Agronomic Treatment Presets for Bangladesh Agriculture
+/*
+ * These presets are deliberately non-prescriptive fallbacks.
+ * Exact pesticide/antibiotic products, concentrations and doses should come
+ * from the authenticated expert/AI workflow and must be checked against the
+ * product label and local agricultural guidance before field use.
+ */
 const FALLBACK_TREATMENTS: Record<string, TreatmentRecommendationResponse> = {
   fungal: {
-    diagnosis:
-      "Fungal Blight / Leaf Spot complex (likely Alternaria or Phytophthora infection). Severe foliar lesion formation observed with active necrotic centers, compromising photosynthetic canopy efficiency.",
+    diagnosis: "Symptoms may be consistent with a fungal leaf-spot or blight problem, but a remote description alone cannot confirm the pathogen.",
     prescriptions: [
-      "Mancozeb 75% WP @ 2.5g/L of water (Protective contact fungicide)",
-      "Azoxystrobin 18.2% + Difenoconazole 11.4% SC @ 1ml/L of water (Systemic translaminar action)",
-      "Agricultural non-ionic surfactant/sticker @ 0.5ml/L of water for optimal leaf adherence",
+      "Remove heavily affected plant material where practical and keep it away from healthy plants.",
+      "Use only a locally registered crop-protection product that is labelled for the identified crop and disease, following the label exactly.",
+      "Ask an agricultural expert to confirm the diagnosis before using a chemical treatment when symptoms are severe or spreading quickly.",
     ],
     treatmentSteps: [
-      "Field Sanitation: Collect and dispose of heavily blighted lower leaves outside the boundary.",
-      "Application: Spray uniformly early in the morning or late afternoon, ensuring complete under-leaf coverage.",
-      "Irrigation Adjustment: Refrain from overhead sprinkling; irrigate through furrows to keep foliage dry.",
-      "Crop Nutrition: Apply balanced potassium-rich foliar nutrients after 5 days to reinforce plant cell walls.",
+      "Improve airflow and avoid keeping foliage wet for long periods.",
+      "Inspect nearby plants and record whether symptoms are spreading.",
+      "Sanitize tools between affected and healthy plants.",
+      "Re-check the crop after several days and escalate to an expert if symptoms worsen.",
     ],
     followUpDays: 7,
-    followUpDate: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-    additionalNotes:
-      "Safety: Wear protective gloves and face mask during application. Observe a 10-day pre-harvest interval (PHI). Avoid application if rain is imminent within 4 hours.",
+    followUpDate: futureDate(7),
+    additionalNotes: "Wear appropriate protective equipment and follow every label instruction, pre-harvest interval and local regulation for any crop-protection product.",
     treatmentMode: "integrated",
   },
   pest: {
-    diagnosis:
-      "Lepidopteran borer or defoliating caterpillar infestation (e.g. Stem Borer / Fall Armyworm / Helicoverpa). Active larval feeding damage detected on vegetative tissue and leaf whorls.",
+    diagnosis: "The reported damage may be caused by an insect pest or feeding larvae. Confirm the pest before choosing a control method.",
     prescriptions: [
-      "Chlorantraniliprole 18.5% SC @ 0.4ml/L of water or Cartap Hydrochloride 50 SP @ 1.2g/L",
-      "Neem seed kernel extract (NSKE 5%) or Azadirachtin 10,000 ppm @ 2ml/L (Bio-repellent)",
-      "Spreader/activator @ 0.5ml/L of water",
+      "Use field scouting, traps and physical removal where practical as first-line monitoring/control measures.",
+      "If treatment is needed, select only a locally registered product labelled for the crop and confirmed pest and follow the product label exactly.",
+      "Use an agricultural expert for confirmation when infestation is widespread or identification is uncertain.",
     ],
     treatmentSteps: [
-      "Scouting & Trapping: Install sex pheromone traps (4-5 per acre) and yellow sticky traps for vector monitoring.",
-      "Direct Target Spraying: Direct spray specifically into the central whorls where young larvae shelter.",
-      "Night Light Trapping: Place light traps over water basins at field borders to trap adult moths.",
-      "Post-Spray Evaluation: Check larval mortality after 72 hours before considering any secondary spray.",
+      "Inspect leaf undersides, stems, whorls and nearby plants for eggs, larvae or adults.",
+      "Record pest counts and affected area before and after intervention.",
+      "Protect beneficial insects by avoiding unnecessary broad-spectrum treatment.",
+      "Reassess before repeating any treatment.",
     ],
     followUpDays: 7,
-    followUpDate: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-    additionalNotes:
-      "Safety: Spray during calm wind conditions to avoid chemical drift. Wash equipment thoroughly after use. 14-day pre-harvest interval.",
+    followUpDate: futureDate(7),
+    additionalNotes: "Do not mix or increase pesticide doses beyond the product label. Observe local safety and harvest-withholding requirements.",
     treatmentMode: "integrated",
   },
   bacterial: {
-    diagnosis:
-      "Bacterial Wilt / Leaf Blight caused by Ralstonia or Xanthomonas pathovars. Vascular occlusion causing rapid diurnal wilting and water-soaked leaf streaks.",
+    diagnosis: "Symptoms may be compatible with a bacterial wilt/blight problem, but laboratory or expert confirmation may be needed because several stresses can look similar.",
     prescriptions: [
-      "Copper Hydroxide 77% WP or Copper Oxychloride 50% WP @ 2.5g/L of water",
-      "Streptomycin Sulphate + Tetracycline Hydrochloride (9:1) @ 0.5g/L of water",
-      "Pseudomonas fluorescens bio-agent @ 5g/L for soil drenching around root zones",
+      "Isolate or remove severely affected plants when appropriate to reduce spread.",
+      "Improve drainage and avoid moving contaminated soil or water between beds.",
+      "Seek expert confirmation before applying bactericides or other antimicrobial products.",
     ],
     treatmentSteps: [
-      "Rogueing: Uproot severely wilted plants along with root-zone soil and incinerate outside the field.",
-      "Drainage & Aeration: Create drainage channels immediately to prevent waterlogging and cross-contamination.",
-      "Root Drenching: Drench surrounding healthy plant root zones with Copper Oxychloride solution.",
-      "Crop Rotation: Avoid planting solanaceous crops in this specific patch for the upcoming 2 seasons.",
+      "Sanitize cutting tools between plants.",
+      "Avoid handling healthy plants immediately after affected plants.",
+      "Check irrigation and drainage for routes that could spread infection.",
+      "Consider crop rotation and resistant varieties for future cycles where relevant.",
     ],
-    followUpDays: 10,
-    followUpDate: new Date(Date.now() + 10 * 86400000).toISOString().split("T")[0],
-    additionalNotes:
-      "Sterilize all cutting tools in 10% bleach solution between rows to avoid mechanical transmission of bacteria.",
+    followUpDays: 7,
+    followUpDate: futureDate(7),
+    additionalNotes: "Do not use human/veterinary antibiotics on crops unless specifically registered and legally permitted for that agricultural use.",
     treatmentMode: "integrated",
   },
   deficiency: {
-    diagnosis:
-      "Physiological Micronutrient Deficiency (interveinal chlorosis indicating Zinc, Boron, or Iron imbalance, compounded by soil pH lockout).",
+    diagnosis: "The symptoms may reflect nutrient deficiency, root stress or soil-pH-related nutrient lockout. A soil/leaf test is the safest way to distinguish these causes.",
     prescriptions: [
-      "Chelated Zinc (Zn-EDTA 12%) @ 1.0g/L of water",
-      "Solubor / Borax (Di-sodium Octaborate Tetrahydrate) @ 1.5g/L of water",
-      "Water-soluble balanced NPK 19:19:19 foliar fertilizer @ 4.0g/L of water",
+      "Check soil moisture, drainage and pH before adding nutrients.",
+      "Use a soil or leaf nutrient test where available.",
+      "Correct confirmed deficiencies using a crop-appropriate fertilizer according to its label or an agronomist's recommendation.",
     ],
     treatmentSteps: [
-      "Soil Conditioning: Apply decomposed farmyard manure or vermicompost to improve cation exchange capacity.",
-      "Foliar Feeding: Apply micronutrient spray in the cool morning hours when stomata are open.",
-      "Repeat Application: Administer a second light foliar booster after 10-12 days if new leaves still show pale venation.",
-      "Moisture Maintenance: Maintain consistent soil moisture to enable active nutrient uptake.",
+      "Compare symptoms on old versus new leaves and across the field.",
+      "Review recent fertilizer applications and irrigation changes.",
+      "Correct root-zone issues before applying additional fertilizer.",
+      "Monitor new growth rather than expecting damaged leaves to recover completely.",
     ],
-    followUpDays: 14,
-    followUpDate: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
-    additionalNotes:
-      "Mix fertilizers thoroughly in a bucket of water before pouring into the sprayer tank. Do not mix with copper fungicides.",
+    followUpDays: 10,
+    followUpDate: futureDate(10),
+    additionalNotes: "Over-fertilization can injure crops and contaminate water. Base correction on diagnosis rather than symptom colour alone.",
     treatmentMode: "integrated",
   },
   organic: {
-    diagnosis:
-      "Organic Plant Health Restoration & Biological Pest/Fungus Suppression regimen. Enhancing systemic acquired resistance (SAR) in the crop.",
+    diagnosis: "An integrated low-residue approach can begin with sanitation, monitoring and environmental correction while the exact problem is confirmed.",
     prescriptions: [
-      "Cold-pressed Neem Oil (10,000 ppm) @ 4ml/L with mild liquid soap (1ml/L) as emulsifier",
-      "Trichoderma viride / harzianum bio-fungicide @ 5g/L for soil drenching & foliage",
-      "Fermented Panchagavya or Jeevamrutha @ 30ml/L of water as organic bio-stimulant",
+      "Prioritize sanitation, resistant varieties, crop rotation and physical/biological controls appropriate to the confirmed problem.",
+      "If using an organic crop-protection product, confirm that it is registered for the crop and target and follow its label exactly.",
+      "Escalate to an agricultural expert if the crop is deteriorating or identification remains uncertain.",
     ],
     treatmentSteps: [
-      "Sanitation: Prune damaged foliage and deposit in an active compost pile.",
-      "Bio-Drenching: Apply Trichoderma solution directly to wet soil around crop root systems.",
-      "Foliar Emulsion Spray: Spray neem oil emulsion evenly over upper and lower leaf surfaces during late afternoon.",
-      "Mulching: Apply dried straw or organic mulch around base to conserve beneficial soil microbes.",
+      "Remove heavily damaged material where appropriate.",
+      "Improve airflow, irrigation practice and field hygiene.",
+      "Monitor pest/disease pressure with regular scouting.",
+      "Document changes so follow-up recommendations can be based on evidence.",
     ],
-    followUpDays: 10,
-    followUpDate: new Date(Date.now() + 10 * 86400000).toISOString().split("T")[0],
-    additionalNotes:
-      "Zero chemical residue; 100% eco-friendly and safe for pollinators. Harvest can safely proceed after 24-48 hours.",
+    followUpDays: 7,
+    followUpDate: futureDate(7),
+    additionalNotes: "'Organic' does not automatically mean risk-free. Follow product labels, protective-equipment instructions and local agricultural rules.",
     treatmentMode: "organic",
   },
 };
@@ -129,82 +125,46 @@ export const getTreatmentRecommendationFromAI = async (
   payload: TreatmentRecommendationRequest
 ): Promise<TreatmentRecommendationResponse> => {
   try {
-    const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/ai/treatment-recommendation`, {
+    const { data: tokenData } = await authClient.token();
+    if (!tokenData?.token) throw new Error("Authentication required");
+
+    const response = await fetch(`${getApiUrl()}/ai/treatment-recommendation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenData.token}`,
       },
       body: JSON.stringify(payload),
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success && data.data) {
-        return data.data;
-      }
+    const data = await response.json();
+    if (!response.ok || !data?.success || !data?.data) {
+      throw new Error(data?.message || "AI treatment recommendation failed");
     }
+    return data.data;
   } catch (err) {
-    console.warn("Server AI request failed or unreachable, using agronomic knowledge engine fallback:", err);
+    console.warn("Authenticated treatment AI unavailable; using non-prescriptive safety fallback:", err);
   }
 
-  // Fallback pattern matching on problem title & description
   const combined = `${payload.problemTitle} ${payload.problemDescription} ${payload.cropType}`.toLowerCase();
   let selected = FALLBACK_TREATMENTS.fungal;
+  if (payload.treatmentMode === "organic") selected = FALLBACK_TREATMENTS.organic;
+  else if (/borer|worm|caterpillar|pest|larva|insect/.test(combined)) selected = FALLBACK_TREATMENTS.pest;
+  else if (/wilt|bacteri|canker|water.?soaked/.test(combined)) selected = FALLBACK_TREATMENTS.bacterial;
+  else if (/yellow|deficien|stunt|zinc|nutrient|chlorosis/.test(combined)) selected = FALLBACK_TREATMENTS.deficiency;
 
-  if (payload.treatmentMode === "organic") {
-    selected = FALLBACK_TREATMENTS.organic;
-  } else if (combined.includes("borer") || combined.includes("worm") || combined.includes("caterpillar") || combined.includes("pest") || combined.includes("larva") || combined.includes("insect")) {
-    selected = FALLBACK_TREATMENTS.pest;
-  } else if (combined.includes("wilt") || combined.includes("bacteri") || combined.includes("canker") || combined.includes("rot")) {
-    selected = FALLBACK_TREATMENTS.bacterial;
-  } else if (combined.includes("yellow") || combined.includes("deficien") || combined.includes("stunt") || combined.includes("zinc") || combined.includes("nutrient")) {
-    selected = FALLBACK_TREATMENTS.deficiency;
-  }
-
-  // Personalize with crop and title
   return {
     ...selected,
-    diagnosis: `${payload.cropType} Diagnostic Assessment: ${selected.diagnosis} Primary trigger: "${payload.problemTitle}".`,
-    treatmentMode: payload.treatmentMode || "integrated",
-    followUpDate: new Date(Date.now() + selected.followUpDays * 86400000).toISOString().split("T")[0],
+    diagnosis: `${payload.cropType}: ${selected.diagnosis} Reported issue: “${payload.problemTitle}”.`,
+    treatmentMode: payload.treatmentMode || selected.treatmentMode,
+    followUpDate: futureDate(selected.followUpDays),
   };
 };
 
 export const CLINICAL_PRESETS = [
-  {
-    id: "late_blight",
-    title: "Fungal Blight & Leaf Spot",
-    badge: "Fungicide Protocol",
-    cropMatch: ["Potato", "Tomato", "Brinjal", "Chili"],
-    data: FALLBACK_TREATMENTS.fungal,
-  },
-  {
-    id: "stem_borer",
-    title: "Stem Borer & Caterpillars",
-    badge: "IPM Insecticide",
-    cropMatch: ["Rice", "Maize", "Eggplant", "Cabbage"],
-    data: FALLBACK_TREATMENTS.pest,
-  },
-  {
-    id: "bacterial_wilt",
-    title: "Bacterial Wilt & Canker",
-    badge: "Bactericide Protocol",
-    cropMatch: ["Tomato", "Potato", "Chili", "Banana"],
-    data: FALLBACK_TREATMENTS.bacterial,
-  },
-  {
-    id: "micronutrient",
-    title: "Zinc, Boron & NPK Deficiency",
-    badge: "Nutrient Foliar Spray",
-    cropMatch: ["Rice", "Wheat", "Mustard", "Corn"],
-    data: FALLBACK_TREATMENTS.deficiency,
-  },
-  {
-    id: "organic_bio",
-    title: "100% Organic & Bio-Control",
-    badge: "Bio-Pesticide Regimen",
-    cropMatch: ["Vegetables", "Fruits", "Herbs"],
-    data: FALLBACK_TREATMENTS.organic,
-  },
+  { id: "late_blight", title: "Fungal Blight & Leaf Spot", badge: "Integrated guidance", cropMatch: ["Potato", "Tomato", "Brinjal", "Chili"], data: FALLBACK_TREATMENTS.fungal },
+  { id: "stem_borer", title: "Stem Borer & Caterpillars", badge: "IPM guidance", cropMatch: ["Rice", "Maize", "Eggplant", "Cabbage"], data: FALLBACK_TREATMENTS.pest },
+  { id: "bacterial_wilt", title: "Bacterial Wilt & Canker", badge: "Disease hygiene", cropMatch: ["Tomato", "Potato", "Chili", "Banana"], data: FALLBACK_TREATMENTS.bacterial },
+  { id: "micronutrient", title: "Possible Nutrient Deficiency", badge: "Test before treating", cropMatch: ["Rice", "Wheat", "Mustard", "Corn"], data: FALLBACK_TREATMENTS.deficiency },
+  { id: "organic_bio", title: "Organic / Biological Approach", badge: "Low-residue guidance", cropMatch: ["Vegetables", "Fruits", "Herbs"], data: FALLBACK_TREATMENTS.organic },
 ];

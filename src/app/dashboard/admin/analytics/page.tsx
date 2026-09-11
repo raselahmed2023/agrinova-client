@@ -21,6 +21,9 @@ interface AnalyticsData {
   };
   marketplace?: {
     active: number;
+    pending: number;
+    outOfStock: number;
+    rejected: number;
     disabled: number;
   };
   consultations?: {
@@ -36,11 +39,6 @@ interface AnalyticsData {
   };
 }
 
-interface IAnalyticsResponse {
-  success?: boolean;
-  data?: AnalyticsData;
-}
-
 export default function AdminAnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -49,10 +47,7 @@ export default function AdminAnalyticsPage() {
     adminService
       .getAdminAnalytics()
       .then((response: unknown) => {
-        const res = response as IAnalyticsResponse;
-        if (res && res.success && res.data) {
-          setAnalytics(res.data);
-        }
+        setAnalytics(response as AnalyticsData);
       })
       .catch((err: unknown) => console.error("Failed to load analytics", err))
       .finally(() => setLoading(false));
@@ -74,7 +69,10 @@ export default function AdminAnalyticsPage() {
   ];
 
   const marketplaceChartData = [
-    { name: "Active", value: analytics?.marketplace?.active || 0 },
+    { name: "Live", value: analytics?.marketplace?.active || 0 },
+    { name: "Pending", value: analytics?.marketplace?.pending || 0 },
+    { name: "Out of Stock", value: analytics?.marketplace?.outOfStock || 0 },
+    { name: "Rejected", value: analytics?.marketplace?.rejected || 0 },
     { name: "Disabled", value: analytics?.marketplace?.disabled || 0 },
   ];
 

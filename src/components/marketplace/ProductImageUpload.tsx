@@ -14,6 +14,8 @@ import {
   UploadCloud,
 } from "lucide-react";
 
+const MAX_IMAGES = 5;
+
 interface ProductImageUploadProps {
   images: string[];
   setImages: Dispatch<SetStateAction<string[]>>;
@@ -107,13 +109,26 @@ export default function ProductImageUpload({
       return;
     }
 
+    const remainingSlots = Math.max(
+      MAX_IMAGES - images.length,
+      0
+    );
+
+    if (remainingSlots === 0) {
+      setError(`You can upload up to ${MAX_IMAGES} product images.`);
+      event.target.value = "";
+      return;
+    }
+
+    const selectedFiles = files.slice(0, remainingSlots);
+
     try {
       setUploading(true);
       setError("");
 
       const uploaded: string[] = [];
 
-      for (const file of files) {
+      for (const file of selectedFiles) {
         if (!file.type.startsWith("image/")) {
           throw new Error(
             `${file.name} is not a valid image file.`
@@ -169,7 +184,7 @@ export default function ProductImageUpload({
           type="file"
           accept="image/*"
           multiple
-          disabled={uploading}
+          disabled={uploading || images.length >= MAX_IMAGES}
           onChange={handleFiles}
           className="sr-only"
         />
@@ -189,7 +204,7 @@ export default function ProductImageUpload({
         </p>
 
         <p className="mt-1 text-xs text-slate-500">
-          Select one or more product photos
+          Select up to 5 product photos
         </p>
       </label>
 

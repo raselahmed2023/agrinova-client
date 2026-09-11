@@ -22,6 +22,7 @@ import {
   LogOut,
   MessageSquareText,
   Package,
+  TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
@@ -91,6 +92,11 @@ const otherItems = [
     label: "Need Investment",
     href: "/dashboard/farmer/investment",
     icon: HandCoins,
+  },
+  {
+    label: "My Investments",
+    href: "/dashboard/farmer/my-investments",
+    icon: TrendingUp,
   },
 ];
 

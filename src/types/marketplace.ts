@@ -23,8 +23,7 @@ export type ProductStatus =
   | "available"
   | "out_of_stock"
   | "rejected"
-  | "disabled"
-  | "approved";
+  | "disabled";
 
 export interface IProduct {
   _id: string;
@@ -77,6 +76,12 @@ export interface IProduct {
   byProductUses?: string[];
 
   rejectionReason?: string;
+
+  approvedAt?: string;
+
+  approvedBy?: string;
+
+  isDeleted?: boolean;
 
   createdAt?: string;
 
@@ -327,3 +332,19 @@ export const PRODUCT_CATEGORIES = [
     label: "Other",
   },
 ] as const;
+
+export const POULTRY_TYPE_OPTIONS = [
+  { value: "chicken", label: "Chicken" },
+  { value: "duck", label: "Duck" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const BY_PRODUCT_USE_OPTIONS = [
+  { value: "biogas", label: "Biogas" },
+  { value: "compost", label: "Compost" },
+  { value: "animal_feed", label: "Animal Feed" },
+  { value: "biomass", label: "Biomass" },
+  { value: "bedding", label: "Bedding" },
+  { value: "other", label: "Other" },
+] as const;
+

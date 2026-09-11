@@ -7,6 +7,7 @@ import GrowSmarterCTA from "@/components/home/GrowSmarterCTA";
 import JourneySection from "@/components/home/JourneySection";
 import MarketplaceSection from "@/components/home/MarketplaceSection";
 import ServicesSection from "@/components/home/ServicesSection";
+import AgentEgg from "@/components/home/AgentEgg";
 
 export default function Home() {
   return (
@@ -20,6 +21,7 @@ export default function Home() {
       <MarketplaceSection />
       <ServicesSection />
       <GrowSmarterCTA />
+      <AgentEgg />
     </main>
   );
 }

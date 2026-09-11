@@ -98,6 +98,12 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
+  // Public investment browsing is allowed, but submitting an investment
+  // decision is a farmer-only action.
+  if (/^\/investment\/[^/]+\/invest(?:\/|$)/.test(pathname)) {
+    return "FARMER";
+  }
+
   // Public route
   return null;
 }
@@ -267,5 +273,9 @@ export const config = {
 
     "/marketplace/listings",
     "/marketplace/listings/:path*",
+
+    // Run Proxy for Investment routes; getRequiredRole keeps catalog/detail
+    // public and protects only /investment/:projectId/invest.
+    "/investment/:path*",
   ],
 };
