@@ -140,14 +140,24 @@ export default function ScheduleConsultationForm({
     }
   };
 
+  const handleSetForNow = () => {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    setDate(todayStr);
+    setTime(`${hours}:${minutes}`);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-              Session Scheduling
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+              Session Scheduling · 30 Mins
             </span>
             <h3 className="text-xl font-black text-slate-900">
               Schedule Consultation
@@ -166,17 +176,33 @@ export default function ScheduleConsultationForm({
         <div className="rounded-2xl bg-emerald-50/70 p-4 border border-emerald-100 text-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="font-bold text-emerald-950">
-              Farmer: {consultation.farmer?.name}
+              Farmer: {consultation.farmer?.name || consultation.farmerName}
             </span>
             {consultation.preferredDate && (
-              <span className="text-emerald-800">
-                Pref: {consultation.preferredDate}
+              <span className="text-emerald-800 font-medium">
+                Pref: {consultation.preferredDate} {consultation.preferredTime ? `· ${consultation.preferredTime}` : ""}
               </span>
             )}
           </div>
           <p className="text-emerald-800">
             Crop: <strong>{consultation.cropType}</strong> · {consultation.problemTitle}
           </p>
+        </div>
+
+        {/* Quick 30-min Now Action */}
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80">
+          <div className="text-xs">
+            <span className="font-bold text-emerald-950 block">Start Live Session Now?</span>
+            <span className="text-emerald-700 text-[11px]">Will show as ongoing for 30 minutes</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSetForNow}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition flex items-center gap-1"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Set to Now</span>
+          </button>
         </div>
 
         {errorMessage && (
