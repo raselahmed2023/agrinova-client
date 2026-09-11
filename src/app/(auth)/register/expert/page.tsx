@@ -41,9 +41,8 @@ export default function ExpertRegisterPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Profile Picture Upload State
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>(DEFAULT_AVATAR);
+  // Profile Picture Upload State (Same flow as Expert Profile update section)
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
@@ -66,14 +65,16 @@ export default function ExpertRegisterPage() {
     },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setImageError(null);
 
     if (!file.type.startsWith("image/")) {
-      setImageError("Please select an image file (PNG, JPG, or WEBP).");
+      setImageError("Please select a valid image file (PNG, JPG, or WEBP).");
       return;
     }
 
@@ -82,20 +83,39 @@ export default function ExpertRegisterPage() {
       return;
     }
 
-    if (imagePreview && imagePreview !== DEFAULT_AVATAR) {
-      URL.revokeObjectURL(imagePreview);
-    }
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
 
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.url) {
+          setAvatarUrl(data.url);
+        } else {
+          setImageError(data.message || "Failed to upload image.");
+        }
+      } else {
+        setImageError("Server failed to upload image.");
+      }
+    } catch (err: any) {
+      setImageError(err?.message || "Failed to upload image.");
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleRemoveImage = () => {
-    if (imagePreview && imagePreview !== DEFAULT_AVATAR) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    setImageFile(null);
-    setImagePreview(DEFAULT_AVATAR);
+    setAvatarUrl("");
+    setImageError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -103,34 +123,8 @@ export default function ExpertRegisterPage() {
 
   const onSubmit = async (data: ExpertRegisterInput) => {
     setAuthError(null);
-    setImageError(null);
 
-    let avatarUrl = DEFAULT_AVATAR;
-
-    // Upload custom image if provided
-    if (imageFile) {
-      try {
-        setIsUploadingImage(true);
-        const formData = new FormData();
-        formData.append("image", imageFile);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          if (uploadData?.success && uploadData?.url) {
-            avatarUrl = uploadData.url;
-          }
-        }
-      } catch (err) {
-        console.error("Image upload failed, falling back to default:", err);
-      } finally {
-        setIsUploadingImage(false);
-      }
-    }
+    const finalAvatar = avatarUrl || DEFAULT_AVATAR;
 
     try {
       const { error } = await authClient.signUp.email({
@@ -143,8 +137,8 @@ export default function ExpertRegisterPage() {
         specialization: data.specialization,
         experienceYears: Number(data.experienceYears),
         qualification: data.qualification,
-        image: avatarUrl,
-        avatar: avatarUrl,
+        image: finalAvatar,
+        avatar: finalAvatar,
       } as Parameters<typeof authClient.signUp.email>[0]);
 
       if (error) {
@@ -355,33 +349,39 @@ export default function ExpertRegisterPage() {
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 {/* Avatar Preview */}
                 <div className="relative group shrink-0">
-                  <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-emerald-500/40 bg-white shadow-sm ring-4 ring-emerald-50">
+                  <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-emerald-500/40 bg-white shadow-sm ring-4 ring-emerald-50 flex items-center justify-center">
                     <Image
-                      src={imagePreview}
+                      src={avatarUrl || DEFAULT_AVATAR}
                       alt="Expert avatar preview"
                       fill
                       unoptimized
                       className="object-cover"
                     />
+                    {isUploadingImage && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                        <Loader2 className="h-6 w-6 text-white animate-spin" />
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
+                    disabled={isUploadingImage}
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="Change profile photo"
                     title="Upload or change photo"
-                    className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#063B2B] text-white shadow-sm transition hover:bg-[#0B513D] active:scale-95"
+                    className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#063B2B] text-white shadow-sm transition hover:bg-[#0B513D] active:scale-95 disabled:opacity-50"
                   >
                     <Camera className="h-3.5 w-3.5" />
                   </button>
                 </div>
 
                 {/* Info & Action Buttons */}
-                <div className="flex-1 text-center sm:text-left space-y-1.5">
+                <div className="flex-1 text-center sm:text-left space-y-1.5 min-w-0">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-800">
                       Profile Picture
                     </p>
-                    {imageFile ? (
+                    {avatarUrl ? (
                       <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-[#063B2B]">
                         Custom Photo
                       </span>
@@ -399,14 +399,21 @@ export default function ExpertRegisterPage() {
                   <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
                     <button
                       type="button"
+                      disabled={isUploadingImage}
                       onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition disabled:opacity-50"
                     >
                       <Upload className="h-3.5 w-3.5 text-slate-500" />
-                      <span>{imageFile ? "Change Photo" : "Upload Photo"}</span>
+                      <span>
+                        {isUploadingImage
+                          ? "Uploading..."
+                          : avatarUrl
+                          ? "Change Photo"
+                          : "Upload Photo"}
+                      </span>
                     </button>
 
-                    {imageFile && (
+                    {avatarUrl && (
                       <button
                         type="button"
                         onClick={handleRemoveImage}

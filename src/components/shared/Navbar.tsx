@@ -225,7 +225,7 @@ export default function Navbar() {
                 </Link>
 
                 <Link
-                  href="/register?role=expert"
+                  href="/register/expert"
                   className="rounded-xl bg-[#D8E9DA] px-5 py-2.5 text-sm font-semibold text-[#315B45] transition hover:bg-[#cde1d0]"
                 >
                   Join as Expert
@@ -448,7 +448,7 @@ export default function Navbar() {
                   </Link>
 
                   <Link
-                    href="/register?role=expert"
+                    href="/register/expert"
                     onClick={closeMenus}
                     className="flex w-full items-center justify-center rounded-xl bg-[#D8E9DA] px-5 py-3 text-sm font-semibold text-[#315B45]"
                   >
