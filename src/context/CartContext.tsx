@@ -31,6 +31,7 @@ interface CartContextValue {
   items: CartItem[];
   totalItems: number;
   subtotal: number;
+  loading: boolean;
 
   addToCart: (
     product: CartProduct,
@@ -54,9 +55,9 @@ interface CartContextValue {
 }
 
 const CartContext =
-  createContext<
-    CartContextValue | undefined
-  >(undefined);
+  createContext<CartContextValue | undefined>(
+    undefined
+  );
 
 const STORAGE_KEY =
   "agrinova-marketplace-cart";
@@ -69,10 +70,20 @@ export function CartProvider({
   const [items, setItems] =
     useState<CartItem[]>([]);
 
-  const [mounted, setMounted] =
-    useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
+  /*
+   * Restore cart from localStorage.
+   *
+   * A small delay keeps the loading spinner
+   * visible during a page refresh.
+   */
   useEffect(() => {
+    let timer: ReturnType<
+      typeof setTimeout
+    >;
+
     try {
       const saved =
         localStorage.getItem(
@@ -83,9 +94,7 @@ export function CartProvider({
         const parsed =
           JSON.parse(saved);
 
-        if (
-          Array.isArray(parsed)
-        ) {
+        if (Array.isArray(parsed)) {
           setItems(parsed);
         }
       }
@@ -94,28 +103,40 @@ export function CartProvider({
         STORAGE_KEY
       );
     } finally {
-      setMounted(true);
+      timer = setTimeout(() => {
+        setLoading(false);
+      }, 350);
     }
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
+  /*
+   * Save cart after initial loading.
+   */
   useEffect(() => {
-    if (!mounted) return;
+    if (loading) return;
 
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(items)
-    );
-  }, [items, mounted]);
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(items)
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [items, loading]);
 
   const addToCart = (
     product: CartProduct,
     quantity = 1
   ) => {
-    const safeQuantity =
-      Math.max(
-        1,
-        Math.floor(quantity)
-      );
+    const safeQuantity = Math.max(
+      1,
+      Math.floor(quantity)
+    );
 
     setItems((current) => {
       const existing =
@@ -125,47 +146,41 @@ export function CartProvider({
             product._id
         );
 
+      const maxQuantity = Math.max(
+        1,
+        Number(product.quantity) || 1
+      );
+
       if (!existing) {
         return [
           ...current,
           {
             product,
-            quantity:
-              Math.min(
-                safeQuantity,
-                Number(
-                  product.quantity
-                )
-              ),
+            quantity: Math.min(
+              safeQuantity,
+              maxQuantity
+            ),
           },
         ];
       }
 
-      return current.map(
-        (item) => {
-          if (
-            item.product._id !==
-            product._id
-          ) {
-            return item;
-          }
-
-          const max =
-            Number(
-              product.quantity
-            );
-
-          return {
-            ...item,
-            quantity:
-              Math.min(
-                item.quantity +
-                  safeQuantity,
-                max
-              ),
-          };
+      return current.map((item) => {
+        if (
+          item.product._id !==
+          product._id
+        ) {
+          return item;
         }
-      );
+
+        return {
+          ...item,
+          quantity: Math.min(
+            item.quantity +
+              safeQuantity,
+            maxQuantity
+          ),
+        };
+      });
     });
   };
 
@@ -182,21 +197,22 @@ export function CartProvider({
           return item;
         }
 
-        const max =
+        const maxQuantity = Math.max(
+          1,
           Number(
             item.product.quantity
-          );
+          ) || 1
+        );
 
         return {
           ...item,
-          quantity:
-            Math.min(
-              Math.max(
-                1,
-                Math.floor(quantity)
-              ),
-              max
+          quantity: Math.min(
+            Math.max(
+              1,
+              Math.floor(quantity)
             ),
+            maxQuantity
+          ),
         };
       })
     );
@@ -260,6 +276,7 @@ export function CartProvider({
         items,
         totalItems,
         subtotal,
+        loading,
         addToCart,
         updateQuantity,
         removeFromCart,

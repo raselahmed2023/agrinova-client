@@ -67,6 +67,8 @@ function MarketplaceContent() {
     searchParams.get("category") || ""
   );
 
+  const [sort, setSort] = useState("newest");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -80,8 +82,8 @@ function MarketplaceContent() {
           search: search.trim(),
           category,
           page: 1,
-          limit: 24,
-          sort: "newest",
+          limit: 25,
+          sort,
         });
 
       const productList = Array.isArray(response)
@@ -105,7 +107,7 @@ function MarketplaceContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, category]);
+  }, [search, category, sort]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -120,13 +122,12 @@ function MarketplaceContent() {
   const clearFilters = () => {
     setSearch("");
     setCategory("");
+    setSort("newest");
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden">
-      {/* =========================================================
-          BACKGROUND
-      ========================================================== */}
+     
 
       <div className="pointer-events-none fixed inset-0 -z-20">
         <div
@@ -135,86 +136,115 @@ function MarketplaceContent() {
             backgroundImage:
               "url('/images/marketplace-bg.jpg')",
             animation:
-              "marketplaceBg 30s ease-in-out infinite alternate",
+              "marketplaceBg 45s ease-in-out infinite alternate",
           }}
         />
 
         {/* Much lighter overlay so background remains visible */}
-        <div className="absolute inset-0 bg-white/65" />
+        <div className="absolute inset-0 bg-white/15" />
 
         {/* Soft readability gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-[#f5f8f2]/70 to-[#f5f8f2]/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-[#f5f8f2]/15 to-[#f5f8f2]/25" />
       </div>
 
       
 
-      <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        {/* =======================================================
-            HERO
-        ======================================================== */}
+      <div className="relative mx-auto w-full max-w-[1600px] px-3 py-6 sm:px-4 lg:px-5 lg:py-8">
+        
 
-        <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/65 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-md md:p-8 lg:p-10">
-          {/* Decorative background */}
-          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-emerald-200/30 blur-3xl" />
 
-          <div className="relative flex flex-col justify-between gap-7 md:flex-row md:items-end">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50/90 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
-                AgriNova Marketplace
+
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/70 bg-white/55 shadow-xl shadow-slate-900/10 backdrop-blur-md">
+          {/* Soft decorative accents */}
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-amber-200/20 blur-3xl" />
+
+          <div className="relative p-6 sm:p-8 lg:p-9">
+            <div className="flex flex-col gap-7 xl:flex-row xl:items-center xl:justify-between">
+              <div className="max-w-4xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 shadow-sm">
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  AgriNova Marketplace
+                </div>
+
+                <h1 className="mt-4 text-xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-xl xl:text-[1.4rem]">
+                  Buy & Sell{" "}
+                  <span className="text-emerald-700">
+                    Agricultural Products
+                  </span>
+                </h1>
+
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+                  A trusted marketplace where farmers and buyers can
+                  <span className="font-semibold text-slate-800">
+                    {" "}buy and sell agricultural products
+                  </span>
+                  {" "}directly across Bangladesh.
+                </p>
+
+                <div className="mt-6">
+                  <p className="mb-2.5 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                    Available on the marketplace
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Crops",
+                      "Seeds",
+                      "Fertilizers",
+                      "Pesticides",
+                      "Equipment",
+                      "Poultry",
+                      "Farm Foods",
+                      "By Products",
+                    ].map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full border border-emerald-100 bg-emerald-50/90 px-3 py-1.5 text-[11px] font-bold text-emerald-700"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-                Buy & Sell
-                <span className="block text-emerald-700">
-                  Agricultural Products
-                </span>
-              </h1>
-
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                Discover quality agricultural products
-                directly from farmers and sellers across
-                Bangladesh.
-              </p>
-            </div>
-
-    
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/cart"
-                className="relative inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 hover:shadow-md"
-              >
-                <ShoppingCart className="h-4 w-4" />
-
-                <span>Cart</span>
-
-                {totalItems > 0 && (
-                  <span className="flex min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    {totalItems > 99
-                      ? "99+"
-                      : totalItems}
-                  </span>
-                )}
-              </Link>
-
-              {isFarmer && (
+              <div className="flex shrink-0 flex-wrap gap-3 xl:justify-end">
                 <Link
-                  href="/marketplace/sell"
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-lg"
+                  href="/cart"
+                  className="relative inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 hover:shadow-md"
                 >
-                  <Plus className="h-4 w-4" />
-                  Sell Product
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>View Cart</span>
+
+                  {totalItems > 0 && (
+                    <span className="flex min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {totalItems > 99
+                        ? "99+"
+                        : totalItems}
+                    </span>
+                  )}
                 </Link>
-              )}
+
+                {isFarmer && (
+                  <Link
+                    href="/marketplace/sell"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-lg"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Sell a Product
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </section>
 
       
 
-        <section className="mt-7">
-          <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-slate-900/5 backdrop-blur-md">
-            <div className="grid gap-3 md:grid-cols-[1fr_240px]">
+        <section className="mt-0">
+          <div className="rounded-2xl border border-white/70 bg-white/85 p-3 shadow-lg shadow-slate-900/5 backdrop-blur-md">
+            <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_210px_190px]">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -248,18 +278,43 @@ function MarketplaceContent() {
                   </option>
                 ))}
               </select>
+
+              <select
+                value={sort}
+                onChange={(event) =>
+                  setSort(event.target.value)
+                }
+                aria-label="Sort marketplace products"
+                className="h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="newest">Newest First</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+              </select>
             </div>
+
+            {(search || category || sort !== "newest") && (
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
           </div>
 
          
 
           {loading && (
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map(
+            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 10 }).map(
                 (_, index) => (
                   <div
                     key={index}
-                    className="h-[430px] animate-pulse rounded-2xl border border-white/60 bg-white/75 shadow-sm"
+                    className="h-[380px] animate-pulse rounded-2xl border border-white/60 bg-white/75 shadow-sm"
                   />
                 )
               )}
@@ -324,33 +379,7 @@ function MarketplaceContent() {
             !error &&
             products.length > 0 && (
               <>
-                <div className="mt-7 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Marketplace Products
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      {products.length}{" "}
-                      {products.length === 1
-                        ? "product"
-                        : "products"}{" "}
-                      found
-                    </p>
-                  </div>
-
-                  {(search || category) && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                   {products.map((product) => (
                     <ProductCard
                       key={product._id}

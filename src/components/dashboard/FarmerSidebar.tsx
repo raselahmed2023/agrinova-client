@@ -21,7 +21,7 @@ import {
   Leaf,
   LogOut,
   MessageSquareText,
-  ShoppingBag,
+  Package,
   WalletCards,
   X,
 } from "lucide-react";
@@ -68,11 +68,12 @@ const aiItems = [
 ];
 
 const marketplaceItems = [
-  {
-    label: "Marketplace",
-    href: "/marketplace",
-    icon: ShoppingBag,
+ {
+    label: "Manage Products",
+    href: "/marketplace/listings",
+    icon: Package,
   },
+
 ];
 
 const otherItems = [
