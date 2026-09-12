@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  useEffect,
   useState,
 } from "react";
 
@@ -12,7 +13,6 @@ import {
 import {
   Heart,
   Loader2,
-  LockKeyhole,
   MessageCircle,
   MoreHorizontal,
   Pencil,
@@ -21,12 +21,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-import type {
-  CommunityComment,
-  CommunityPost,
-  CommunityReply,
-} from "@/types/community";
-
 import {
   addCommunityComment,
   addCommunityReply,
@@ -34,6 +28,12 @@ import {
   toggleCommunityLike,
   updateCommunityPost,
 } from "@/services/community.service";
+
+import type {
+  CommunityComment,
+  CommunityPost,
+  CommunityReply,
+} from "@/types/community";
 
 function initials(
   name: string
@@ -44,7 +44,7 @@ function initials(
     .filter(Boolean)
     .map(
       (
-        part: string
+        part
       ) =>
         part[0]
     )
@@ -57,35 +57,34 @@ function initials(
 }
 
 function timeAgo(
-  value: string
+  value:
+    string
 ) {
   const date =
     new Date(
       value
     );
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "";
-  }
-
-  const ms =
-    Date.now() -
-    date.getTime();
-
-  const minutes =
-    Math.floor(
-      ms / 60000
+  const seconds =
+    Math.max(
+      Math.floor(
+        (Date.now() -
+          date.getTime()) /
+          1000
+      ),
+      0
     );
 
   if (
-    minutes < 1
+    seconds < 60
   ) {
     return "Just now";
   }
+
+  const minutes =
+    Math.floor(
+      seconds / 60
+    );
 
   if (
     minutes < 60
@@ -118,7 +117,49 @@ function timeAgo(
   return date.toLocaleDateString();
 }
 
-interface CommunityPostCardProps {
+function Avatar({
+  name,
+  src,
+  size =
+    "h-10 w-10",
+}: {
+  name: string;
+
+  src?:
+    string;
+
+  size?:
+    string;
+}) {
+  return (
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 font-black text-emerald-800 ${size}`}
+    >
+      {src ? (
+        <img
+          src={
+            src
+          }
+          alt={
+            name
+          }
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        initials(
+          name
+        )
+      )}
+    </div>
+  );
+}
+
+export default function CommunityPostCard({
+  initialPost,
+  currentUserId,
+  currentUserRole,
+  onDeleted,
+}: {
   initialPost:
     CommunityPost;
 
@@ -129,30 +170,62 @@ interface CommunityPostCardProps {
     string | null;
 
   onDeleted?: (
-    postId: string
+    postId:
+      string
   ) => void;
-}
-
-export default function CommunityPostCard({
-  initialPost,
-  currentUserId,
-  currentUserRole,
-  onDeleted,
-}: CommunityPostCardProps) {
+}) {
   const router =
     useRouter();
 
-  const isAuthenticated =
-    Boolean(
-      currentUserId
-    );
-
-  const isFarmer =
+  const role =
     String(
       currentUserRole ||
         ""
-    ).toUpperCase() ===
+    ).toUpperCase();
+
+  const isFarmer =
+    role ===
     "FARMER";
+
+  const determineLiked =
+    (
+      input:
+        CommunityPost
+    ) =>
+      Boolean(
+        currentUserId &&
+          input.likes?.some(
+            (
+              id:
+                string
+            ) =>
+              String(
+                id
+              ) ===
+              String(
+                currentUserId
+              )
+          )
+      );
+
+  const normalize =
+    (
+      input:
+        CommunityPost
+    ): CommunityPost => ({
+      ...input,
+
+      likedByMe:
+        input.likedByMe ||
+        determineLiked(
+          input
+        ),
+
+      likeCount:
+        input.likes?.length ??
+        input.likeCount ??
+        0,
+    });
 
   const [
     post,
@@ -160,30 +233,22 @@ export default function CommunityPostCard({
   ] =
     useState<
       CommunityPost
-    >(() => ({
-      ...initialPost,
-
-      likedByMe:
-        initialPost.likedByMe ||
-        Boolean(
-          currentUserId &&
-            initialPost.likes?.some(
-              (
-                id: string
-              ) =>
-                String(
-                  id
-                ) ===
-                String(
-                  currentUserId
-                )
-            )
-        ),
-    }));
+    >(
+      () =>
+        normalize(
+          initialPost
+        )
+    );
 
   const [
-    comment,
-    setComment,
+    commentText,
+    setCommentText,
+  ] =
+    useState("");
+
+  const [
+    replyText,
+    setReplyText,
   ] =
     useState("");
 
@@ -196,12 +261,6 @@ export default function CommunityPostCard({
     >(null);
 
   const [
-    replyText,
-    setReplyText,
-  ] =
-    useState("");
-
-  const [
     editing,
     setEditing,
   ] =
@@ -212,14 +271,8 @@ export default function CommunityPostCard({
     setEditText,
   ] =
     useState(
-      post.content
+      initialPost.content
     );
-
-  const [
-    busy,
-    setBusy,
-  ] =
-    useState(false);
 
   const [
     menuOpen,
@@ -228,15 +281,50 @@ export default function CommunityPostCard({
     useState(false);
 
   const [
+    busyAction,
+    setBusyAction,
+  ] =
+    useState("");
+
+  const [
     error,
     setError,
   ] =
     useState("");
 
+  /*
+    IMPORTANT:
+    On refresh, backend returns likes[].
+    We calculate visual state from current user's id.
+  */
+  useEffect(() => {
+    setPost(
+      (
+        current
+      ) => ({
+        ...current,
+
+        likedByMe:
+          determineLiked(
+            current
+          ),
+
+        likeCount:
+          current.likes
+            ?.length ??
+          current.likeCount ??
+          0,
+      })
+    );
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentUserId,
+  ]);
+
   const mine =
     Boolean(
-      isFarmer &&
-        currentUserId &&
+      currentUserId &&
         String(
           currentUserId
         ) ===
@@ -245,27 +333,22 @@ export default function CommunityPostCard({
           )
     );
 
-  /* ============================================================
-     LOGIN
-  ============================================================ */
-
   const login =
-    () => {
+    (
+      destination =
+        "/community"
+    ) => {
       router.push(
         `/login?redirect=${encodeURIComponent(
-          "/community"
+          destination
         )}`
       );
     };
 
-  /* ============================================================
-     FARMER ACTION CHECK
-  ============================================================ */
-
   const requireFarmer =
     () => {
       if (
-        !isAuthenticated
+        !currentUserId
       ) {
         login();
 
@@ -281,31 +364,16 @@ export default function CommunityPostCard({
       return true;
     };
 
-  /* ============================================================
-     PROFILE CLICK
-
-     Anonymous user:
-     -> Login
-
-     Farmer:
-     -> Community profile
-
-     Other authenticated roles:
-     -> remain in Community
-  ============================================================ */
-
   const openProfile =
     (
-      authorId:
+      farmerId:
         string
     ) => {
       if (
-        !isAuthenticated
+        !currentUserId
       ) {
-        router.push(
-          `/login?redirect=${encodeURIComponent(
-            `/community/profile/${authorId}`
-          )}`
+        login(
+          `/community/profile/${farmerId}`
         );
 
         return;
@@ -318,26 +386,65 @@ export default function CommunityPostCard({
       }
 
       router.push(
-        `/community/profile/${authorId}`
+        `/community/profile/${farmerId}`
       );
     };
 
   /* ============================================================
-     LIKE
+     LIKE — OPTIMISTIC + PERSISTENT
   ============================================================ */
 
-  const refreshLike =
+  const toggleLike =
     async () => {
       if (
         !requireFarmer() ||
-        busy
+        !currentUserId
       ) {
         return;
       }
 
+      const previous =
+        post;
+
+      const wasLiked =
+        post.likedByMe ||
+        determineLiked(
+          post
+        );
+
+      const nextLikes =
+        wasLiked
+          ? post.likes.filter(
+              (
+                id
+              ) =>
+                String(id) !==
+                String(
+                  currentUserId
+                )
+            )
+          : [
+              ...post.likes,
+
+              currentUserId,
+            ];
+
+      setPost({
+        ...post,
+
+        likes:
+          nextLikes,
+
+        likedByMe:
+          !wasLiked,
+
+        likeCount:
+          nextLikes.length,
+      });
+
       try {
-        setBusy(
-          true
+        setBusyAction(
+          "like"
         );
 
         setError(
@@ -350,45 +457,28 @@ export default function CommunityPostCard({
           );
 
         setPost(
-          updated
+          normalize(
+            updated
+          )
         );
       } catch (
         err
       ) {
+        setPost(
+          previous
+        );
+
         setError(
           err instanceof Error
             ? err.message
             : "Unable to update like."
         );
       } finally {
-        setBusy(
-          false
+        setBusyAction(
+          ""
         );
       }
     };
-
-  /* ============================================================
-     COMMENT BUTTON
-  ============================================================ */
-
-  const focusComment =
-    () => {
-      if (
-        !requireFarmer()
-      ) {
-        return;
-      }
-
-      document
-        .getElementById(
-          `comment-${post._id}`
-        )
-        ?.focus();
-    };
-
-  /* ============================================================
-     COMMENT
-  ============================================================ */
 
   const submitComment =
     async (
@@ -397,30 +487,23 @@ export default function CommunityPostCard({
     ) => {
       event.preventDefault();
 
-      const content =
-        comment.trim();
-
       if (
         !requireFarmer() ||
-        !content ||
-        busy
+        !commentText.trim()
       ) {
         return;
       }
 
       try {
-        setBusy(
-          true
-        );
-
-        setError(
-          ""
+        setBusyAction(
+          "comment"
         );
 
         const created =
           await addCommunityComment(
             post._id,
-            content
+
+            commentText.trim()
           );
 
         setPost(
@@ -444,88 +527,38 @@ export default function CommunityPostCard({
           })
         );
 
-        setComment(
+        setCommentText(
           ""
         );
-      } catch (
-        err
-      ) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to add comment."
-        );
       } finally {
-        setBusy(
-          false
+        setBusyAction(
+          ""
         );
       }
     };
-
-  /* ============================================================
-     OPEN REPLY
-  ============================================================ */
-
-  const toggleReply =
-    (
-      commentId:
-        string
-    ) => {
-      if (
-        !requireFarmer()
-      ) {
-        return;
-      }
-
-      setReplyingTo(
-        (
-          current
-        ) =>
-          current ===
-          commentId
-            ? null
-            : commentId
-      );
-
-      setReplyText(
-        ""
-      );
-    };
-
-  /* ============================================================
-     REPLY
-  ============================================================ */
 
   const submitReply =
     async (
       commentId:
         string
     ) => {
-      const content =
-        replyText.trim();
-
       if (
         !requireFarmer() ||
-        !content ||
-        busy
+        !replyText.trim()
       ) {
         return;
       }
 
       try {
-        setBusy(
-          true
-        );
-
-        setError(
-          ""
+        setBusyAction(
+          `reply-${commentId}`
         );
 
         const created =
           await addCommunityReply(
             post._id,
             commentId,
-            content
+            replyText.trim()
           );
 
         setPost(
@@ -537,22 +570,22 @@ export default function CommunityPostCard({
             comments:
               current.comments.map(
                 (
-                  item:
+                  comment:
                     CommunityComment
                 ) =>
-                  item._id ===
+                  comment._id ===
                   commentId
                     ? {
-                        ...item,
+                        ...comment,
 
                         replies: [
-                          ...(item.replies ||
+                          ...(comment.replies ||
                             []),
 
                           created,
                         ],
                       }
-                    : item
+                    : comment
               ),
           })
         );
@@ -564,108 +597,72 @@ export default function CommunityPostCard({
         setReplyingTo(
           null
         );
-      } catch (
-        err
-      ) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to add reply."
-        );
       } finally {
-        setBusy(
-          false
+        setBusyAction(
+          ""
         );
       }
     };
 
-  /* ============================================================
-     UPDATE OWN POST
-  ============================================================ */
-
   const saveEdit =
     async () => {
-      const content =
-        editText.trim();
-
       if (
         !mine ||
-        !content ||
-        busy
+        !editText.trim()
       ) {
         return;
       }
 
       try {
-        setBusy(
-          true
-        );
-
-        setError(
-          ""
+        setBusyAction(
+          "edit"
         );
 
         const updated =
           await updateCommunityPost(
             post._id,
+
             {
-              content,
+              content:
+                editText.trim(),
             }
           );
 
         setPost(
-          updated
+          normalize(
+            updated
+          )
         );
 
         setEditing(
           false
         );
-      } catch (
-        err
-      ) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to update post."
-        );
       } finally {
-        setBusy(
-          false
+        setBusyAction(
+          ""
         );
       }
     };
 
-  /* ============================================================
-     DELETE OWN POST
-  ============================================================ */
-
   const remove =
     async () => {
       if (
-        !mine ||
-        busy
+        !mine
       ) {
         return;
       }
 
-      const confirmed =
-        window.confirm(
-          "Delete this Community post?"
-        );
-
       if (
-        !confirmed
+        !window.confirm(
+          "Delete this post?"
+        )
       ) {
         return;
       }
 
       try {
-        setBusy(
-          true
-        );
-
-        setError(
-          ""
+        setBusyAction(
+          "delete"
         );
 
         await deleteCommunityPost(
@@ -675,136 +672,121 @@ export default function CommunityPostCard({
         onDeleted?.(
           post._id
         );
-      } catch (
-        err
-      ) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to delete post."
-        );
       } finally {
-        setBusy(
-          false
+        setBusyAction(
+          ""
         );
       }
     };
 
+  const likeCount =
+    post.likes?.length ??
+    post.likeCount ??
+    0;
+
+  const commentCount =
+    post.comments?.length ??
+    post.commentCount ??
+    0;
+
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <article className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
 
-      {/* =====================================================
-          AUTHOR / MENU
-      ====================================================== */}
+      <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-4">
 
-      <div className="p-5 sm:p-6">
-
-        <div className="flex items-start justify-between gap-3">
-
-          <button
-            type="button"
-            onClick={() =>
-              openProfile(
-                post.authorId
-              )
+        <button
+          type="button"
+          onClick={() =>
+            openProfile(
+              post.authorId
+            )
+          }
+          className="flex min-w-0 items-center gap-3 text-left"
+        >
+          <Avatar
+            name={
+              post.authorName
             }
-            className="group flex min-w-0 items-center gap-3 text-left"
-          >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-800">
-              {initials(
+            src={
+              post.authorAvatar
+            }
+          />
+
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-slate-900 hover:underline">
+              {
                 post.authorName
-              )}
-            </div>
+              }
+            </p>
 
-            <div className="min-w-0">
+            <p className="mt-0.5 text-xs text-slate-500">
+              {timeAgo(
+                post.createdAt
+              )}{" "}
+              · Farmer
+            </p>
+          </div>
+        </button>
 
-              <p className="truncate font-black text-slate-950 transition group-hover:text-emerald-700">
-                {
-                  post.authorName
-                }
-              </p>
+        {mine && (
+          <div className="relative">
 
-              <p className="text-xs text-slate-400">
-                {timeAgo(
-                  post.createdAt
-                )}{" "}
-                · Farmer Community
-              </p>
-            </div>
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                setMenuOpen(
+                  (
+                    value
+                  ) =>
+                    !value
+                )
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
 
-          {mine && (
-            <div className="relative">
+            {menuOpen && (
+              <div className="absolute right-0 top-10 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
 
-              <button
-                type="button"
-                onClick={() =>
-                  setMenuOpen(
-                    (
-                      current
-                    ) =>
-                      !current
-                  )
-                }
-                aria-label="Post options"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(
+                      true
+                    );
 
-              {menuOpen && (
-                <div className="absolute right-0 top-10 z-20 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                    setMenuOpen(
+                      false
+                    );
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold hover:bg-slate-50"
+                >
+                  <Pencil className="h-4 w-4" />
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(
-                        true
-                      );
+                  Edit post
+                </button>
 
-                      setEditText(
-                        post.content
-                      );
+                <button
+                  type="button"
+                  onClick={() =>
+                    void remove()
+                  }
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
 
-                      setMenuOpen(
-                        false
-                      );
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <Pencil className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(
-                        false
-                      );
-
-                      void remove();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ===================================================
-            EDIT
-        ==================================================== */}
-
+      <div className="px-4 pb-3">
         {editing ? (
-          <div className="mt-4 space-y-3">
-
+          <>
             <textarea
               value={
                 editText
@@ -817,32 +799,22 @@ export default function CommunityPostCard({
                     .value
                 )
               }
-              maxLength={
-                5000
-              }
               rows={
                 4
               }
-              className="w-full resize-none rounded-2xl border border-slate-200 p-4 text-[15px] leading-7 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none"
             />
 
-            <div className="flex justify-end gap-2">
+            <div className="mt-2 flex justify-end gap-2">
 
               <button
                 type="button"
-                disabled={
-                  busy
-                }
-                onClick={() => {
+                onClick={() =>
                   setEditing(
                     false
-                  );
-
-                  setEditText(
-                    post.content
-                  );
-                }}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                  )
+                }
+                className="rounded-lg bg-slate-100 px-4 py-2 text-xs font-black"
               >
                 Cancel
               </button>
@@ -852,22 +824,19 @@ export default function CommunityPostCard({
                 onClick={() =>
                   void saveEdit()
                 }
-                disabled={
-                  busy ||
-                  !editText.trim()
-                }
-                className="flex min-h-10 min-w-20 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black text-white"
               >
-                {busy ? (
+                {busyAction ===
+                "edit" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   "Save"
                 )}
               </button>
             </div>
-          </div>
+          </>
         ) : (
-          <p className="mt-4 whitespace-pre-wrap break-words text-[15px] leading-7 text-slate-700">
+          <p className="whitespace-pre-wrap break-words text-[15px] leading-6 text-slate-800">
             {
               post.content
             }
@@ -875,115 +844,107 @@ export default function CommunityPostCard({
         )}
       </div>
 
-      {/* =====================================================
-          IMAGES
-      ====================================================== */}
-
-      {post.images &&
-        post.images.length >
-          0 && (
-          <div
-            className={`grid gap-1 bg-slate-100 ${
-              post.images
-                .length > 1
-                ? "grid-cols-2"
-                : "grid-cols-1"
-            }`}
-          >
-            {post.images.map(
-              (
-                src:
-                  string,
-                index:
-                  number
-              ) => (
-                <img
-                  key={`${src}-${index}`}
-                  src={
-                    src
-                  }
-                  alt="Community post"
-                  loading="lazy"
-                  className="h-full max-h-[520px] min-h-52 w-full object-cover"
-                />
-              )
-            )}
-          </div>
-        )}
-
-      {/* =====================================================
-          COUNTS
-      ====================================================== */}
-
-      <div className="px-5 py-3 text-xs font-semibold text-slate-500 sm:px-6">
-
-        <div className="flex items-center justify-between">
-
-          <span>
-            {post.likeCount ||
-              0}{" "}
-            {post.likeCount ===
+      {post.images?.length >
+        0 && (
+        <div
+          className={`grid gap-[2px] bg-slate-100 ${
+            post.images.length ===
             1
-              ? "like"
-              : "likes"}
-          </span>
-
-          <span>
-            {post.comments
-              ?.length ||
-              0}{" "}
-            {post.comments
-              ?.length ===
-            1
-              ? "comment"
-              : "comments"}
-          </span>
+              ? "grid-cols-1"
+              : "grid-cols-2"
+          }`}
+        >
+          {post.images.map(
+            (
+              src,
+              index
+            ) => (
+              <img
+                key={`${src}-${index}`}
+                src={
+                  src
+                }
+                alt="Community post"
+                className={
+                  post.images
+                    .length ===
+                  1
+                    ? "max-h-[620px] w-full object-cover"
+                    : "h-72 w-full object-cover"
+                }
+              />
+            )
+          )}
         </div>
+      )}
+
+      <div className="flex items-center justify-between px-4 py-2.5 text-xs text-slate-500">
+
+        <span>
+          {likeCount >
+          0
+            ? `${likeCount} ${
+                likeCount ===
+                1
+                  ? "like"
+                  : "likes"
+              }`
+            : ""}
+        </span>
+
+        <span>
+          {commentCount >
+          0
+            ? `${commentCount} ${
+                commentCount ===
+                1
+                  ? "comment"
+                  : "comments"
+              }`
+            : ""}
+        </span>
       </div>
 
-      {/* =====================================================
-          LIKE + COMMENT BUTTON
-      ====================================================== */}
-
-      <div className="grid grid-cols-2 border-y border-slate-100 px-3 py-1">
+      <div className="mx-4 grid grid-cols-2 border-y border-slate-100 py-1">
 
         <button
           type="button"
           onClick={() =>
-            void refreshLike()
+            void toggleLike()
           }
-          disabled={
-            busy &&
-            isFarmer
-          }
-          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition ${
+          className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-bold transition ${
             post.likedByMe
-              ? "text-rose-600"
+              ? "bg-emerald-50 text-emerald-700"
               : "text-slate-600 hover:bg-slate-50"
           }`}
         >
-          {busy &&
-          isFarmer ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Heart
-              className={`h-5 w-5 ${
-                post.likedByMe
-                  ? "fill-current"
-                  : ""
-              }`}
-            />
-          )}
+          <Heart
+            className={`h-5 w-5 ${
+              post.likedByMe
+                ? "fill-emerald-600 text-emerald-600"
+                : ""
+            }`}
+          />
 
           Like
         </button>
 
         <button
           type="button"
-          onClick={
-            focusComment
-          }
-          className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+          onClick={() => {
+            if (
+              !requireFarmer()
+            ) {
+              return;
+            }
+
+            document
+              .getElementById(
+                `community-comment-${post._id}`
+              )
+              ?.focus();
+          }}
+          className="flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
         >
           <MessageCircle className="h-5 w-5" />
 
@@ -991,11 +952,7 @@ export default function CommunityPostCard({
         </button>
       </div>
 
-      {/* =====================================================
-          COMMENTS
-      ====================================================== */}
-
-      <div className="space-y-4 p-5 sm:p-6">
+      <div className="space-y-3 px-4 py-3">
 
         {post.comments?.map(
           (
@@ -1006,11 +963,8 @@ export default function CommunityPostCard({
               key={
                 item._id
               }
-              className="flex gap-3"
+              className="flex items-start gap-2"
             >
-
-              {/* Comment avatar */}
-
               <button
                 type="button"
                 onClick={() =>
@@ -1018,16 +972,21 @@ export default function CommunityPostCard({
                     item.authorId
                   )
                 }
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-700 transition hover:bg-emerald-100 hover:text-emerald-800"
               >
-                {initials(
-                  item.authorName
-                )}
+                <Avatar
+                  name={
+                    item.authorName
+                  }
+                  src={
+                    item.authorAvatar
+                  }
+                  size="h-8 w-8 text-[10px]"
+                />
               </button>
 
               <div className="min-w-0 flex-1">
 
-                <div className="inline-block max-w-full rounded-2xl bg-slate-100 px-4 py-2.5">
+                <div className="inline-block max-w-full rounded-[18px] bg-[#f0f2f5] px-3.5 py-2">
 
                   <button
                     type="button"
@@ -1036,14 +995,14 @@ export default function CommunityPostCard({
                         item.authorId
                       )
                     }
-                    className="block text-left text-xs font-black text-slate-900 transition hover:text-emerald-700"
+                    className="block text-left text-xs font-black hover:underline"
                   >
                     {
                       item.authorName
                     }
                   </button>
 
-                  <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm leading-5 text-slate-700">
                     {
                       item.content
                     }
@@ -1052,21 +1011,29 @@ export default function CommunityPostCard({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    toggleReply(
-                      item._id
-                    )
-                  }
-                  className="ml-2 mt-1 inline-flex items-center gap-1 text-xs font-bold text-slate-500 transition hover:text-emerald-700"
+                  onClick={() => {
+                    if (
+                      !requireFarmer()
+                    ) {
+                      return;
+                    }
+
+                    setReplyingTo(
+                      (
+                        current
+                      ) =>
+                        current ===
+                        item._id
+                          ? null
+                          : item._id
+                    );
+                  }}
+                  className="ml-3 mt-1 inline-flex items-center gap-1 text-[11px] font-black text-slate-500"
                 >
                   <Reply className="h-3 w-3" />
 
                   Reply
                 </button>
-
-                {/* ===========================================
-                    REPLIES
-                ============================================ */}
 
                 {item.replies?.map(
                   (
@@ -1077,9 +1044,8 @@ export default function CommunityPostCard({
                       key={
                         reply._id
                       }
-                      className="ml-4 mt-3 flex gap-2"
+                      className="ml-4 mt-2 flex items-start gap-2"
                     >
-
                       <button
                         type="button"
                         onClick={() =>
@@ -1087,14 +1053,19 @@ export default function CommunityPostCard({
                             reply.authorId
                           )
                         }
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[9px] font-black text-emerald-800 transition hover:bg-emerald-100"
                       >
-                        {initials(
-                          reply.authorName
-                        )}
+                        <Avatar
+                          name={
+                            reply.authorName
+                          }
+                          src={
+                            reply.authorAvatar
+                          }
+                          size="h-7 w-7 text-[9px]"
+                        />
                       </button>
 
-                      <div className="max-w-full rounded-2xl bg-emerald-50/70 px-3 py-2">
+                      <div className="rounded-[17px] bg-[#f0f2f5] px-3 py-2">
 
                         <button
                           type="button"
@@ -1103,14 +1074,14 @@ export default function CommunityPostCard({
                               reply.authorId
                             )
                           }
-                          className="block text-left text-xs font-black text-slate-900 transition hover:text-emerald-700"
+                          className="text-[11px] font-black hover:underline"
                         >
                           {
                             reply.authorName
                           }
                         </button>
 
-                        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {
                             reply.content
                           }
@@ -1120,14 +1091,10 @@ export default function CommunityPostCard({
                   )
                 )}
 
-                {/* ===========================================
-                    REPLY INPUT
-                ============================================ */}
-
                 {replyingTo ===
                   item._id &&
                   isFarmer && (
-                  <div className="mt-2 flex gap-2">
+                  <div className="ml-3 mt-2 flex gap-2">
 
                     <input
                       value={
@@ -1137,16 +1104,12 @@ export default function CommunityPostCard({
                         event
                       ) =>
                         setReplyText(
-                          event
-                            .target
+                          event.target
                             .value
                         )
                       }
-                      maxLength={
-                        1200
-                      }
                       placeholder="Write a reply..."
-                      className="min-w-0 flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      className="min-h-9 flex-1 rounded-full bg-[#f0f2f5] px-4 text-sm outline-none"
                     />
 
                     <button
@@ -1156,14 +1119,10 @@ export default function CommunityPostCard({
                           item._id
                         )
                       }
-                      disabled={
-                        busy ||
-                        !replyText.trim()
-                      }
-                      aria-label="Send reply"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-emerald-700"
                     >
-                      {busy ? (
+                      {busyAction ===
+                      `reply-${item._id}` ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Send className="h-4 w-4" />
@@ -1176,77 +1135,52 @@ export default function CommunityPostCard({
           )
         )}
 
-        {/* ===================================================
-            COMMENT INPUT - FARMER
-        ==================================================== */}
-
-        {isFarmer ? (
+        {isFarmer && (
           <form
             onSubmit={
               submitComment
             }
-            className="flex gap-2"
+            className="flex items-center gap-2 pt-1"
           >
-            <input
-              id={`comment-${post._id}`}
-              value={
-                comment
-              }
-              onChange={(
-                event
-              ) =>
-                setComment(
-                  event.target
-                    .value
-                )
-              }
-              placeholder="Write a comment..."
-              maxLength={
-                1800
-              }
-              className="min-w-0 flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-            />
+            <div className="flex min-w-0 flex-1 items-center rounded-full bg-[#f0f2f5] pr-1">
 
-            <button
-              type="submit"
-              disabled={
-                busy ||
-                !comment.trim()
-              }
-              aria-label="Send comment"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
+              <input
+                id={`community-comment-${post._id}`}
+                value={
+                  commentText
+                }
+                onChange={(
+                  event
+                ) =>
+                  setCommentText(
+                    event.target
+                      .value
+                  )
+                }
+                placeholder="Write a comment..."
+                className="min-h-10 min-w-0 flex-1 bg-transparent px-4 text-sm outline-none"
+              />
+
+              <button
+                type="submit"
+                disabled={
+                  !commentText.trim()
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full text-emerald-700 disabled:opacity-30"
+              >
+                {busyAction ===
+                "comment" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </form>
-        ) : !isAuthenticated ? (
-
-          /* =================================================
-             LOGGED OUT
-
-             Can read everything.
-             Cannot interact.
-          ================================================== */
-
-          <button
-            type="button"
-            onClick={
-              login
-            }
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 transition hover:bg-emerald-100"
-          >
-            <LockKeyhole className="h-4 w-4" />
-
-            Login to like, comment or reply
-          </button>
-        ) : null}
+        )}
 
         {error && (
-          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
             {
               error
             }

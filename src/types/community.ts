@@ -1,27 +1,42 @@
 export interface CommunityReply {
   _id: string;
 
-  authorId: string;
+  authorId:
+    string;
 
-  authorName: string;
+  authorName:
+    string;
 
-  content: string;
+  authorAvatar?:
+    string;
 
-  createdAt: string;
+  content:
+    string;
+
+  createdAt:
+    string;
 }
 
 export interface CommunityComment {
   _id: string;
 
-  authorId: string;
+  authorId:
+    string;
 
-  authorName: string;
+  authorName:
+    string;
 
-  content: string;
+  authorAvatar?:
+    string;
 
-  replies: CommunityReply[];
+  content:
+    string;
 
-  createdAt: string;
+  replies:
+    CommunityReply[];
+
+  createdAt:
+    string;
 }
 
 export type CommunityPostStatus =
@@ -31,35 +46,53 @@ export type CommunityPostStatus =
 export interface CommunityPost {
   _id: string;
 
-  authorId: string;
+  authorId:
+    string;
 
-  authorName: string;
+  authorName:
+    string;
 
-  content: string;
+  authorAvatar?:
+    string;
 
-  images: string[];
+  content:
+    string;
 
-  likes: string[];
+  images:
+    string[];
 
-  likeCount: number;
+  likes:
+    string[];
 
-  commentCount: number;
+  likeCount:
+    number;
 
-  likedByMe: boolean;
+  commentCount:
+    number;
 
-  comments: CommunityComment[];
+  likedByMe:
+    boolean;
 
-  status: CommunityPostStatus;
+  comments:
+    CommunityComment[];
 
-  moderationReason?: string;
+  status:
+    CommunityPostStatus;
 
-  removedAt?: string;
+  moderationReason?:
+    string;
 
-  removedBy?: string;
+  removedAt?:
+    string;
 
-  createdAt: string;
+  removedBy?:
+    string;
 
-  updatedAt: string;
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
 }
 
 export interface CommunityFarmerProfile {
@@ -67,11 +100,17 @@ export interface CommunityFarmerProfile {
 
   name: string;
 
-  location: string;
+  avatar?:
+    string;
 
-  joinedAt: string;
+  location:
+    string;
 
-  postCount: number;
+  joinedAt:
+    string;
+
+  postCount:
+    number;
 }
 
 export interface CommunityMeta {
@@ -81,29 +120,17 @@ export interface CommunityMeta {
 
   total: number;
 
-  totalPages: number;
+  totalPages:
+    number;
 }
 
 export interface CommunityProfileResponse {
-  profile: CommunityFarmerProfile;
+  profile:
+    CommunityFarmerProfile;
 
-  posts: CommunityPost[];
+  posts:
+    CommunityPost[];
 
-  meta: CommunityMeta;
-}
-
-export interface CommunityFeedResponse {
-  posts: CommunityPost[];
-
-  meta?: {
-    page?: number;
-
-    limit?: number;
-
-    total?: number;
-
-    totalPages?: number;
-
-    [key: string]: unknown;
-  };
+  meta:
+    CommunityMeta;
 }

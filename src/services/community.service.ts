@@ -1,5 +1,3 @@
-import { authClient } from "@/lib/auth-client";
-
 import {
   apiRequest,
   apiRequestWithMeta,
@@ -7,24 +5,13 @@ import {
 
 import type {
   CommunityComment,
+  CommunityFarmerProfile,
   CommunityPost,
   CommunityProfileResponse,
   CommunityReply,
 } from "@/types/community";
 
-const BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000/api/v1"
-).replace(/\/$/, "");
 
-/* ============================================================
-   PUBLIC COMMUNITY FEED
-
-   Logged-out users can read:
-   - posts
-   - comments
-   - replies
-============================================================ */
 
 export async function getCommunityFeed(
   page = 1,
@@ -37,15 +24,21 @@ export async function getCommunityFeed(
       "/community/feed",
       "GET",
       undefined,
+
       new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
+        page:
+          String(page),
+
+        limit:
+          String(limit),
       }).toString()
     );
 
   return {
     posts:
-      Array.isArray(result.data)
+      Array.isArray(
+        result.data
+      )
         ? result.data
         : [],
 
@@ -54,15 +47,14 @@ export async function getCommunityFeed(
   };
 }
 
-/* ============================================================
-   CREATE POST
-   FARMER ONLY
-============================================================ */
+
 
 export function createCommunityPost(
   payload: {
     content: string;
-    images?: string[];
+
+    images?:
+      string[];
   }
 ) {
   return apiRequest<CommunityPost>(
@@ -72,31 +64,26 @@ export function createCommunityPost(
   );
 }
 
-/* ============================================================
-   UPDATE OWN POST
-   FARMER ONLY
-============================================================ */
-
 export function updateCommunityPost(
   postId: string,
+
   payload: {
     content?: string;
-    images?: string[];
+
+    images?:
+      string[];
   }
 ) {
   return apiRequest<CommunityPost>(
     `/community/posts/${encodeURIComponent(
       postId
     )}`,
+
     "PATCH",
+
     payload
   );
 }
-
-/* ============================================================
-   DELETE OWN POST
-   FARMER ONLY
-============================================================ */
 
 export function deleteCommunityPost(
   postId: string
@@ -107,14 +94,12 @@ export function deleteCommunityPost(
     `/community/posts/${encodeURIComponent(
       postId
     )}`,
+
     "DELETE"
   );
 }
 
-/* ============================================================
-   LIKE / UNLIKE
-   FARMER ONLY
-============================================================ */
+
 
 export function toggleCommunityLike(
   postId: string
@@ -123,14 +108,12 @@ export function toggleCommunityLike(
     `/community/posts/${encodeURIComponent(
       postId
     )}/like`,
+
     "POST"
   );
 }
 
-/* ============================================================
-   COMMENT
-   FARMER ONLY
-============================================================ */
+
 
 export function addCommunityComment(
   postId: string,
@@ -140,17 +123,14 @@ export function addCommunityComment(
     `/community/posts/${encodeURIComponent(
       postId
     )}/comments`,
+
     "POST",
+
     {
       content,
     }
   );
 }
-
-/* ============================================================
-   REPLY
-   FARMER ONLY
-============================================================ */
 
 export function addCommunityReply(
   postId: string,
@@ -163,66 +143,75 @@ export function addCommunityReply(
     )}/comments/${encodeURIComponent(
       commentId
     )}/replies`,
+
     "POST",
+
     {
       content,
     }
   );
 }
 
-/* ============================================================
-   FARMER COMMUNITY PROFILE
-
-   LOGIN REQUIRED.
-   Backend also requires FARMER role.
-
-   Public visitors cannot use this API.
-============================================================ */
 
 export function getCommunityFarmerProfile(
   farmerId: string,
   page = 1,
-  limit = 10
+  limit = 20
 ) {
   return apiRequest<CommunityProfileResponse>(
     `/community/farmers/${encodeURIComponent(
       farmerId
     )}`,
+
     "GET",
+
     undefined,
+
     new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
+      page:
+        String(page),
+
+      limit:
+        String(limit),
     }).toString()
   );
 }
 
-/* ============================================================
-   COMMUNITY IMAGE UPLOAD
+export function getMyCommunityProfile() {
+  return apiRequest<CommunityFarmerProfile>(
+    "/community/me",
+    "GET"
+  );
+}
 
-   Uses server-side ImgBB.
-   FARMER ONLY.
-============================================================ */
+export function updateMyCommunityProfile(
+  payload: {
+    avatar?: string;
+
+    location?: string;
+  }
+) {
+  return apiRequest<CommunityFarmerProfile>(
+    "/community/me",
+
+    "PATCH",
+
+    payload
+  );
+}
+
+
 
 export async function uploadCommunityImage(
   file: File
 ): Promise<string> {
-  const { data } =
-    await authClient.token();
-
-  if (!data?.token) {
-    throw new Error(
-      "Please sign in as a farmer to upload an image."
-    );
-  }
-
   if (
     !file.type.startsWith(
       "image/"
     )
   ) {
     throw new Error(
-      "Please select a valid image."
+      "Please choose an image file."
     );
   }
 
@@ -245,72 +234,57 @@ export async function uploadCommunityImage(
 
   const response =
     await fetch(
-      `${BASE_URL}/community/upload-image`,
-      {
-        method: "POST",
+      "/api/upload",
 
-        headers: {
-          Authorization:
-            `Bearer ${data.token}`,
-        },
+      {
+        method:
+          "POST",
 
         body,
-
-        credentials:
-          "include",
       }
     );
 
-  let result:
-    | {
-        success?: boolean;
-        message?: string;
-        data?: {
-          url?: string;
-        };
-      }
-    | null = null;
-
-  try {
-    result =
-      await response.json();
-  } catch {
-    throw new Error(
-      "Image upload returned an invalid response."
-    );
-  }
+  const result =
+    await response.json();
 
   if (
     !response.ok ||
     !result?.success ||
-    !result.data?.url
+    !result?.url
   ) {
     throw new Error(
       result?.message ||
-        "Community image upload failed."
+        "Image upload failed."
     );
   }
 
   return String(
-    result.data.url
+    result.url
   );
 }
 
-/* ============================================================
-   ADMIN COMMUNITY POSTS
-============================================================ */
+
 
 export async function getAdminCommunityPosts(
-  status = "ALL",
-  search = "",
-  page = 1
+  status =
+    "ALL",
+
+  search =
+    "",
+
+  page =
+    1
 ) {
   const query =
     new URLSearchParams({
       status,
       search,
-      page: String(page),
-      limit: "20",
+
+      page:
+        String(page),
+
+      limit:
+        "20",
     });
 
   const result =
@@ -318,25 +292,22 @@ export async function getAdminCommunityPosts(
       CommunityPost[]
     >(
       "/community/admin/posts",
+
       "GET",
+
       undefined,
+
       query.toString()
     );
 
   return {
     posts:
-      Array.isArray(result.data)
-        ? result.data
-        : [],
+      result.data,
 
     meta:
       result.meta,
   };
 }
-
-/* ============================================================
-   ADMIN REMOVE POST + WARNING
-============================================================ */
 
 export function removeCommunityPostByAdmin(
   postId: string,
@@ -346,16 +317,14 @@ export function removeCommunityPostByAdmin(
     `/community/admin/posts/${encodeURIComponent(
       postId
     )}/remove`,
+
     "PATCH",
+
     {
       reason,
     }
   );
 }
-
-/* ============================================================
-   ADMIN WARNING ONLY
-============================================================ */
 
 export function warnCommunityFarmerByAdmin(
   postId: string,
@@ -363,33 +332,17 @@ export function warnCommunityFarmerByAdmin(
 ) {
   return apiRequest<{
     warned: boolean;
+
     postId?: string;
   }>(
     `/community/admin/posts/${encodeURIComponent(
       postId
     )}/warn`,
+
     "POST",
+
     {
       reason,
     }
   );
 }
-
-/* ============================================================
-   OPTIONAL SERVICE OBJECT
-============================================================ */
-
-export const CommunityService = {
-  getCommunityFeed,
-  createCommunityPost,
-  updateCommunityPost,
-  deleteCommunityPost,
-  toggleCommunityLike,
-  addCommunityComment,
-  addCommunityReply,
-  getCommunityFarmerProfile,
-  uploadCommunityImage,
-  getAdminCommunityPosts,
-  removeCommunityPostByAdmin,
-  warnCommunityFarmerByAdmin,
-};

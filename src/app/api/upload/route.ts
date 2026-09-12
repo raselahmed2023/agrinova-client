@@ -1,76 +1,281 @@
-import { NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  mkdir,
+  writeFile,
+} from "fs/promises";
+
 import path from "path";
+
 import crypto from "crypto";
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("image") as File | null;
+export const runtime =
+  "nodejs";
 
-    if (!file) {
+export async function POST(
+  req: NextRequest
+) {
+  try {
+    const formData =
+      await req.formData();
+
+    const file =
+      formData.get(
+        "image"
+      );
+
+    if (
+      !(file instanceof File)
+    ) {
       return NextResponse.json(
-        { success: false, message: "No image file provided" },
-        { status: 400 }
+        {
+          success:
+            false,
+
+          message:
+            "No image file provided",
+        },
+
+        {
+          status:
+            400,
+        }
       );
     }
 
-    // First, try ImgBB if API key is configured
-    const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
+    if (
+      !file.type.startsWith(
+        "image/"
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success:
+            false,
+
+          message:
+            "Only image files are allowed",
+        },
+
+        {
+          status:
+            400,
+        }
+      );
+    }
+
+    if (
+      file.size >
+      8 * 1024 * 1024
+    ) {
+      return NextResponse.json(
+        {
+          success:
+            false,
+
+          message:
+            "Image must be 8 MB or smaller",
+        },
+
+        {
+          status:
+            400,
+        }
+      );
+    }
+
+    /*
+      Server-only key.
+      DO NOT use NEXT_PUBLIC_IMGBB_API_KEY.
+    */
+    const apiKey =
+      process.env
+        .IMGBB_API_KEY;
+
+    /* ==========================================================
+       TRY IMGBB
+    ========================================================== */
+
     if (apiKey) {
       try {
-        const imgbbForm = new FormData();
-        imgbbForm.append("image", file);
+        const bytes =
+          await file.arrayBuffer();
 
-        const imgbbRes = await fetch(
-          `https://api.imgbb.com/1/upload?key=${apiKey}`,
-          {
-            method: "POST",
-            body: imgbbForm,
-          }
+        const base64 =
+          Buffer.from(
+            bytes
+          ).toString(
+            "base64"
+          );
+
+        const body =
+          new URLSearchParams();
+
+        body.set(
+          "image",
+          base64
         );
 
-        if (imgbbRes.ok) {
-          const imgbbData = await imgbbRes.json();
-          if (imgbbData?.success && imgbbData?.data?.url) {
-            return NextResponse.json({
-              success: true,
-              url: imgbbData.data.url,
-            });
+        body.set(
+          "name",
+          `agrinova-${Date.now()}`
+        );
+
+        const response =
+          await fetch(
+            `https://api.imgbb.com/1/upload?key=${encodeURIComponent(
+              apiKey
+            )}`,
+
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded",
+              },
+
+              body:
+                body.toString(),
+            }
+          );
+
+        if (
+          response.ok
+        ) {
+          const data =
+            await response.json();
+
+          const url =
+            data?.data
+              ?.display_url ||
+            data?.data?.url;
+
+          if (url) {
+            return NextResponse.json(
+              {
+                success:
+                  true,
+
+                url,
+              }
+            );
           }
         }
-      } catch {
-        // Fallback to local storage if ImgBB fails
+      } catch (
+        error
+      ) {
+        console.warn(
+          "ImgBB upload failed. Using local fallback.",
+          error
+        );
       }
     }
 
-    // Local file storage fallback in public/uploads
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    /* ==========================================================
+       LOCAL FALLBACK
+    ========================================================== */
 
-    const ext = path.extname(file.name) || ".png";
-    const safeExt = [".jpg", ".jpeg", ".png", ".webp"].includes(
-      ext.toLowerCase()
-    )
-      ? ext.toLowerCase()
-      : ".png";
+    const bytes =
+      await file.arrayBuffer();
 
-    const fileName = `expert-${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`;
-    const filePath = path.join(process.cwd(), "public", "uploads", fileName);
+    const buffer =
+      Buffer.from(
+        bytes
+      );
 
-    await writeFile(filePath, buffer);
+    const originalExt =
+      path
+        .extname(
+          file.name
+        )
+        .toLowerCase();
+
+    const allowed = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+    ];
+
+    const extension =
+      allowed.includes(
+        originalExt
+      )
+        ? originalExt
+        : file.type ===
+            "image/webp"
+          ? ".webp"
+          : file.type ===
+              "image/png"
+            ? ".png"
+            : ".jpg";
+
+    const uploadDirectory =
+      path.join(
+        process.cwd(),
+        "public",
+        "uploads"
+      );
+
+    await mkdir(
+      uploadDirectory,
+
+      {
+        recursive:
+          true,
+      }
+    );
+
+    const fileName =
+      `agrinova-${Date.now()}-${crypto
+        .randomBytes(5)
+        .toString(
+          "hex"
+        )}${extension}`;
+
+    await writeFile(
+      path.join(
+        uploadDirectory,
+        fileName
+      ),
+
+      buffer
+    );
 
     return NextResponse.json({
       success: true,
-      url: `/uploads/${fileName}`,
+
+      url:
+        `/uploads/${fileName}`,
     });
-  } catch (error: any) {
+  } catch (
+    error
+  ) {
+    console.error(
+      "Upload error:",
+      error
+    );
+
     return NextResponse.json(
       {
-        success: false,
-        message: error?.message || "Failed to upload image",
+        success:
+          false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "Image upload failed",
       },
-      { status: 500 }
+
+      {
+        status:
+          500,
+      }
     );
   }
 }
