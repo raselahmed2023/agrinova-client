@@ -20,16 +20,32 @@ export interface ApiEnvelope<T> {
   meta?: ApiMeta;
 }
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const requestHeaders: Record<string, string> = {
+type ApiMethod =
+  | "GET"
+  | "POST"
+  | "PATCH"
+  | "DELETE";
+
+
+
+async function getAuthHeaders(): Promise<
+  Record<string, string>
+> {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
+  if (typeof window === "undefined") {
+    return headers;
+  }
+
   try {
-    const { data } = await authClient.token();
+    const { data } =
+      await authClient.token();
 
     if (data?.token) {
-      requestHeaders.Authorization = `Bearer ${data.token}`;
+      headers.Authorization =
+        `Bearer ${data.token}`;
     }
   } catch (error) {
     console.warn(
@@ -38,66 +54,105 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     );
   }
 
-  return requestHeaders;
+  return headers;
 }
+
+
 
 async function requestEnvelope<T>(
   endpoint: string,
-  method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
+  method: ApiMethod = "GET",
   body?: unknown,
   queryString?: string
 ): Promise<ApiEnvelope<T>> {
-  const cleanEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`;
+  const cleanEndpoint =
+    endpoint.startsWith("/")
+      ? endpoint
+      : `/${endpoint}`;
 
-  const url = new URL(`${BASE_URL}${cleanEndpoint}`);
+  const url = new URL(
+    `${BASE_URL}${cleanEndpoint}`
+  );
 
   if (queryString) {
-    const params = new URLSearchParams(queryString);
+    const params =
+      new URLSearchParams(
+        queryString
+      );
 
-    params.forEach((value, key) => {
-      url.searchParams.set(key, value);
-    });
+    params.forEach(
+      (value, key) => {
+        url.searchParams.set(
+          key,
+          value
+        );
+      }
+    );
   }
 
-  const headers = await getAuthHeaders();
+  const headers =
+    await getAuthHeaders();
 
   let response: Response;
 
   try {
-    response = await fetch(url.toString(), {
-      method,
-      headers,
-      cache: "no-store",
-      credentials: "include",
-      ...(body !== undefined
-        ? { body: JSON.stringify(body) }
-        : {}),
-    });
+    response = await fetch(
+      url.toString(),
+      {
+        method,
+
+        headers,
+
+        cache: "no-store",
+
+        credentials:
+          "include",
+
+        ...(body !== undefined
+          ? {
+              body:
+                JSON.stringify(
+                  body
+                ),
+            }
+          : {}),
+      }
+    );
   } catch (error) {
-    console.error("API connection failed:", {
-      url: url.toString(),
-      method,
-      error,
-    });
+    console.error(
+      "API connection failed:",
+      {
+        url:
+          url.toString(),
+
+        method,
+
+        error,
+      }
+    );
 
     throw new Error(
       `Unable to connect to the backend server at ${BASE_URL}.`
     );
   }
 
-  let result: ApiEnvelope<T> | null = null;
+  let result:
+    | ApiEnvelope<T>
+    | null = null;
 
   try {
-    result = await response.json();
+    result =
+      await response.json();
   } catch {
     throw new Error(
       `API returned an invalid response (${response.status}).`
     );
   }
 
-  if (!response.ok || !result?.success) {
+  if (
+    !response.ok ||
+    !result?.success
+  ) {
     throw new Error(
       result?.message ||
         `Request failed with status ${response.status}.`
@@ -107,31 +162,30 @@ async function requestEnvelope<T>(
   return result;
 }
 
-/**
- * Use this for normal endpoints when only response.data is needed.
- */
+
+
 export async function apiRequest<T>(
   endpoint: string,
-  method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
+  method: ApiMethod = "GET",
   body?: unknown,
   queryString?: string
 ): Promise<T> {
-  const result = await requestEnvelope<T>(
-    endpoint,
-    method,
-    body,
-    queryString
-  );
+  const result =
+    await requestEnvelope<T>(
+      endpoint,
+      method,
+      body,
+      queryString
+    );
 
   return result.data;
 }
 
-/**
- * Use this for paginated/list endpoints that also need response.meta.
- */
+
+
 export async function apiRequestWithMeta<T>(
   endpoint: string,
-  method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
+  method: ApiMethod = "GET",
   body?: unknown,
   queryString?: string
 ): Promise<ApiEnvelope<T>> {
@@ -142,3 +196,5 @@ export async function apiRequestWithMeta<T>(
     queryString
   );
 }
+
+export { BASE_URL };

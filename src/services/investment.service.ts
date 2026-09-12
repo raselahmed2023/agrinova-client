@@ -1,80 +1,64 @@
-import { apiRequest } from "./api.client";
-
+import { apiRequest, apiRequestWithMeta } from "./api.client";
 import type {
+  CreateInvestmentApplicationPayload,
   CreateInvestmentProjectPayload,
+  InvestmentApplication,
   InvestmentListResponse,
   InvestmentProject,
 } from "@/types/investment";
 
-export const createInvestmentProject =
-  async (
-    payload: CreateInvestmentProjectPayload
-  ): Promise<InvestmentProject> => {
-    return apiRequest<InvestmentProject>(
-      "/investments",
-      "POST",
-      payload
-    );
+const listWithMeta = async <T>(endpoint: string, queryString?: string): Promise<InvestmentListResponse<T>> => {
+  const result = await apiRequestWithMeta<T[]>(endpoint, "GET", undefined, queryString);
+  return {
+    data: result.data,
+    meta: {
+      page: Number(result.meta?.page || 1),
+      limit: Number(result.meta?.limit || result.data.length || 1),
+      total: Number(result.meta?.total || result.data.length),
+      totalPages: Number(result.meta?.totalPages || 1),
+    },
   };
+};
 
-export const getMyInvestmentProjects =
-  async (): Promise<InvestmentProject[]> => {
-    return apiRequest<InvestmentProject[]>(
-      "/investments/me",
-      "GET"
-    );
-  };
+export const createInvestmentProject = (payload: CreateInvestmentProjectPayload) =>
+  apiRequest<InvestmentProject>("/investments", "POST", payload);
 
-export const getMyInvestmentProject =
-  async (
-    projectId: string
-  ): Promise<InvestmentProject> => {
-    return apiRequest<InvestmentProject>(
-      `/investments/me/${projectId}`,
-      "GET"
-    );
-  };
+export const getMyInvestmentProjects = () =>
+  apiRequest<InvestmentProject[]>("/investments/me", "GET");
 
-export const updateMyInvestmentProject =
-  async (
-    projectId: string,
-    payload: Partial<CreateInvestmentProjectPayload>
-  ): Promise<InvestmentProject> => {
-    return apiRequest<InvestmentProject>(
-      `/investments/me/${projectId}`,
-      "PATCH",
-      payload
-    );
-  };
+export const getMyInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "GET");
 
-export const deleteMyInvestmentProject =
-  async (
-    projectId: string
-  ): Promise<InvestmentProject> => {
-    return apiRequest<InvestmentProject>(
-      `/investments/me/${projectId}`,
-      "DELETE"
-    );
-  };
+export const updateMyInvestmentProject = (projectId: string, payload: Partial<CreateInvestmentProjectPayload>) =>
+  apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "PATCH", payload);
 
-export const getApprovedInvestmentProjects =
-  async (
-    queryString?: string
-  ): Promise<InvestmentListResponse> => {
-    return apiRequest<InvestmentListResponse>(
-      "/investments",
-      "GET",
-      undefined,
-      queryString
-    );
-  };
+export const deleteMyInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "DELETE");
 
-export const getApprovedInvestmentProject =
-  async (
-    projectId: string
-  ): Promise<InvestmentProject> => {
-    return apiRequest<InvestmentProject>(
-      `/investments/${projectId}`,
-      "GET"
-    );
-  };
+export const getApprovedInvestmentProjects = (queryString?: string) =>
+  listWithMeta<InvestmentProject>("/investments", queryString);
+
+export const getApprovedInvestmentProject = (projectId: string) =>
+  apiRequest<InvestmentProject>(`/investments/${projectId}`, "GET");
+
+export const createInvestmentApplication = (projectId: string, payload: CreateInvestmentApplicationPayload) =>
+  apiRequest<InvestmentApplication>(`/investments/${projectId}/apply`, "POST", payload);
+
+export const getMyInvestmentApplications = () =>
+  apiRequest<InvestmentApplication[]>("/investments/my-investments", "GET");
+
+export const submitBankInvestmentPayment = (
+  applicationId: string,
+  payload: { senderBankName: string; transactionReference: string; paymentProofUrl: string }
+) => apiRequest<InvestmentApplication>(`/investments/my-investments/${applicationId}/bank-payment`, "POST", payload);
+
+export const createInvestmentStripeCheckout = (applicationId: string) =>
+  apiRequest<{ sessionId: string; url: string | null }>(`/investments/my-investments/${applicationId}/stripe-checkout`, "POST");
+
+export const verifyInvestmentStripeCheckout = (applicationId: string, sessionId: string) =>
+  apiRequest<InvestmentApplication>(
+    `/investments/my-investments/${applicationId}/stripe-verify`,
+    "GET",
+    undefined,
+    new URLSearchParams({ sessionId }).toString()
+  );

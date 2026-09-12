@@ -18,11 +18,14 @@ export type TransactionType =
   | "sale"
   | "free";
 
+/**
+ * pending is retained only for legacy database records.
+ * New farmer listings publish immediately.
+ */
 export type ProductStatus =
   | "pending"
   | "available"
   | "out_of_stock"
-  | "rejected"
   | "disabled";
 
 export interface IProduct {
@@ -75,8 +78,23 @@ export interface IProduct {
 
   byProductUses?: string[];
 
+  /**
+   * Legacy field only.
+   */
   rejectionReason?: string;
 
+  /**
+   * Current admin moderation fields.
+   */
+  moderationReason?: string;
+
+  moderatedAt?: string;
+
+  moderatedBy?: string;
+
+  /**
+   * Legacy approval fields kept so old records do not break.
+   */
   approvedAt?: string;
 
   approvedBy?: string;
@@ -138,6 +156,8 @@ export interface IProductListResponse {
   data: IProduct[];
 }
 
+
+
 export interface IOrderItem {
   productId: string;
 
@@ -188,7 +208,8 @@ export type PaymentMethod =
 export type PaymentStatus =
   | "pending"
   | "paid"
-  | "failed";
+  | "failed"
+  | "refunded";
 
 export interface IOrderFulfillment {
   sellerId: string;
@@ -268,6 +289,8 @@ export interface IOrder {
 
   paymentReference?: string;
 
+  stockRestored?: boolean;
+
   notes?: string;
 
   createdAt?: string;
@@ -288,45 +311,60 @@ export interface ICreateOrderPayload {
   notes?: string;
 }
 
+
+
 export interface IStripeSession {
   sessionId: string;
 
-  checkoutUrl: string;
+  /**
+   * Stripe Checkout redirect URL.
+   */
+  url: string | null;
 }
+
+
 
 export const PRODUCT_CATEGORIES = [
   {
     value: "crops",
     label: "Crops",
   },
+
   {
     value: "seeds",
     label: "Seeds",
   },
+
   {
     value: "fertilizers",
     label: "Fertilizers",
   },
+
   {
     value: "pesticides",
     label: "Pesticides",
   },
+
   {
     value: "equipment",
     label: "Equipment",
   },
+
   {
     value: "poultry",
     label: "Poultry",
   },
+
   {
     value: "farm_foods",
     label: "Farm Food",
   },
+
   {
     value: "by_products",
     label: "By Products",
   },
+
   {
     value: "other",
     label: "Other",
@@ -334,17 +372,50 @@ export const PRODUCT_CATEGORIES = [
 ] as const;
 
 export const POULTRY_TYPE_OPTIONS = [
-  { value: "chicken", label: "Chicken" },
-  { value: "duck", label: "Duck" },
-  { value: "other", label: "Other" },
+  {
+    value: "chicken",
+    label: "Chicken",
+  },
+
+  {
+    value: "duck",
+    label: "Duck",
+  },
+
+  {
+    value: "other",
+    label: "Other",
+  },
 ] as const;
 
 export const BY_PRODUCT_USE_OPTIONS = [
-  { value: "biogas", label: "Biogas" },
-  { value: "compost", label: "Compost" },
-  { value: "animal_feed", label: "Animal Feed" },
-  { value: "biomass", label: "Biomass" },
-  { value: "bedding", label: "Bedding" },
-  { value: "other", label: "Other" },
-] as const;
+  {
+    value: "biogas",
+    label: "Biogas",
+  },
 
+  {
+    value: "compost",
+    label: "Compost",
+  },
+
+  {
+    value: "animal_feed",
+    label: "Animal Feed",
+  },
+
+  {
+    value: "biomass",
+    label: "Biomass",
+  },
+
+  {
+    value: "bedding",
+    label: "Bedding",
+  },
+
+  {
+    value: "other",
+    label: "Other",
+  },
+] as const;

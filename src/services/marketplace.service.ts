@@ -1,82 +1,223 @@
-import { apiRequest, apiRequestWithMeta } from "./api.client";
-import type {
-  CreateInvestmentApplicationPayload,
-  CreateInvestmentProjectPayload,
-  InvestmentApplication,
-  InvestmentListResponse,
-  InvestmentProject,
-} from "@/types/investment";
+import {
+  apiRequest,
+  apiRequestWithMeta,
+} from "./api.client";
 
-const withMeta = async <T>(
-  endpoint: string,
-  queryString?: string
-): Promise<InvestmentListResponse<T>> => {
-  const result = await apiRequestWithMeta<T[]>(endpoint, "GET", undefined, queryString);
+import type {
+  ICreateProduct,
+  IProduct,
+  IProductListResponse,
+} from "@/types/marketplace";
+
+export interface MarketplaceQuery {
+  search?: string;
+  category?: string;
+  location?: string;
+  district?: string;
+  transactionType?: string;
+  productionMethod?: string;
+  minPrice?: number | string;
+  maxPrice?: number | string;
+  sort?: string;
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
+function buildQuery(
+  params: MarketplaceQuery
+) {
+  const query =
+    new URLSearchParams();
+
+  Object.entries(
+    params
+  ).forEach(
+    ([key, value]) => {
+      if (
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !==
+          ""
+      ) {
+        query.set(
+          key,
+          String(value)
+        );
+      }
+    }
+  );
+
+  return query.toString();
+}
+
+function normalizeListResponse(
+  data: IProduct[],
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+  }
+): IProductListResponse {
   return {
-    data: result.data,
+    data:
+      Array.isArray(data)
+        ? data
+        : [],
+
     meta: {
-      page: Number(result.meta?.page || 1),
-      limit: Number(result.meta?.limit || result.data.length || 1),
-      total: Number(result.meta?.total || result.data.length),
-      totalPages: Number(result.meta?.totalPages || 1),
+      page:
+        Number(
+          meta?.page || 1
+        ),
+
+      limit:
+        Number(
+          meta?.limit ||
+            data?.length ||
+            1
+        ),
+
+      total:
+        Number(
+          meta?.total ??
+            data?.length ??
+            0
+        ),
+
+      totalPages:
+        Math.max(
+          Number(
+            meta?.totalPages ||
+              1
+          ),
+          1
+        ),
     },
   };
-};
+}
 
-export const createInvestmentProject = (payload: CreateInvestmentProjectPayload) =>
-  apiRequest<InvestmentProject>("/investments", "POST", payload);
+export async function getProductsPage(
+  params: MarketplaceQuery = {}
+): Promise<IProductListResponse> {
+  const response =
+    await apiRequestWithMeta<
+      IProduct[]
+    >(
+      "/marketplace/products",
+      "GET",
+      undefined,
+      buildQuery(params)
+    );
 
-export const getMyInvestmentProjects = () =>
-  apiRequest<InvestmentProject[]>("/investments/me");
+  return normalizeListResponse(
+    response.data,
+    response.meta
+  );
+}
 
-export const getMyInvestmentProject = (projectId: string) =>
-  apiRequest<InvestmentProject>(`/investments/me/${projectId}`);
+export async function getProducts(
+  params: MarketplaceQuery = {}
+): Promise<IProduct[]> {
+  return (
+    await getProductsPage(
+      params
+    )
+  ).data;
+}
 
-export const updateMyInvestmentProject = (
-  projectId: string,
-  payload: Partial<CreateInvestmentProjectPayload>
-) => apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "PATCH", payload);
+export async function getProductById(
+  id: string
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${encodeURIComponent(
+      id
+    )}`
+  );
+}
 
-export const deleteMyInvestmentProject = (projectId: string) =>
-  apiRequest<InvestmentProject>(`/investments/me/${projectId}`, "DELETE");
-
-export const getApprovedInvestmentProjects = (queryString?: string) =>
-  withMeta<InvestmentProject>("/investments", queryString);
-
-export const getApprovedInvestmentProject = (projectId: string) =>
-  apiRequest<InvestmentProject>(`/investments/${projectId}`);
-
-export const createInvestmentApplication = (
-  projectId: string,
-  payload: CreateInvestmentApplicationPayload
-) => apiRequest<InvestmentApplication>(`/investments/${projectId}/apply`, "POST", payload);
-
-export const getMyInvestmentApplications = () =>
-  apiRequest<InvestmentApplication[]>("/investments/my-investments");
-
-export const getMyInvestmentApplication = (applicationId: string) =>
-  apiRequest<InvestmentApplication>(`/investments/my-investments/${applicationId}`);
-
-export const submitBankInvestmentPayment = (
-  applicationId: string,
-  payload: { senderBankName: string; transactionReference: string; paymentProofUrl: string }
-) =>
-  apiRequest<InvestmentApplication>(
-    `/investments/my-investments/${applicationId}/bank-payment`,
+export async function createProduct(
+  data: ICreateProduct
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    "/marketplace/products",
     "POST",
-    payload
+    data
   );
+}
 
-export const createInvestmentStripeCheckout = (applicationId: string) =>
-  apiRequest<{ sessionId: string; url: string | null }>(
-    `/investments/my-investments/${applicationId}/stripe-checkout`,
-    "POST"
-  );
+export async function getMyProductsPage(
+  params: MarketplaceQuery = {}
+): Promise<IProductListResponse> {
+  const response =
+    await apiRequestWithMeta<
+      IProduct[]
+    >(
+      "/marketplace/my-listings",
+      "GET",
+      undefined,
+      buildQuery(params)
+    );
 
-export const verifyInvestmentStripeCheckout = (applicationId: string, sessionId: string) =>
-  apiRequest<InvestmentApplication>(
-    `/investments/my-investments/${applicationId}/stripe-verify`,
-    "GET",
-    undefined,
-    `sessionId=${encodeURIComponent(sessionId)}`
+  return normalizeListResponse(
+    response.data,
+    response.meta
   );
+}
+
+export async function getMyProducts(
+  params: MarketplaceQuery = {}
+): Promise<IProduct[]> {
+  return (
+    await getMyProductsPage(
+      params
+    )
+  ).data;
+}
+
+export async function getMyProductById(
+  id: string
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/my-listings/${encodeURIComponent(
+      id
+    )}`
+  );
+}
+
+export async function updateProduct(
+  id: string,
+  data: Partial<ICreateProduct>
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${encodeURIComponent(
+      id
+    )}`,
+    "PATCH",
+    data
+  );
+}
+
+export async function deleteProduct(
+  id: string
+): Promise<IProduct> {
+  return apiRequest<IProduct>(
+    `/marketplace/products/${encodeURIComponent(
+      id
+    )}`,
+    "DELETE"
+  );
+}
+
+export const MarketplaceService = {
+  getProducts,
+  getProductsPage,
+  getProductById,
+  createProduct,
+  getMyProducts,
+  getMyProductsPage,
+  getMyProductById,
+  updateProduct,
+  deleteProduct,
+};

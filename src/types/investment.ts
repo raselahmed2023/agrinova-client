@@ -34,11 +34,8 @@ export interface InvestmentProject {
   category: InvestmentCategory;
   requiredInvestment: number;
   minimumInvestment: number;
-  ownContribution: number;
   fundedAmount: number;
   durationMonths: number;
-  expectedReturnPercent: number;
-  investorSharePercent: number;
   division: string;
   district: string;
   upazila: string;
@@ -54,14 +51,6 @@ export interface InvestmentProject {
   approvedAt?: string;
   createdAt: string;
   updatedAt: string;
-
-  // Optional legacy fields from older records.
-  duration?: string;
-  expectedReturn?: string;
-  profitSharing?: string;
-  estimatedRevenue?: number;
-  estimatedCost?: number;
-  estimatedProfit?: number;
 }
 
 export interface CreateInvestmentProjectPayload {
@@ -70,10 +59,7 @@ export interface CreateInvestmentProjectPayload {
   category: InvestmentCategory;
   requiredInvestment: number;
   minimumInvestment: number;
-  ownContribution?: number;
   durationMonths: number;
-  expectedReturnPercent: number;
-  investorSharePercent: number;
   description: string;
   useOfFunds: string;
   projectImage?: string;
@@ -92,6 +78,8 @@ export interface InvestmentApplication {
   investorId: string;
   investorName?: string;
   investorEmail?: string;
+  /** Admin API only. Farmer/investor responses intentionally omit this field. */
+  nidNumber?: string;
   amount: number;
   note?: string;
   paymentMethod: InvestmentPaymentMethod;
@@ -110,17 +98,13 @@ export interface InvestmentApplication {
 }
 
 export interface InvestmentListResponse<T> {
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  meta: { page: number; limit: number; total: number; totalPages: number };
   data: T[];
 }
 
 export interface CreateInvestmentApplicationPayload {
   amount: number;
+  nidNumber: string;
   note?: string;
   paymentMethod: InvestmentPaymentMethod;
 }

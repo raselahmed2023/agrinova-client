@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 
 import MarketplaceBackground from "@/components/marketplace/MarketplaceBackground";
@@ -21,8 +23,17 @@ export default function CartPage() {
     subtotal,
     updateQuantity,
     removeFromCart,
+    refreshCart,
     loading,
   } = useCart();
+
+  useEffect(() => {
+    if (!loading) {
+      refreshCart().catch(() => undefined);
+    }
+    // Refresh once when the persisted cart becomes available.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   /*
    * Loading state:
@@ -159,6 +170,10 @@ export default function CartPage() {
                               ? ` / ${product.unit}`
                               : ""
                             }`}
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold text-emerald-700">
+                          {product.quantity} {product.unit || "unit"} remaining
                         </p>
 
                         {/* Quantity Controls */}

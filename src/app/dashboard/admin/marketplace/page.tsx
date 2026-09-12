@@ -1,1146 +1,583 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  Check,
+  AlertTriangle,
+  Ban,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Eye,
-  Image as ImageIcon,
-  Loader2,
   Package,
   RefreshCw,
   Search,
-  ShieldOff,
+  ShieldCheck,
   Trash2,
+  Truck,
   X,
 } from "lucide-react";
 
-import {
-  marketplaceService,
-} from "@/services/admin.marketplace.service";
-
+import { marketplaceService } from "@/services/admin.marketplace.service";
 import type {
+  IOrder,
+  IOrderFulfillment,
   IProduct,
   ProductCategory,
   ProductStatus,
 } from "@/types/marketplace";
 
-const CATEGORY_OPTIONS: {
-  value: ProductCategory;
-  label: string;
-}[] = [
-  {
-    value: "crops",
-    label: "Crops",
-  },
-  {
-    value: "seeds",
-    label: "Seeds",
-  },
-  {
-    value: "fertilizers",
-    label: "Fertilizers",
-  },
-  {
-    value: "pesticides",
-    label: "Pesticides",
-  },
-  {
-    value: "equipment",
-    label: "Equipment",
-  },
-  {
-    value: "poultry",
-    label: "Poultry",
-  },
-  {
-    value: "farm_foods",
-    label: "Farm Food",
-  },
-  {
-    value: "by_products",
-    label: "By Products",
-  },
-  {
-    value: "other",
-    label: "Other",
-  },
+const categories: { value: ProductCategory | "all"; label: string }[] = [
+  { value: "all", label: "All categories" },
+  { value: "crops", label: "Crops" },
+  { value: "seeds", label: "Seeds" },
+  { value: "fertilizers", label: "Fertilizers" },
+  { value: "pesticides", label: "Pesticides" },
+  { value: "equipment", label: "Equipment" },
+  { value: "poultry", label: "Poultry" },
+  { value: "farm_foods", label: "Farm food" },
+  { value: "by_products", label: "By-products" },
+  { value: "other", label: "Other" },
 ];
 
-const STATUS_OPTIONS: {
-  value: ProductStatus | "all";
-  label: string;
-}[] = [
-  {
-    value: "all",
-    label: "All Status",
-  },
-  {
-    value: "pending",
-    label: "Pending",
-  },
-  {
-    value: "available",
-    label: "Available",
-  },
-  {
-    value: "out_of_stock",
-    label: "Out of Stock",
-  },
-  {
-    value: "rejected",
-    label: "Rejected",
-  },
-  {
-    value: "disabled",
-    label: "Disabled",
-  },
+const statuses: { value: ProductStatus | "all"; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "available", label: "Live" },
+  { value: "out_of_stock", label: "Out of stock" },
+  { value: "disabled", label: "Hidden" },
+  { value: "pending", label: "Legacy pending" },
 ];
 
-const formatMoney = (value: number) =>
-  new Intl.NumberFormat("en-BD", {
-    style: "currency",
-    currency: "BDT",
-    maximumFractionDigits: 0,
-  }).format(value);
+const money = (value: number) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
+const pretty = (value?: string) =>
+  value ? value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-const categoryLabel = (
-  category: ProductCategory
-) =>
-  CATEGORY_OPTIONS.find(
-    (item) =>
-      item.value === category
-  )?.label || category;
+function Spinner() {
+  return (
+    <div className="flex min-h-64 items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
+    </div>
+  );
+}
 
-function StatusBadge({
-  status,
-}: {
-  status: ProductStatus;
-}) {
-  const styles: Record<
-    string,
-    string
-  > = {
-    pending:
-      "bg-amber-50 text-amber-700 border-amber-200",
-    available:
-      "bg-emerald-50 text-emerald-700 border-emerald-200",
-    out_of_stock:
-      "bg-orange-50 text-orange-700 border-orange-200",
-    rejected:
-      "bg-rose-50 text-rose-700 border-rose-200",
-    disabled:
-      "bg-red-50 text-red-700 border-red-200",
-  };
+function StatusPill({ status }: { status: ProductStatus }) {
+  const cls =
+    status === "available"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "out_of_stock"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : status === "disabled"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-slate-200 bg-slate-50 text-slate-600";
 
   return (
-    <span
-      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-        styles[status] ||
-        "bg-slate-50 text-slate-600 border-slate-200"
-      }`}
-    >
-      {status
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, (char) =>
-          char.toUpperCase()
-        )}
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${cls}`}>
+      {status === "available" ? "Live" : pretty(status)}
     </span>
   );
 }
 
-function getEffectiveStatus(product: IProduct): ProductStatus {
-  if (
-    !product.approvedAt &&
-    (product.status === "available" ||
-      product.status === "out_of_stock")
-  ) {
-    return "pending";
-  }
-
-  return product.status;
-}
-
 export default function AdminMarketplacePage() {
-  const [products, setProducts] =
-    useState<IProduct[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [search, setSearch] =
-    useState("");
-
-  const [searchInput, setSearchInput] =
-    useState("");
-
-  const [status, setStatus] =
-    useState<ProductStatus | "all">(
-      "all"
-    );
-
-  const [category, setCategory] =
-    useState<ProductCategory | "all">(
-      "all"
-    );
-
-  const [page, setPage] =
-    useState(1);
-
-  const [totalPages, setTotalPages] =
-    useState(1);
-
-  const [total, setTotal] =
-    useState(0);
-
-  const [selected, setSelected] =
-    useState<IProduct | null>(null);
-
-  const [actionLoading, setActionLoading] =
-    useState<string | null>(null);
-
-  const [rejectReason, setRejectReason] =
-    useState("");
-
-  const loadProducts =
-    useCallback(async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const result =
-          await marketplaceService.getAdminProducts(
-            {
-              page,
-              limit: 10,
-              status,
-              category,
-              search,
-            }
-          );
-
-        setProducts(
-          Array.isArray(result?.data)
-            ? result.data
-            : []
-        );
-
-        setTotal(
-          result?.meta?.total || 0
-        );
-
-        setTotalPages(
-          Math.max(
-            result?.meta?.totalPages || 1,
-            1
-          )
-        );
-      } catch (err) {
-        console.error(
-          "Failed to load admin marketplace products:",
-          err
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load marketplace products."
-        );
-
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    }, [
-      page,
-      status,
-      category,
-      search,
-    ]);
+  const [tab, setTab] = useState<"products" | "fulfillment">("products");
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    const wanted = new URLSearchParams(window.location.search).get("tab");
+    if (wanted === "fulfillment") setTab("fulfillment");
+  }, []);
 
-  const handleSearch = (
-    event: React.FormEvent
-  ) => {
-    event.preventDefault();
+  return (
+    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
+              Marketplace Operations
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">
+              Marketplace Control Center
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Farmer listings publish instantly. Admin moderation is exception-based: hide or remove rule-violating listings, notify farmers, and coordinate pickup and delivery.
+            </p>
+          </div>
 
-    setPage(1);
-    setSearch(
-      searchInput.trim()
-    );
-  };
+          <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setTab("products")}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                tab === "products" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500"
+              }`}
+            >
+              Products
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("fulfillment")}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                tab === "fulfillment" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500"
+              }`}
+            >
+              Pickup & Delivery
+            </button>
+          </div>
+        </div>
+      </div>
 
-  const handleAction = async (
-    action:
-      | "approve"
-      | "reject"
-      | "disable"
-      | "restore"
-      | "remove",
-    product: IProduct
-  ) => {
-    if (action === "reject") {
-      if (!rejectReason.trim()) {
-        setError(
-          "Please provide a rejection reason."
-        );
-        return;
-      }
-    }
+      <div className="mt-6">
+        {tab === "products" ? <ProductsTab /> : <FulfillmentTab />}
+      </div>
+    </div>
+  );
+}
 
-    if (action === "remove") {
-      const confirmed =
-        window.confirm(
-          `Remove "${product.title}" from the marketplace?`
-        );
+function ProductsTab() {
+  const [products, setProducts] = useState<IProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<ProductStatus | "all">("all");
+  const [category, setCategory] = useState<ProductCategory | "all">("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState({ live: 0, outOfStock: 0, hidden: 0 });
+  const [selected, setSelected] = useState<IProduct | null>(null);
+  const [reason, setReason] = useState("");
+  const [acting, setActing] = useState(false);
 
-      if (!confirmed) {
-        return;
-      }
-    }
-
+  const load = useCallback(async () => {
     try {
-      setActionLoading(
-        `${action}-${product._id}`
-      );
-
+      setLoading(true);
       setError("");
-
-      if (action === "approve") {
-        await marketplaceService.approveProduct(
-          product._id
-        );
-      }
-
-      if (action === "reject") {
-        await marketplaceService.rejectProduct(
-          product._id,
-          rejectReason.trim()
-        );
-      }
-
-      if (action === "disable") {
-        await marketplaceService.disableProduct(
-          product._id
-        );
-      }
-
-      if (action === "restore") {
-        await marketplaceService.restoreProduct(
-          product._id
-        );
-      }
-
-      if (action === "remove") {
-        await marketplaceService.removeProduct(
-          product._id
-        );
-      }
-
-      setSelected(null);
-      setRejectReason("");
-
-      await loadProducts();
+      const result = await marketplaceService.getAdminProducts({
+        page,
+        limit: 12,
+        search,
+        status,
+        category,
+      });
+      setProducts(result.data);
+      setTotal(result.meta.total);
+      setTotalPages(result.meta.totalPages);
+      setCounts(result.meta.counts);
     } catch (err) {
-      console.error(
-        `Marketplace ${action} failed:`,
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Failed to ${action} product.`
-      );
+      setError(err instanceof Error ? err.message : "Unable to load marketplace products.");
     } finally {
-      setActionLoading(null);
+      setLoading(false);
+    }
+  }, [page, search, status, category]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const open = async (product: IProduct) => {
+    setSelected(product);
+    setReason(product.moderationReason || "");
+    try {
+      setSelected(await marketplaceService.getAdminProductById(product._id));
+    } catch {
+      // Keep table data in modal if refresh fails.
     }
   };
 
-  const openProduct = async (
-    product: IProduct
-  ) => {
+  const act = async (action: "hide" | "restore" | "remove") => {
+    if (!selected) return;
+    if ((action === "hide" || action === "remove") && !reason.trim()) {
+      setError("Please write a clear reason so the farmer receives a useful notice.");
+      return;
+    }
+    if (action === "remove" && !window.confirm(`Remove “${selected.title}” from AgriNova?`)) return;
+
     try {
-      setSelected(product);
-
-      const fresh =
-        await marketplaceService.getAdminProductById(
-          product._id
-        );
-
-      setSelected(fresh);
+      setActing(true);
+      setError("");
+      if (action === "hide") {
+        await marketplaceService.moderateProduct(selected._id, reason.trim());
+      } else if (action === "restore") {
+        await marketplaceService.restoreProduct(selected._id);
+      } else {
+        await marketplaceService.removeProduct(selected._id, reason.trim());
+      }
+      setSelected(null);
+      setReason("");
+      await load();
     } catch (err) {
-      console.error(
-        "Failed to load product details:",
-        err
-      );
+      setError(err instanceof Error ? err.message : "Marketplace moderation failed.");
+    } finally {
+      setActing(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-              <Package className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-                Marketplace Management
-              </h1>
-
-              <p className="text-sm text-slate-500">
-                Review and manage farmer product listings.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={loadProducts}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${
-              loading
-                ? "animate-spin"
-                : ""
-            }`}
-          />
-
-          Refresh
-        </button>
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric label="Live listings" value={counts.live} tone="emerald" />
+        <Metric label="Out of stock" value={counts.outOfStock} tone="amber" />
+        <Metric label="Hidden by moderation" value={counts.hidden} tone="red" />
       </div>
 
-      {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1fr_190px_190px_auto]">
-          <form
-            onSubmit={handleSearch}
-            className="flex"
-          >
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-              <input
-                value={searchInput}
-                onChange={(event) =>
-                  setSearchInput(
-                    event.target.value
-                  )
-                }
-                placeholder="Search product, seller or district..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="ml-2 h-11 rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800"
-            >
-              Search
-            </button>
-          </form>
-
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPage(1);
+            setSearch(searchInput.trim());
+          }}
+          className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto]"
+        >
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search product, seller, email or district"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none focus:border-emerald-500 focus:bg-white"
+            />
+          </div>
           <select
             value={status}
-            onChange={(event) => {
-              setStatus(
-                event.target
-                  .value as ProductStatus | "all"
-              );
+            onChange={(e) => {
+              setStatus(e.target.value as ProductStatus | "all");
               setPage(1);
             }}
-            className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm"
           >
-            {STATUS_OPTIONS.map(
-              (option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                >
-                  {option.label}
-                </option>
-              )
-            )}
+            {statuses.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
           </select>
-
           <select
             value={category}
-            onChange={(event) => {
-              setCategory(
-                event.target
-                  .value as ProductCategory | "all"
-              );
+            onChange={(e) => {
+              setCategory(e.target.value as ProductCategory | "all");
               setPage(1);
             }}
-            className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm"
           >
-            <option value="all">
-              All Categories
-            </option>
-
-            {CATEGORY_OPTIONS.map(
-              (option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                >
-                  {option.label}
-                </option>
-              )
-            )}
+            {categories.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
           </select>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSearchInput("");
-              setSearch("");
-              setStatus("all");
-              setCategory("all");
-              setPage(1);
-            }}
-            className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            Reset
+          <button className="h-11 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white hover:bg-emerald-800">
+            Search
           </button>
+        </form>
+      </div>
+
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {loading ? (
+          <Spinner />
+        ) : products.length === 0 ? (
+          <div className="p-12 text-center text-sm text-slate-500">No products match these filters.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Product</th>
+                  <th className="px-5 py-3">Seller</th>
+                  <th className="px-5 py-3">Stock</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {products.map((product) => (
+                  <tr key={product._id} className="hover:bg-slate-50/70">
+                    <td className="px-5 py-4">
+                      <p className="font-bold text-slate-900">{product.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">{pretty(product.category)} · {money(product.price)}/{product.unit}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <p className="font-medium text-slate-800">{product.sellerName || "Farmer"}</p>
+                      <p className="mt-1 text-xs text-slate-400">{product.sellerEmail || "—"}</p>
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-slate-700">{product.quantity} {product.unit}</td>
+                    <td className="px-5 py-4"><StatusPill status={product.status} /></td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => open(product)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+                      >
+                        <Eye className="h-4 w-4" /> Review
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-sm">
+          <span className="text-slate-500">{total.toLocaleString("en-BD")} listings</span>
+          <div className="flex items-center gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((v) => v - 1)} className="rounded-lg border p-2 disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+            <span className="font-semibold text-slate-700">{page} / {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage((v) => v + 1)} className="rounded-lg border p-2 disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+          </div>
         </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <X className="mt-0.5 h-4 w-4 shrink-0" />
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill status={selected.status} />
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{pretty(selected.category)}</span>
+                </div>
+                <h2 className="mt-3 text-2xl font-extrabold text-slate-950">{selected.title}</h2>
+                <p className="mt-1 text-sm text-slate-500">Seller: {selected.sellerName || "Farmer"} · {selected.sellerEmail || "No email"}</p>
+              </div>
+              <button onClick={() => setSelected(null)} className="rounded-xl border p-2 text-slate-500"><X className="h-5 w-5" /></button>
+            </div>
 
-          <p className="flex-1">
-            {error}
-          </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <Info label="Price" value={`${money(selected.price)} / ${selected.unit}`} />
+              <Info label="Remaining stock" value={`${selected.quantity} ${selected.unit}`} />
+              <Info label="Location" value={[selected.upazila, selected.district, selected.division].filter(Boolean).join(", ") || "Not provided"} />
+            </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setError("")
-            }
-            className="font-semibold hover:text-red-900"
-          >
-            Dismiss
-          </button>
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              {selected.description}
+            </div>
+
+            {selected.moderationReason && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <strong>Previous moderation notice:</strong> {selected.moderationReason}
+              </div>
+            )}
+
+            {selected.status !== "disabled" && (
+              <div className="mt-5">
+                <label className="text-sm font-bold text-slate-800">Reason for moderation/removal</label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  placeholder="Explain the specific rule or marketplace policy issue. This message is sent to the farmer."
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {selected.status === "disabled" ? (
+                <button disabled={acting} onClick={() => act("restore")} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                  <RefreshCw className="h-4 w-4" /> Restore listing
+                </button>
+              ) : (
+                <button disabled={acting} onClick={() => act("hide")} className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                  <Ban className="h-4 w-4" /> Hide & notify farmer
+                </button>
+              )}
+              <button disabled={acting} onClick={() => act("remove")} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-50">
+                <Trash2 className="h-4 w-4" /> Remove & notify farmer
+              </button>
+            </div>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Summary */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          <span className="font-semibold text-slate-900">
-            {total}
-          </span>{" "}
-          product
-          {total === 1
-            ? ""
-            : "s"} found
-        </p>
-      </div>
+function FulfillmentTab() {
+  const [orders, setOrders] = useState<IOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [acting, setActing] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Record<string, { name: string; phone: string }>>({});
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[950px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-4">
-                  Product
-                </th>
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setOrders(await marketplaceService.getAdminOrders());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load marketplace fulfillment.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-                <th className="px-5 py-4">
-                  Seller
-                </th>
+  useEffect(() => {
+    load();
+  }, [load]);
 
-                <th className="px-5 py-4">
-                  Category
-                </th>
+  const rows = useMemo(() => {
+    const activeStatuses = new Set([
+      "ready_for_pickup",
+      "picked_up",
+      "out_for_delivery",
+    ]);
 
-                <th className="px-5 py-4">
-                  Price
-                </th>
+    return orders
+      .filter((order) => order.paymentMethod === "cod" || order.paymentStatus === "paid")
+      .flatMap((order) =>
+        order.fulfillments
+          .filter((fulfillment) => activeStatuses.has(fulfillment.status))
+          .map((fulfillment) => ({ order, fulfillment }))
+      )
+      .sort((a, b) => {
+      const priority = (status: string) =>
+        status === "ready_for_pickup" ? 0 : status === "picked_up" ? 1 : status === "out_for_delivery" ? 2 : 3;
+      return priority(a.fulfillment.status) - priority(b.fulfillment.status);
+    });
+  }, [orders]);
 
-                <th className="px-5 py-4">
-                  Quantity
-                </th>
+  const advance = async (order: IOrder, fulfillment: IOrderFulfillment) => {
+    const next =
+      fulfillment.status === "ready_for_pickup"
+        ? "picked_up"
+        : fulfillment.status === "picked_up"
+          ? "out_for_delivery"
+          : fulfillment.status === "out_for_delivery"
+            ? "delivered"
+            : null;
+    if (!next) return;
 
-                <th className="px-5 py-4">
-                  Status
-                </th>
+    const key = `${order._id}:${fulfillment.sellerId}`;
+    const agent = agents[key] || { name: "", phone: "" };
+    if (next === "picked_up" && !agent.name.trim()) {
+      setError("Enter the assigned collection agent name before marking items picked up.");
+      return;
+    }
 
-                <th className="px-5 py-4 text-right">
-                  Action
-                </th>
-              </tr>
-            </thead>
+    try {
+      setActing(key);
+      setError("");
+      const updated = await marketplaceService.updateAdminFulfillment(
+        order._id,
+        fulfillment.sellerId,
+        next,
+        next === "picked_up" ? { name: agent.name.trim(), phone: agent.phone.trim() } : fulfillment.deliveryPartner
+      );
+      setOrders((current) => current.map((item) => item._id === updated._id ? updated : item));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update fulfillment.");
+    } finally {
+      setActing(null);
+    }
+  };
 
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="py-16 text-center"
-                  >
-                    <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Loading marketplace products...
-                    </div>
-                  </td>
-                </tr>
-              ) : products.length ===
-                0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="py-16 text-center"
-                  >
-                    <div className="mx-auto flex max-w-sm flex-col items-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                        <Package className="h-6 w-6" />
-                      </div>
+  if (loading) return <div className="rounded-2xl border bg-white"><Spinner /></div>;
 
-                      <p className="font-semibold text-slate-800">
-                        No products found
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        Try changing the filters or search term.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                products.map(
-                  (product) => (
-                    <tr
-                      key={product._id}
-                      className="transition hover:bg-slate-50/60"
-                    >
-                      {/* Product */}
-                      <td className="px-5 py-4">
-                        <div className="flex min-w-[250px] items-center gap-3">
-                          {product.images?.[0] ? (
-                            <img
-                              src={
-                                product.images[0]
-                              }
-                              alt={
-                                product.title
-                              }
-                              className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                              <ImageIcon className="h-5 w-5" />
-                            </div>
-                          )}
-
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-900">
-                              {product.title}
-                            </p>
-
-                            <p className="mt-0.5 truncate text-xs text-slate-500">
-                              {product.location ||
-                                product.district ||
-                                "Location not provided"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Seller */}
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-slate-800">
-                          {product.sellerName ||
-                            "Unknown seller"}
-                        </p>
-
-                        <p className="mt-0.5 max-w-[190px] truncate text-xs text-slate-500">
-                          {product.sellerEmail ||
-                            "No email"}
-                        </p>
-                      </td>
-
-                      {/* Category */}
-                      <td className="px-5 py-4">
-                        <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                          {categoryLabel(
-                            product.category
-                          )}
-                        </span>
-                      </td>
-
-                      {/* Price */}
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-emerald-700">
-                          {formatMoney(
-                            Number(
-                              product.price
-                            )
-                          )}
-                        </p>
-
-                        <p className="text-xs text-slate-400">
-                          /{" "}
-                          {product.unit ||
-                            "unit"}
-                        </p>
-                      </td>
-
-                      {/* Quantity */}
-                      <td className="px-5 py-4">
-                        <span className="font-medium text-slate-700">
-                          {product.quantity}{" "}
-                          {product.unit}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-5 py-4">
-                        <StatusBadge
-                          status={
-                            getEffectiveStatus(product)
-                          }
-                        />
-                      </td>
-
-                      {/* Action */}
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openProduct(
-                              product
-                            )
-                          }
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Review
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                )
-              )}
-            </tbody>
-          </table>
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-950">Pickup & Delivery Queue</h2>
+          <p className="mt-1 text-sm text-slate-500">Farmers notify admin when items are ready. Assign a collection agent, then move each seller fulfillment through pickup, delivery and completion.</p>
         </div>
-
-        {/* Pagination */}
-        {!loading &&
-          products.length > 0 && (
-            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-              <p className="text-xs text-slate-500">
-                Page{" "}
-                <span className="font-semibold text-slate-800">
-                  {page}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-slate-800">
-                  {totalPages}
-                </span>
-              </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    page <= 1
-                  }
-                  onClick={() =>
-                    setPage(
-                      (current) =>
-                        Math.max(
-                          current -
-                            1,
-                          1
-                        )
-                    )
-                  }
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </button>
-
-                <button
-                  type="button"
-                  disabled={
-                    page >=
-                    totalPages
-                  }
-                  onClick={() =>
-                    setPage(
-                      (current) =>
-                        Math.min(
-                          current +
-                            1,
-                          totalPages
-                        )
-                    )
-                  }
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+        <button onClick={load} className="rounded-xl border p-2.5 text-slate-600 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /></button>
       </div>
 
-      {/* Product Review */}
-      {selected && (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <div>
-              <h2 className="font-bold text-slate-950">
-                Product Review
-              </h2>
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-              <p className="mt-0.5 text-xs text-slate-400">
-                {selected._id}
-              </p>
-            </div>
+      {!rows.length ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">No marketplace fulfillment activity yet.</div>
+      ) : (
+        <div className="space-y-4">
+          {rows.map(({ order, fulfillment }) => {
+            const key = `${order._id}:${fulfillment.sellerId}`;
+            const next = fulfillment.status === "ready_for_pickup" ? "picked_up" : fulfillment.status === "picked_up" ? "out_for_delivery" : fulfillment.status === "out_for_delivery" ? "delivered" : null;
+            const agent = agents[key] || { name: fulfillment.deliveryPartner?.name || "", phone: fulfillment.deliveryPartner?.phone || "" };
 
-            <button
-              type="button"
-              onClick={() => {
-                setSelected(null);
-                setRejectReason("");
-              }}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Close review"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="grid gap-6 p-5 lg:grid-cols-[320px_1fr]">
-            {/* Image */}
-            <div>
-              {selected.images?.[0] ? (
-                <img
-                  src={
-                    selected.images[0]
-                  }
-                  alt={
-                    selected.title
-                  }
-                  className="h-72 w-full rounded-2xl border border-slate-200 object-cover"
-                />
-              ) : (
-                <div className="flex h-72 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                  <ImageIcon className="h-12 w-12" />
+            return (
+              <article key={key} className={`rounded-2xl border bg-white p-5 shadow-sm ${fulfillment.status === "ready_for_pickup" ? "border-emerald-300 ring-2 ring-emerald-50" : "border-slate-200"}`}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{order.orderNumber}</span>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{pretty(fulfillment.status)}</span>
+                    </div>
+                    <h3 className="mt-3 text-lg font-extrabold text-slate-900">{fulfillment.sellerName}</h3>
+                    <p className="mt-1 text-sm text-slate-500">Pickup: {fulfillment.pickupAddress || "Seller location not provided"}</p>
+                    <p className="mt-1 text-sm text-slate-500">Buyer: {order.customerName} · {order.shippingAddress.district}</p>
+                  </div>
+                  <div className="text-left lg:text-right">
+                    <p className="text-xs uppercase tracking-wide text-slate-400">Seller payout</p>
+                    <p className="mt-1 text-xl font-extrabold text-emerald-700">{money(fulfillment.sellerPayout)}</p>
+                  </div>
                 </div>
-              )}
 
-              <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Seller
-                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {fulfillment.items.map((item) => (
+                    <div key={item.productId} className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                      <p className="font-bold text-slate-800">{item.title}</p>
+                      <p className="mt-1 text-slate-500">{item.quantity} {item.unit} · {money(item.subtotal)}</p>
+                    </div>
+                  ))}
+                </div>
 
-                <p className="mt-1 font-semibold text-slate-900">
-                  {selected.sellerName ||
-                    "Unknown seller"}
-                </p>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {selected.sellerEmail ||
-                    "No email"}
-                </p>
-
-                {selected.sellerContact && (
-                  <p className="mt-1 text-sm text-slate-500">
-                    {selected.sellerContact}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Details */}
-            <div>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      {categoryLabel(
-                        selected.category
-                      )}
-                    </span>
-
-                    <StatusBadge
-                      status={
-                        getEffectiveStatus(selected)
-                      }
+                {fulfillment.status === "ready_for_pickup" && (
+                  <div className="mt-5 grid gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 sm:grid-cols-2">
+                    <input
+                      value={agent.name}
+                      onChange={(e) => setAgents((v) => ({ ...v, [key]: { ...agent, name: e.target.value } }))}
+                      placeholder="Collection agent name *"
+                      className="h-11 rounded-xl border border-emerald-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                    />
+                    <input
+                      value={agent.phone}
+                      onChange={(e) => setAgents((v) => ({ ...v, [key]: { ...agent, phone: e.target.value } }))}
+                      placeholder="Agent phone"
+                      className="h-11 rounded-xl border border-emerald-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
-
-                  <h3 className="mt-3 text-2xl font-bold text-slate-950">
-                    {selected.title}
-                  </h3>
-                </div>
-              </div>
-
-              <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                {selected.description ||
-                  "No description provided."}
-              </p>
-
-              {/* Product info */}
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs text-slate-400">
-                    Price
-                  </p>
-
-                  <p className="mt-1 font-bold text-emerald-700">
-                    {formatMoney(
-                      Number(
-                        selected.price
-                      )
-                    )}
-                  </p>
-
-                  <p className="text-xs text-slate-400">
-                    / {selected.unit}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs text-slate-400">
-                    Available Quantity
-                  </p>
-
-                  <p className="mt-1 font-bold text-slate-900">
-                    {selected.quantity}{" "}
-                    {selected.unit}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs text-slate-400">
-                    Production
-                  </p>
-
-                  <p className="mt-1 font-bold capitalize text-slate-900">
-                    {selected.productionMethod}
-                  </p>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Location
-                </p>
-
-                <p className="mt-1 text-sm font-medium text-slate-800">
-                  {[
-                    selected.location,
-                    selected.upazila,
-                    selected.district,
-                    selected.division,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") ||
-                    "Location not provided"}
-                </p>
-              </div>
-
-              {/* Rejection reason */}
-              {selected.rejectionReason && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
-                    Rejection Reason
-                  </p>
-
-                  <p className="mt-1 text-sm text-red-700">
-                    {
-                      selected.rejectionReason
-                    }
-                  </p>
-                </div>
-              )}
-
-              {/* Reject input */}
-              {getEffectiveStatus(selected) ===
-                "pending" && (
-                <div className="mt-5">
-                  <label className="text-sm font-semibold text-slate-800">
-                    Rejection reason
-                  </label>
-
-                  <textarea
-                    value={
-                      rejectReason
-                    }
-                    onChange={(event) =>
-                      setRejectReason(
-                        event.target.value
-                      )
-                    }
-                    rows={3}
-                    placeholder="Explain why this product is being rejected..."
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  />
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="mt-6 flex flex-wrap gap-2">
-                {getEffectiveStatus(selected) ===
-                  "pending" && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={
-                        !!actionLoading
-                      }
-                      onClick={() =>
-                        handleAction(
-                          "approve",
-                          selected
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
-                    >
-                      {actionLoading ===
-                      `approve-${selected._id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                      Approve
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={
-                        !!actionLoading
-                      }
-                      onClick={() =>
-                        handleAction(
-                          "reject",
-                          selected
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
-                    >
-                      {actionLoading ===
-                      `reject-${selected._id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                      Reject
-                    </button>
-                  </>
                 )}
 
-                {(getEffectiveStatus(selected) ===
-                  "available" ||
-                  getEffectiveStatus(selected) ===
-                    "out_of_stock") && (
+                {next && (
                   <button
                     type="button"
-                    disabled={
-                      !!actionLoading
-                    }
-                    onClick={() =>
-                      handleAction(
-                        "disable",
-                        selected
-                      )
-                    }
-                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                    disabled={acting === key}
+                    onClick={() => advance(order, fulfillment)}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-50"
                   >
-                    {actionLoading ===
-                    `disable-${selected._id}` ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ShieldOff className="h-4 w-4" />
-                    )}
-                    Disable
+                    <Truck className="h-4 w-4" />
+                    {acting === key ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-label="Updating fulfillment" /> : next === "picked_up" ? "Assign agent & mark picked up" : `Mark ${pretty(next)}`}
                   </button>
                 )}
 
-                {(getEffectiveStatus(selected) ===
-                  "disabled" ||
-                  getEffectiveStatus(selected) ===
-                    "rejected") && (
-                  <button
-                    type="button"
-                    disabled={
-                      !!actionLoading
-                    }
-                    onClick={() =>
-                      handleAction(
-                        "restore",
-                        selected
-                      )
-                    }
-                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
-                  >
-                    {actionLoading ===
-                    `restore-${selected._id}` ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Restore
-                  </button>
+                {fulfillment.status === "delivered" && (
+                  <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4" /> Delivery complete
+                  </div>
                 )}
-
-                <button
-                  type="button"
-                  disabled={
-                    !!actionLoading
-                  }
-                  onClick={() =>
-                    handleAction(
-                      "remove",
-                      selected
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                >
-                  {actionLoading ===
-                  `remove-${selected._id}` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  Remove
-                </button>
-              </div>
-            </div>
-          </div>
+              </article>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+function Metric({ label, value, tone }: { label: string; value: number; tone: "emerald" | "amber" | "red" }) {
+  const cls = tone === "emerald" ? "bg-emerald-50 text-emerald-700" : tone === "amber" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
+  const Icon = tone === "emerald" ? ShieldCheck : tone === "amber" ? AlertTriangle : Ban;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${cls}`}><Icon className="h-5 w-5" /></div>
+      <p className="mt-4 text-2xl font-extrabold text-slate-950">{value.toLocaleString("en-BD")}</p>
+      <p className="mt-1 text-sm text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-bold text-slate-800">{value}</p>
     </div>
   );
 }

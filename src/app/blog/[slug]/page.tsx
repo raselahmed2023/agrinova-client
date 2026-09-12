@@ -1,280 +1,96 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import {
-  FaRegCalendar,
-  FaRegClock,
-  FaArrowLeft,
-} from "react-icons/fa";
+import { FormEvent, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Eye, Loader2, MessageCircle, Reply } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { addBlogComment, addBlogReply, getBlogByIdOrSlug } from "@/services/blog.service";
+import type { IBlog, IBlogComment } from "@/types/blog";
 
-import {
-  getBlogs,
-  getBlogByIdOrSlug,
-} from "@/services/blog.service";
+export default function BlogDetailsPage() {
+  const params = useParams<{ slug: string }>();
+  const [blog, setBlog] = useState<IBlog | null>(null);
+  const [comments, setComments] = useState<IBlogComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [replyText, setReplyText] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-import type { IBlog } from "@/types/blog";
-
-interface BlogPageProps {
-  params: Promise<{
-    slug: string;
-  }>;
-}
-
-
-
-export async function generateStaticParams() {
-  const result = await getBlogs({
-    status: "PUBLISHED",
-    limit: 100,
-  });
-
-  return result.blogs.map((post: IBlog) => ({
-    slug: post.slug,
-  }));
-}
-
-
-
-export async function generateMetadata({
-  params,
-}: BlogPageProps) {
-  const { slug } = await params;
-
-  const result = await getBlogByIdOrSlug(slug);
-
-  const post = result.blog;
-
-  if (!post) {
-    return {
-      title: "Blog Post Not Found",
-    };
-  }
-
-  return {
-    title: post.title,
-    description: post.summary,
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await getBlogByIdOrSlug(params.slug);
+      setBlog(result.blog);
+      setComments(result.blog.comments || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load article");
+    } finally {
+      setLoading(false);
+    }
   };
-}
 
+  useEffect(() => { void load(); }, [params.slug]);
 
+  const submitComment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!blog || !commentText.trim()) return;
+    try {
+      setSubmitting(true);
+      const created = await addBlogComment(blog._id, commentText.trim());
+      setComments((current) => [...current, created]);
+      setCommentText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Please sign in to comment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-function getAuthorAvatar(post: IBlog) {
-  return (
-    post.author?.avatar ||
-    "/images/default-avatar.png"
-  );
-}
+  const submitReply = async (commentId: string) => {
+    if (!blog || !replyText[commentId]?.trim()) return;
+    try {
+      setSubmitting(true);
+      const created = await addBlogReply(blog._id, commentId, replyText[commentId].trim());
+      setComments((current) => current.map((comment) => comment._id === commentId ? { ...comment, replies: [...(comment.replies || []), created] } : comment));
+      setReplyText((current) => ({ ...current, [commentId]: "" }));
+      setReplyingTo(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Please sign in to reply");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-function getCoverImage(post: IBlog) {
-  return (
-    post.images?.[0] ||
-    "/images/marketplace-bg.jpg"
-  );
-}
-
-
-
-export default async function SingleBlogPage({
-  params,
-}: BlogPageProps) {
-  const { slug } = await params;
-
-  const result = await getBlogByIdOrSlug(slug);
-
-  const post = result.blog;
-
-  if (!post) {
-    notFound();
-  }
-
-  const relatedPosts: IBlog[] = [];
-
-  /*
-   * Get a few published blogs for the "More Articles" section.
-   * The current post is excluded.
-   */
-  try {
-    const blogsResult = await getBlogs({
-      status: "PUBLISHED",
-      limit: 3,
-    });
-
-    relatedPosts.push(
-      ...blogsResult.blogs
-        .filter((blog: IBlog) => blog.slug !== post.slug)
-        .slice(0, 2)
-    );
-  } catch {
-    // Related posts are optional.
-  }
+  if (loading) return <div className="flex min-h-[65vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-emerald-700" /></div>;
+  if (!blog) return <div className="mx-auto max-w-3xl p-10 text-center text-red-700">{error || "Article not found"}</div>;
 
   return (
-    <article className="w-full bg-[#F7F8FC] px-5 py-14 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-3xl">
+    <main className="bg-slate-50 py-10">
+      <article className="mx-auto max-w-4xl px-4 sm:px-6">
+        <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700"><ArrowLeft className="h-4 w-4" />Back to blog</Link>
+        <header className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-9">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{blog.category}</span><span>{blog.readTime}</span><span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" />{blog.views}</span></div>
+          <h1 className="mt-4 text-3xl font-black leading-tight text-slate-950 md:text-5xl">{blog.title}</h1>
+          <p className="mt-4 text-lg leading-8 text-slate-600">{blog.summary}</p>
+          <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 font-black text-emerald-800">{blog.author.name.charAt(0)}</div><div><p className="font-black text-slate-900">{blog.author.name}</p><p className="text-sm text-slate-500">{blog.author.title || "Agricultural Expert"}</p></div></div>
+        </header>
 
-        {/* Back to Blog */}
-        <Link
-          href="/blog"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#063d2d] hover:underline"
-        >
-          <FaArrowLeft className="h-3 w-3" />
-          Back to Blog
-        </Link>
+        {blog.images[0] && <img src={blog.images[0]} alt={blog.title} className="mt-7 max-h-[540px] w-full rounded-3xl object-cover shadow-sm" />}
 
-        {/* Category */}
-        <span className="mt-6 block text-xs font-bold tracking-wide text-[#0a9b4e]">
-          {post.category}
-        </span>
+        <div className="prose prose-slate mt-7 max-w-none rounded-3xl border border-slate-200 bg-white p-6 leading-8 shadow-sm md:p-9"><ReactMarkdown>{blog.content}</ReactMarkdown></div>
 
-        {/* Title */}
-        <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-tight text-[#063d2d]">
-          {post.title}
-        </h1>
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="flex items-center gap-3"><MessageCircle className="h-6 w-6 text-emerald-700" /><div><h2 className="text-xl font-black text-slate-950">Discussion</h2><p className="text-sm text-slate-500">Farmers, experts and admins can comment and reply after signing in.</p></div></div>
+          <form onSubmit={submitComment} className="mt-5 flex gap-3"><input value={commentText} onChange={(e) => setCommentText(e.target.value)} maxLength={1500} placeholder="Ask a question or share an experience..." className="min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-600" /><button disabled={submitting || !commentText.trim()} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-50">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Comment"}</button></form>
+          {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
 
-        {/* Author + Meta */}
-        <div className="mt-5 flex flex-wrap items-center gap-4">
-
-          {/* Author */}
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-full">
-              <Image
-                src={getAuthorAvatar(post)}
-                alt={post.author?.name || "Author"}
-                fill
-                className="object-cover"
-              />
-            </div>
-
-            <span className="text-sm font-semibold text-[#0b241c]">
-              {post.author?.name || "AgriNova Expert"}
-            </span>
-          </div>
-
-          {/* Date */}
-          <span className="flex items-center gap-1.5 text-xs text-[#46605a]">
-            <FaRegCalendar className="h-3 w-3" />
-
-            {new Date(post.createdAt).toLocaleDateString(
-              "en-US",
-              {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }
-            )}
-          </span>
-
-          {/* Read Time */}
-          <span className="flex items-center gap-1.5 text-xs text-[#46605a]">
-            <FaRegClock className="h-3 w-3" />
-            {post.readTime || "5 min read"}
-          </span>
-        </div>
-
-        {/* Cover Image */}
-        <div className="relative mt-8 aspect-[16/9] w-full overflow-hidden rounded-2xl">
-          <Image
-            src={getCoverImage(post)}
-            alt={post.title}
-            fill
-            priority
-            className="object-cover"
-          />
-        </div>
-
-        {/* Summary */}
-        {post.summary && (
-          <p className="mt-8 text-lg font-medium leading-relaxed text-[#29443c]">
-            {post.summary}
-          </p>
-        )}
-
-        {/* Article Content */}
-        <div className="mt-8 flex flex-col gap-5">
-          {post.content
-            .split(/\n\s*\n/)
-            .filter((paragraph) => paragraph.trim())
-            .map(
-              (
-                paragraph: string,
-                index: number
-              ) => (
-                <p
-                  key={index}
-                  className="whitespace-pre-line text-[15px] leading-relaxed text-[#3f5650] sm:text-base"
-                >
-                  {paragraph.trim()}
-                </p>
-              )
-            )}
-        </div>
-
-        {/* Tags */}
-        {post.tags?.length > 0 && (
-          <div className="mt-10 flex flex-wrap gap-2">
-            {post.tags.map((tag: string) => (
-              <span
-                key={tag}
-                className="rounded-full bg-[#EAF4ED] px-3 py-1 text-xs font-medium text-[#0B513D]"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Related Posts */}
-        {relatedPosts.length > 0 && (
-          <div className="mt-16 border-t border-[#c7d3d1] pt-10">
-
-            <h2 className="text-xl font-bold text-[#063d2d]">
-              More Articles
-            </h2>
-
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {relatedPosts.map(
-                (related: IBlog) => (
-                  <Link
-                    key={related._id}
-                    href={`/blog/${related.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-[#c7d3d1] bg-white transition hover:shadow-md"
-                  >
-                    {/* Image */}
-                    <div className="relative h-40 w-full">
-                      <Image
-                        src={
-                          related.images?.[0] ||
-                          "/images/marketplace-bg.jpg"
-                        }
-                        alt={related.title}
-                        fill
-                        className="object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-5">
-                      <span className="text-xs font-bold text-[#0a9b4e]">
-                        {related.category}
-                      </span>
-
-                      <h3 className="mt-1 text-sm font-bold leading-snug text-[#0b241c] group-hover:text-[#063d2d]">
-                        {related.title}
-                      </h3>
-
-                      {related.summary && (
-                        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#60756f]">
-                          {related.summary}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                )
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </article>
+          <div className="mt-7 space-y-5">{comments.length === 0 ? <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">No comments yet. Start the discussion.</p> : comments.map((comment) => <div key={comment._id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="flex items-center justify-between gap-3"><div><p className="font-black text-slate-900">{comment.userName}</p><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{comment.userRole}</p></div><button onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)} className="inline-flex items-center gap-1 text-sm font-bold text-slate-600"><Reply className="h-4 w-4" />Reply</button></div><p className="mt-3 text-sm leading-6 text-slate-700">{comment.content}</p>{comment.replies?.length > 0 && <div className="mt-4 space-y-3 border-l-2 border-emerald-100 pl-4">{comment.replies.map((reply) => <div key={reply._id} className="rounded-xl bg-white p-3"><p className="text-sm font-black text-slate-900">{reply.userName} <span className="ml-2 text-[10px] uppercase text-emerald-700">{reply.userRole}</span></p><p className="mt-1 text-sm text-slate-600">{reply.content}</p></div>)}</div>}{replyingTo === comment._id && <div className="mt-4 flex gap-2"><input value={replyText[comment._id] || ""} onChange={(e) => setReplyText((current) => ({ ...current, [comment._id]: e.target.value }))} maxLength={1000} placeholder="Write a reply..." className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-600" /><button disabled={submitting || !replyText[comment._id]?.trim()} onClick={() => void submitReply(comment._id)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Reply</button></div>}</div>)}</div>
+        </section>
+      </article>
+    </main>
   );
 }

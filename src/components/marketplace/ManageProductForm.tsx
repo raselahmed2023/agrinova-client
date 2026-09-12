@@ -77,20 +77,20 @@ const STATUS_STYLES: Record<
   }
 > = {
   pending: {
-    label: "Pending review",
+    label: "Legacy listing",
     className:
       "border-amber-200 bg-amber-50 text-amber-800",
     icon: Clock3,
     message:
-      "This listing is waiting for admin approval and is not public yet.",
+      "This is a legacy listing from the previous approval workflow. Saving it will publish it automatically when stock is available.",
   },
   available: {
-    label: "Approved & live",
+    label: "Live",
     className:
       "border-emerald-200 bg-emerald-50 text-emerald-800",
     icon: ShieldCheck,
     message:
-      "This listing is live. Content, price, image or location changes will send it back for admin review. Stock/contact-only changes can stay live.",
+      "This listing is live. Farmer edits publish immediately; AgriNova may hide or remove listings that violate marketplace rules.",
   },
   out_of_stock: {
     label: "Out of stock",
@@ -98,15 +98,7 @@ const STATUS_STYLES: Record<
       "border-orange-200 bg-orange-50 text-orange-800",
     icon: AlertTriangle,
     message:
-      "This listing is approved but currently out of stock. Increase stock to make it available again.",
-  },
-  rejected: {
-    label: "Rejected",
-    className:
-      "border-rose-200 bg-rose-50 text-rose-800",
-    icon: AlertTriangle,
-    message:
-      "Update the rejected listing and save it to submit the corrected content for review again.",
+      "This listing is out of stock. Increase quantity and save to make it live again.",
   },
   disabled: {
     label: "Disabled by admin",
@@ -176,12 +168,7 @@ export default function ManageProductForm({
     [form.division, form.district]
   );
 
-  const effectiveStatus =
-    !product.approvedAt &&
-    (product.status === "available" ||
-      product.status === "out_of_stock")
-      ? "pending"
-      : product.status;
+  const effectiveStatus = product.status;
 
   const status =
     STATUS_STYLES[effectiveStatus] ||
@@ -315,9 +302,11 @@ export default function ManageProductForm({
       );
 
       setSuccess(
-        updated.status === "pending"
-          ? "Changes saved. This listing is now waiting for admin review."
-          : "Product updated successfully."
+        updated.status === "disabled"
+          ? "Changes saved. This listing remains hidden until AgriNova moderation restores it."
+          : updated.status === "out_of_stock"
+            ? "Changes saved. This listing is out of stock."
+            : "Changes saved and published immediately."
       );
 
       if (onSaved) {
@@ -403,10 +392,10 @@ export default function ManageProductForm({
           </div>
         </div>
 
-        {product.rejectionReason && (
+        {(product.moderationReason || product.rejectionReason) && (
           <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             <p className="font-bold">Admin feedback</p>
-            <p className="mt-1">{product.rejectionReason}</p>
+            <p className="mt-1">{product.moderationReason || product.rejectionReason}</p>
           </div>
         )}
 
@@ -508,7 +497,7 @@ export default function ManageProductForm({
 
             <Section
               title="Price & inventory"
-              description="Stock-only changes on an approved product do not require a new content review."
+              description="Update stock at any time. Positive stock makes an active listing available immediately."
             >
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Transaction">
@@ -770,7 +759,7 @@ export default function ManageProductForm({
                 Save changes
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                Approved listings remain editable. Changes that affect what buyers see are sent to admin review again.
+                Your live listings remain editable. Changes publish immediately unless the listing has been hidden by AgriNova moderation.
               </p>
 
               <button
@@ -779,7 +768,7 @@ export default function ManageProductForm({
                 className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                {saving ? "Saving..." : "Save Product"}
+                {saving ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-label="Saving product" /> : "Save Product"}
               </button>
 
               <button
@@ -789,7 +778,7 @@ export default function ManageProductForm({
                 className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
-                {deleting ? "Deleting..." : "Delete Listing"}
+                {deleting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-700" aria-label="Removing listing" /> : "Delete Listing"}
               </button>
 
               <Link

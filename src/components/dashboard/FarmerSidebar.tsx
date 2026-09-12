@@ -24,6 +24,7 @@ import {
   Package,
   TrendingUp,
   WalletCards,
+  UsersRound,
   X,
 } from "lucide-react";
 

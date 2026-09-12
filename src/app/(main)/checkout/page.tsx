@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
     items,
     subtotal,
     clearCart,
+    refreshCart,
     loading: cartLoading,
   } = useCart();
 
@@ -69,6 +71,14 @@ export default function CheckoutPage() {
 
   const [error, setError] =
     useState("");
+
+  useEffect(() => {
+    if (!cartLoading) {
+      refreshCart().catch(() => undefined);
+    }
+    // Refresh persisted product stock once before checkout.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartLoading]);
 
   const updateAddress = (
     key: keyof IShippingAddress,
@@ -137,42 +147,13 @@ export default function CheckoutPage() {
             order._id
           );
 
-        console.log(
-          "STRIPE CHECKOUT RESPONSE:",
-          stripe
-        );
-
-        const stripeData =
-          stripe as {
-            checkoutUrl?: string;
-            url?: string;
-            sessionUrl?: string;
-            data?: {
-              checkoutUrl?: string;
-              url?: string;
-              sessionUrl?: string;
-            };
-          };
-
-        const checkoutUrl =
-          stripeData.checkoutUrl ||
-          stripeData.url ||
-          stripeData.sessionUrl ||
-          stripeData.data
-            ?.checkoutUrl ||
-          stripeData.data?.url ||
-          stripeData.data
-            ?.sessionUrl;
-
-        if (!checkoutUrl) {
+        if (!stripe.url) {
           throw new Error(
             "Stripe checkout URL was not returned by the server."
           );
         }
 
-        window.location.assign(
-          checkoutUrl
-        );
+        window.location.assign(stripe.url);
 
         return;
       }
@@ -473,12 +454,16 @@ export default function CheckoutPage() {
                 }
                 className="w-full rounded-xl bg-emerald-700 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading
-                  ? "Processing..."
-                  : paymentMethod ===
-                    "card"
-                    ? "Continue to Secure Payment"
-                    : "Place COD Order"}
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    Processing
+                  </span>
+                ) : paymentMethod === "card" ? (
+                  "Continue to Secure Payment"
+                ) : (
+                  "Place COD Order"
+                )}
               </button>
 
             </form>
@@ -670,3 +655,4 @@ function PaymentOption({
     </button>
   );
 }
+

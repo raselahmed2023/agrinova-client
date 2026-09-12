@@ -8,14 +8,14 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarDays,
-  HandCoins,
+  CircleDollarSign,
   Landmark,
+  Loader2,
   MapPin,
-  PieChart,
   ShieldCheck,
   Sprout,
-  TrendingUp,
   UserRound,
+  WalletCards,
 } from "lucide-react";
 
 import { useSession } from "@/lib/auth-client";
@@ -54,7 +54,7 @@ export default function InvestmentProjectDetailsPage() {
     return { progress: Math.min(100, Math.round((funded / goal) * 100)), remaining: Math.max(0, goal - funded) };
   }, [project]);
 
-  if (loading) return <main className="min-h-screen bg-slate-50 px-4 py-24 text-center text-sm text-slate-500">Loading project...</main>;
+  if (loading) return <main className="flex min-h-[65vh] items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-emerald-700" /></main>;
 
   if (error || !project) {
     return (
@@ -114,9 +114,9 @@ export default function InvestmentProjectDetailsPage() {
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 [CalendarDays, "Duration", `${project.durationMonths} months`],
-                [TrendingUp, "Estimated return", `${project.expectedReturnPercent}%`],
-                [PieChart, "Investor share", `${project.investorSharePercent}%`],
-                [HandCoins, "Farmer contribution", formatMoney(project.ownContribution)],
+                [WalletCards, "Minimum investment", formatMoney(project.minimumInvestment)],
+                [CircleDollarSign, "Funding goal", formatMoney(project.requiredInvestment)],
+                [CircleDollarSign, "Already funded", formatMoney(project.fundedAmount)],
               ].map(([Icon, label, value]) => {
                 const MetricIcon = Icon as typeof CalendarDays;
                 return <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5"><MetricIcon className="h-5 w-5 text-emerald-700" /><p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">{String(label)}</p><p className="mt-1 text-lg font-black text-slate-900">{String(value)}</p></div>;
@@ -124,7 +124,7 @@ export default function InvestmentProjectDetailsPage() {
             </section>
 
             <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-950">
-              <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-black">Important investment notice</p><p className="mt-1">Admin approval verifies the platform workflow and submitted project record; it does not guarantee profit or eliminate agricultural/business risk. Return figures are estimates.</p></div></div>
+              <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-black">Important investment notice</p><p className="mt-1">Admin approval verifies the submitted project and platform workflow. Agricultural and business investments still involve risk; review the project information before committing funds.</p></div></div>
             </section>
           </div>
 
@@ -138,7 +138,7 @@ export default function InvestmentProjectDetailsPage() {
 
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Minimum investment</p><p className="mt-1 font-black text-slate-900">{formatMoney(project.minimumInvestment)}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Estimated return</p><p className="mt-1 font-black text-slate-900">{project.expectedReturnPercent}%</p></div>
+                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Duration</p><p className="mt-1 font-black text-slate-900">{project.durationMonths} months</p></div>
               </div>
 
               <div className="mt-6">

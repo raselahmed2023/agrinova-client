@@ -1,3 +1,4 @@
+
 import { apiRequest } from "./api.client";
 
 import type {
@@ -6,68 +7,64 @@ import type {
   IStripeSession,
 } from "@/types/marketplace";
 
-export async function createOrder(
+export const createOrder = (
   payload: ICreateOrderPayload
-): Promise<IOrder> {
-  return apiRequest<IOrder>(
+) =>
+  apiRequest<IOrder>(
     "/orders",
     "POST",
     payload
   );
-}
 
-export async function getMyOrders(): Promise<IOrder[]> {
-  return apiRequest<IOrder[]>(
+export const getMyOrders = () =>
+  apiRequest<IOrder[]>(
     "/orders/my"
   );
-}
 
-export async function getMyOrderById(
+export const getMyOrderById = (
   orderId: string
-): Promise<IOrder> {
-  return apiRequest<IOrder>(
-    `/orders/my/${orderId}`
+) =>
+  apiRequest<IOrder>(
+    `/orders/my/${encodeURIComponent(
+      orderId
+    )}`
   );
-}
 
-export async function getSellerOrders(): Promise<IOrder[]> {
-  return apiRequest<IOrder[]>(
+export const getSellerOrders = () =>
+  apiRequest<IOrder[]>(
     "/orders/seller"
   );
-}
 
-export async function updateSellerFulfillment(
+export const updateSellerFulfillment = (
   orderId: string,
   status:
     | "confirmed"
     | "processing"
     | "ready_for_pickup"
-): Promise<IOrder> {
-  return apiRequest<IOrder>(
-    `/orders/seller/${orderId}/fulfillment`,
+) =>
+  apiRequest<IOrder>(
+    `/orders/seller/${encodeURIComponent(
+      orderId
+    )}/fulfillment`,
     "PATCH",
-    {
-      status,
-    }
+    { status }
   );
-}
 
-export async function createStripeCheckoutSession(
+export const createStripeCheckoutSession = (
   orderId: string
-): Promise<IStripeSession> {
-  return apiRequest<IStripeSession>(
+) =>
+  apiRequest<IStripeSession>(
     "/payments/stripe/checkout-session",
     "POST",
     {
       orderId,
     }
   );
-}
 
-export async function getStripeCheckoutSession(
+export const getStripeCheckoutSession = (
   sessionId: string
-) {
-  return apiRequest<{
+) =>
+  apiRequest<{
     sessionId: string;
     paymentStatus: string;
     status: string | null;
@@ -79,7 +76,30 @@ export async function getStripeCheckoutSession(
       sessionId
     )}`
   );
-}
+
+export const getStripePaymentStatus = (
+  orderId: string
+) =>
+  apiRequest<{
+    orderId: string;
+    orderNumber: string;
+    paymentStatus: string;
+    paymentReference?: string;
+  }>(
+    `/payments/stripe/status/${encodeURIComponent(
+      orderId
+    )}`
+  );
+
+export const cancelStripeOrder = (
+  orderId: string
+) =>
+  apiRequest<IOrder>(
+    `/payments/stripe/cancel/${encodeURIComponent(
+      orderId
+    )}`,
+    "POST"
+  );
 
 export const OrderService = {
   createOrder,
@@ -89,4 +109,6 @@ export const OrderService = {
   updateSellerFulfillment,
   createStripeCheckoutSession,
   getStripeCheckoutSession,
+  getStripePaymentStatus,
+  cancelStripeOrder,
 };

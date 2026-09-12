@@ -23,11 +23,33 @@ export default function AgentEgg() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [attentionJump, setAttentionJump] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, open]);
+
+  useEffect(() => {
+    if (open) {
+      setAttentionJump(false);
+      return;
+    }
+
+    let resetTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const jump = () => {
+      setAttentionJump(true);
+      resetTimer = setTimeout(() => setAttentionJump(false), 900);
+    };
+
+    const interval = setInterval(jump, 10_000);
+
+    return () => {
+      clearInterval(interval);
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [open]);
 
   const send = async (raw: string) => {
     const text = raw.trim();
@@ -106,7 +128,14 @@ export default function AgentEgg() {
         </section>
       )}
 
-      <button type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? "Close Agent Egg" : "Open Agent Egg"} className="group flex items-center gap-3 rounded-full bg-[#063d2e] p-2.5 pr-4 text-white shadow-xl shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-[#0a4d3a]">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label={open ? "Close Agent Egg" : "Open Agent Egg"}
+        className={`group flex items-center gap-3 rounded-full bg-[#063d2e] p-2.5 pr-4 text-white shadow-xl shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-[#0a4d3a] ${
+          attentionJump ? "motion-safe:animate-bounce" : ""
+        }`}
+      >
         <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-amber-50 to-amber-100 text-emerald-800"><span className="absolute inset-x-2 top-2 h-2 rounded-full bg-white/70" />{open ? <X className="relative h-5 w-5" /> : <MessageCircle className="relative h-5 w-5" />}</span>
         <span className="hidden text-left sm:block"><span className="block text-xs font-black">Agent Egg</span><span className="block text-[10px] text-emerald-100/70">Ask AgriNova</span></span>
       </button>

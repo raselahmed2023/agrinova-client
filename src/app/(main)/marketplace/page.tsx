@@ -39,8 +39,8 @@ export default function MarketplacePage() {
       fallback={
         <main className="min-h-screen bg-[#f5f8f2]">
           <div className="flex min-h-[70vh] items-center justify-center">
-            <div className="rounded-2xl bg-white px-8 py-6 text-sm text-slate-500 shadow-sm">
-              Loading marketplace...
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm" aria-label="Loading marketplace">
+              <span className="h-7 w-7 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
             </div>
           </div>
         </main>
@@ -413,7 +413,7 @@ function MarketplaceContent() {
                 <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-white/70 bg-white/75 px-4 py-3 text-sm text-slate-600 backdrop-blur-sm">
                   <span>
                     <strong className="text-slate-900">{total}</strong>{" "}
-                    {total === 1 ? "approved product" : "approved products"} found
+                    {total === 1 ? "product" : "products"} found
                   </span>
                   <span>Page {page} of {totalPages}</span>
                 </div>

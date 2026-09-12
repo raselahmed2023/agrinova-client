@@ -8,46 +8,47 @@ export interface IBlogAuthor {
   bio?: string;
 }
 
+export interface IBlogReply {
+  _id: string;
+  userId: string;
+  userName: string;
+  userRole: "FARMER" | "EXPERT" | "ADMIN";
+  content: string;
+  createdAt: string;
+}
+
+export interface IBlogComment {
+  _id: string;
+  userId: string;
+  userName: string;
+  userRole: "FARMER" | "EXPERT" | "ADMIN";
+  content: string;
+  replies: IBlogReply[];
+  createdAt: string;
+}
+
 export interface IBlog {
   _id: string;
-  id?: string;
   title: string;
   slug: string;
   category: string;
   tags: string[];
   summary: string;
   content: string;
-  images: string[]; // 1 to 2 images
+  images: string[];
   readTime: string;
   author: IBlogAuthor;
   status: "PUBLISHED" | "DRAFT";
   views: number;
+  comments?: IBlogComment[];
   createdAt: string;
   updatedAt?: string;
 }
 
 export interface IBlogSingleResponse {
   blog: IBlog;
-  nextBlog?: {
-    _id: string;
-    slug: string;
-    title: string;
-    summary: string;
-    images: string[];
-    readTime: string;
-    category: string;
-    author: IBlogAuthor;
-  } | null;
-  prevBlog?: {
-    _id: string;
-    slug: string;
-    title: string;
-    summary: string;
-    images: string[];
-    readTime: string;
-    category: string;
-    author: IBlogAuthor;
-  } | null;
+  nextBlog?: Pick<IBlog, "_id" | "slug" | "title" | "summary" | "images" | "readTime" | "category" | "author"> | null;
+  prevBlog?: Pick<IBlog, "_id" | "slug" | "title" | "summary" | "images" | "readTime" | "category" | "author"> | null;
 }
 
 export interface IBlogFormData {
@@ -57,6 +58,5 @@ export interface IBlogFormData {
   summary: string;
   content: string;
   images: string[];
-  readTime?: string;
   status?: "PUBLISHED" | "DRAFT";
 }

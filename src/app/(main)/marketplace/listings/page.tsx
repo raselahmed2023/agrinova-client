@@ -48,13 +48,13 @@ type StatusView = {
 
 const STATUS_CONFIG: Record<ProductStatus, StatusView> = {
   pending: {
-    label: "Pending review",
+    label: "Legacy listing",
     badge: "border-amber-200 bg-amber-50 text-amber-700",
     icon: Clock3,
-    help: "Waiting for admin approval.",
+    help: "Legacy status. Edit and save to publish under the new instant-listing flow.",
   },
   available: {
-    label: "Approved & live",
+    label: "Live",
     badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
     icon: CheckCircle2,
     help: "Visible in the public marketplace.",
@@ -63,13 +63,7 @@ const STATUS_CONFIG: Record<ProductStatus, StatusView> = {
     label: "Out of stock",
     badge: "border-orange-200 bg-orange-50 text-orange-700",
     icon: AlertCircle,
-    help: "Approved, but currently unavailable to buy.",
-  },
-  rejected: {
-    label: "Needs changes",
-    badge: "border-rose-200 bg-rose-50 text-rose-700",
-    icon: AlertCircle,
-    help: "Review the admin feedback and edit the listing.",
+    help: "Currently unavailable because stock is zero.",
   },
   disabled: {
     label: "Disabled",
@@ -84,7 +78,6 @@ const FILTERS: { value: ListingFilter; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "available", label: "Live" },
   { value: "out_of_stock", label: "Out of stock" },
-  { value: "rejected", label: "Needs changes" },
   { value: "disabled", label: "Disabled" },
 ];
 
@@ -112,14 +105,6 @@ function formatDate(value?: string) {
 }
 
 const getEffectiveStatus = (product: IProduct): ProductStatus => {
-  if (
-    !product.approvedAt &&
-    (product.status === "available" ||
-      product.status === "out_of_stock")
-  ) {
-    return "pending";
-  }
-
   return product.status;
 };
 
@@ -146,7 +131,6 @@ export default function MyListingsPage() {
         "pending",
         "available",
         "out_of_stock",
-        "rejected",
         "disabled",
       ];
 
@@ -285,7 +269,7 @@ export default function MyListingsPage() {
             Login required
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Sign in to manage the products you have submitted to the marketplace.
+            Sign in to manage the products you have published in the marketplace.
           </p>
           <Link
             href="/login?redirect=/marketplace/listings"
@@ -321,7 +305,7 @@ export default function MyListingsPage() {
                     My marketplace listings
                   </h1>
                   <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                    Submit products, follow admin review, update approved stock, and fix rejected listings from one place.
+                    Publish products instantly, manage stock, edit listings, and review any moderation notices from one place.
                   </p>
                 </div>
               </div>
@@ -443,7 +427,7 @@ export default function MyListingsPage() {
                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                   {search || status !== "all"
                     ? "Try clearing the current search or status filter."
-                    : "Create your first marketplace listing and it will appear here while the admin reviews it."}
+                    : "Create your first marketplace listing and it will appear publicly as soon as it is published."}
                 </p>
                 {!search && status === "all" && (
                   <Link
@@ -462,8 +446,7 @@ export default function MyListingsPage() {
                   const view = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.pending;
                   const StatusIcon = view.icon;
                   const canViewPublic =
-                    Boolean(product.approvedAt) &&
-                    (product.status === "available" || product.status === "out_of_stock");
+                    product.status === "available" || product.status === "out_of_stock";
 
                   return (
                     <article
@@ -506,10 +489,10 @@ export default function MyListingsPage() {
                               {view.help}
                             </p>
 
-                            {product.status === "rejected" && product.rejectionReason && (
+                            {(product.moderationReason || product.rejectionReason) && (
                               <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                                 <span className="font-bold">Admin feedback:</span>{" "}
-                                {product.rejectionReason}
+                                {product.moderationReason || product.rejectionReason}
                               </div>
                             )}
 

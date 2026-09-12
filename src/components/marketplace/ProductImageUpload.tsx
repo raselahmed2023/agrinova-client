@@ -198,9 +198,7 @@ export default function ProductImageUpload({
         </div>
 
         <p className="mt-3 text-sm font-bold text-slate-800">
-          {uploading
-            ? "Uploading image..."
-            : "Upload product images"}
+          Upload product images
         </p>
 
         <p className="mt-1 text-xs text-slate-500">

@@ -21,6 +21,10 @@ import {
 
 const navLinks = [
   {
+    label: "Community",
+    href: "/community",
+  },
+  {
     label: "Marketplace",
     href: "/marketplace",
   },
@@ -37,7 +41,7 @@ const navLinks = [
     href: "/blog",
   },
   {
-    label: "Support",
+    label: "B2B Support",
     href: "/support",
   },
 ];

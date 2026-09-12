@@ -4,9 +4,7 @@ import { auth } from "@/lib/auth";
 
 type UserRole = "FARMER" | "EXPERT" | "ADMIN";
 
-/**
- * Get the correct dashboard for a user's role.
- */
+
 function getDashboardPath(role: UserRole): string {
   switch (role) {
     case "ADMIN":
@@ -21,12 +19,9 @@ function getDashboardPath(role: UserRole): string {
   }
 }
 
-/**
- * Return the role required to access a protected route.
- *
- * null means the route is not role-protected.
- */
-function getRequiredRole(pathname: string): UserRole | null {
+
+
+function getRequiredRole(pathname: string, searchParams: URLSearchParams): UserRole | null {
   // Admin dashboard
   if (
     pathname === "/dashboard/admin" ||
@@ -51,14 +46,12 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Generic dashboard.
-  // It is protected, but the user's role determines
-  // which dashboard they should be sent to.
+ 
   if (pathname === "/dashboard") {
     return null;
   }
 
-  // Checkout
+
   if (
     pathname === "/checkout" ||
     pathname.startsWith("/checkout/")
@@ -66,7 +59,7 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Orders
+ 
   if (
     pathname === "/orders" ||
     pathname.startsWith("/orders/")
@@ -74,7 +67,7 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Seller orders
+ 
   if (
     pathname === "/seller-orders" ||
     pathname.startsWith("/seller-orders/")
@@ -82,7 +75,7 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Sell products
+  
   if (
     pathname === "/marketplace/sell" ||
     pathname.startsWith("/marketplace/sell/")
@@ -90,7 +83,7 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Seller listings
+  
   if (
     pathname === "/marketplace/listings" ||
     pathname.startsWith("/marketplace/listings/")
@@ -98,57 +91,52 @@ function getRequiredRole(pathname: string): UserRole | null {
     return "FARMER";
   }
 
-  // Public investment browsing is allowed, but submitting an investment
-  // decision is a farmer-only action.
+
+  
+  if (
+    /^\/marketplace\/[^/]+$/.test(pathname) &&
+    searchParams.get("edit") === "1"
+  ) {
+    return "FARMER";
+  }
+
+ 
   if (/^\/investment\/[^/]+\/invest(?:\/|$)/.test(pathname)) {
     return "FARMER";
   }
 
-  // Public route
+
+  if (
+    pathname === "/community/profile" ||
+    pathname.startsWith("/community/profile/")
+  ) {
+    return "FARMER";
+  }
+
   return null;
 }
 
-/**
- * Next.js 16 Proxy
- *
- * Protects private routes and redirects users
- * according to their authenticated role.
- */
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  /*
-   * /dashboard is special:
-   * it requires authentication even though
-   * getRequiredRole() returns null for it.
-   */
+ 
   const isGenericDashboard = pathname === "/dashboard";
 
-  const requiredRole = getRequiredRole(pathname);
+  const requiredRole = getRequiredRole(pathname, request.nextUrl.searchParams);
 
-  /*
-   * Completely public route.
-   *
-   * If the route is not protected and is not
-   * the generic dashboard, allow it immediately.
-   */
+  
   if (requiredRole === null && !isGenericDashboard) {
     return NextResponse.next();
   }
 
   try {
-    /*
-     * Use the headers from the actual incoming request.
-     *
-     * Do NOT use next/headers here.
-     */
+   
     const session = await auth.api.getSession({
       headers: request.headers,
     });
 
-    /*
-     * User is not authenticated.
-     */
+    
     if (!session?.user) {
       const loginUrl = new URL("/login", request.url);
 
@@ -159,16 +147,12 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    /*
-     * Get the user's role safely.
-     */
+    
     const rawRole = String(
       session.user.role ?? ""
     ).toUpperCase();
 
-    /*
-     * Make sure the role is one of our supported roles.
-     */
+    
     if (
       rawRole !== "FARMER" &&
       rawRole !== "EXPERT" &&
@@ -186,12 +170,7 @@ export async function proxy(request: NextRequest) {
 
     const role = rawRole as UserRole;
 
-    /*
-     * /dashboard
-     *
-     * Send the user to the dashboard
-     * that matches their role.
-     */
+    
     if (isGenericDashboard) {
       return NextResponse.redirect(
         new URL(
@@ -201,13 +180,7 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    /*
-     * Role-protected route.
-     *
-     * Example:
-     * FARMER trying to access /dashboard/admin
-     * will be redirected to /dashboard/farmer.
-     */
+    
     if (
       requiredRole !== null &&
       role !== requiredRole
@@ -248,12 +221,7 @@ export async function proxy(request: NextRequest) {
   }
 }
 
-/**
- * Routes handled by the Proxy.
- *
- * Public marketplace browsing remains accessible.
- * Only private marketplace actions are protected.
- */
+
 export const config = {
   matcher: [
     "/dashboard",
@@ -274,8 +242,13 @@ export const config = {
     "/marketplace/listings",
     "/marketplace/listings/:path*",
 
-    // Run Proxy for Investment routes; getRequiredRole keeps catalog/detail
-    // public and protects only /investment/:projectId/invest.
+    
+    "/marketplace/:path*",
+
+   
     "/investment/:path*",
+
+   
+    "/community/:path*",
   ],
 };
