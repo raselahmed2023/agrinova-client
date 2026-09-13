@@ -19,9 +19,13 @@ import {
   RefreshCw,
   Edit3,
   CalendarDays,
+  Download,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import { getConsultationById } from "@/services/consultation.service";
 import type { Consultation } from "@/types/consultation";
+import { downloadPrescriptionPDF } from "@/utils/prescriptionPdf";
 import ConsultationStatusBadge, {
   UrgencyBadge,
 } from "@/components/expert/ConsultationStatusBadge";
@@ -29,6 +33,7 @@ import VideoCallButton from "@/components/expert/VideoCallButton";
 import ConsultationCountdownCard from "@/components/consultant/ConsultationCountdownCard";
 import EditConsultationModal from "@/components/consultant/EditConsultationModal";
 import RescheduleConsultationModal from "@/components/consultant/RescheduleConsultationModal";
+import { getConsultationOngoingInfo } from "@/utils/consultationTiming";
 
 export default function FarmerConsultationDetailPage({
   params,
@@ -43,6 +48,14 @@ export default function FarmerConsultationDetailPage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -85,6 +98,15 @@ export default function FarmerConsultationDetailPage({
     );
   }
 
+  const timing = getConsultationOngoingInfo(consultation, now);
+  const isCompleted = consultation.status === "COMPLETED";
+  const isSessionFinished = [
+    "COMPLETED",
+    "CANCELLED",
+    "REJECTED",
+  ].includes(consultation.status);
+  const canReschedule = !isCompleted && (timing.canReschedule || !isSessionFinished);
+
   const scheduledDisplay = consultation.scheduledAt
     ? new Date(consultation.scheduledAt).toLocaleString("en-US", {
         weekday: "short",
@@ -100,6 +122,31 @@ export default function FarmerConsultationDetailPage({
 
   return (
     <div className="min-h-screen bg-slate-50/60 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-5xl mx-auto">
+      {/* Missed / Incomplete Session Alert for Farmer */}
+      {timing.isMissedOrIncomplete && !isCompleted && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-300 text-amber-900 text-xs shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-sm block text-amber-950">
+                Specialist Did Not Mark Complete / Missed Session
+              </span>
+              <span className="text-amber-800 text-xs">
+                The 30-minute consultation window has concluded. You are eligible to reschedule this consultation to a new appointment slot for free.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsRescheduleModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 text-xs font-bold transition shadow-sm shrink-0"
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span>Reschedule Slot</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <Link
@@ -111,23 +158,31 @@ export default function FarmerConsultationDetailPage({
         </Link>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => setIsEditModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
-          >
-            <Edit3 className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Edit Details</span>
-          </button>
+          {!isCompleted && (
+            <>
+              {!isSessionFinished && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex-1 sm:flex-none"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Edit Details</span>
+                </button>
+              )}
 
-          <button
-            type="button"
-            onClick={() => setIsRescheduleModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/80 shadow-sm flex-1 sm:flex-none"
-          >
-            <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
-            <span>Reschedule</span>
-          </button>
+              {canReschedule && (
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduleModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/80 shadow-sm flex-1 sm:flex-none"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>Reschedule</span>
+                </button>
+              )}
+            </>
+          )}
 
           <button
             type="button"
@@ -143,8 +198,8 @@ export default function FarmerConsultationDetailPage({
       {/* 1. Live Countdown & Video Room Hero Card */}
       <ConsultationCountdownCard
         consultation={consultation}
-        onEditDetails={() => setIsEditModalOpen(true)}
-        onReschedule={() => setIsRescheduleModalOpen(true)}
+        onEditDetails={!isSessionFinished ? () => setIsEditModalOpen(true) : undefined}
+        onReschedule={canReschedule ? () => setIsRescheduleModalOpen(true) : undefined}
         onRefresh={loadData}
       />
 
@@ -179,16 +234,18 @@ export default function FarmerConsultationDetailPage({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setIsRescheduleModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
-            >
-              <Calendar className="h-3.5 w-3.5 text-emerald-700" />
-              Change Slot
-            </button>
-          </div>
+          {!isSessionFinished && (
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => setIsRescheduleModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+              >
+                <Calendar className="h-3.5 w-3.5 text-emerald-700" />
+                Change Slot
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Schedule & Crop Meta */}
@@ -225,19 +282,29 @@ export default function FarmerConsultationDetailPage({
       {/* 2. Official Recommendation Card if completed */}
       {(consultation.recommendations || consultation.recommendation) && (
         <div className="rounded-2xl sm:rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/40 via-white to-emerald-50/20 p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-emerald-100">
             <div className="flex items-center gap-2 text-emerald-950 font-bold text-base sm:text-lg">
               <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 shrink-0" />
               <span>Specialist Diagnostic Recommendation</span>
             </div>
-            {consultation.recommendations?.createdAt && (
-              <span className="text-xs text-slate-500">
-                Issued on{" "}
-                {new Date(
-                  consultation.recommendations.createdAt
-                ).toLocaleDateString()}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {consultation.recommendations?.createdAt && (
+                <span className="text-xs text-slate-500 hidden md:inline">
+                  Issued on{" "}
+                  {new Date(
+                    consultation.recommendations.createdAt
+                  ).toLocaleDateString()}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => downloadPrescriptionPDF(consultation)}
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:from-emerald-700 hover:to-teal-800 transition"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Download Prescription (PDF)</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -306,6 +373,10 @@ export default function FarmerConsultationDetailPage({
                 <p className="leading-relaxed">{consultation.recommendations.additionalNotes}</p>
               </div>
             )}
+
+            <div className="pt-3 border-t border-emerald-100/80 text-xs text-slate-500">
+              This digital prescription is officially certified and can be printed or saved for input dealers & cooperatives.
+            </div>
           </div>
         </div>
       )}
@@ -314,17 +385,28 @@ export default function FarmerConsultationDetailPage({
       <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
-              Submitted Issue
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsEditModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl transition"
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Edit Details</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
+                Submitted Issue
+              </span>
+              {isCompleted && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                  <Lock className="h-3 w-3 text-slate-400" />
+                  Locked (Session Completed)
+                </span>
+              )}
+            </div>
+
+            {!isSessionFinished && (
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl transition"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                <span>Edit Details</span>
+              </button>
+            )}
           </div>
           <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 break-words">
             {consultation.problemTitle}
@@ -387,26 +469,30 @@ export default function FarmerConsultationDetailPage({
       )}
 
       {/* Edit Consultation Details Modal */}
-      <EditConsultationModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        consultation={consultation}
-        onSuccess={(updated) => {
-          setConsultation(updated);
-          loadData();
-        }}
-      />
+      {!isSessionFinished && isEditModalOpen && (
+        <EditConsultationModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          consultation={consultation}
+          onSuccess={(updated) => {
+            setConsultation(updated);
+            loadData();
+          }}
+        />
+      )}
 
       {/* Reschedule Consultation Appointment Modal */}
-      <RescheduleConsultationModal
-        isOpen={isRescheduleModalOpen}
-        onClose={() => setIsRescheduleModalOpen(false)}
-        consultation={consultation}
-        onSuccess={(updated) => {
-          setConsultation(updated);
-          loadData();
-        }}
-      />
+      {canReschedule && isRescheduleModalOpen && (
+        <RescheduleConsultationModal
+          isOpen={isRescheduleModalOpen}
+          onClose={() => setIsRescheduleModalOpen(false)}
+          consultation={consultation}
+          onSuccess={(updated) => {
+            setConsultation(updated);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
