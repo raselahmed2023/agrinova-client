@@ -36,6 +36,7 @@ import type {
   ScheduleConsultationPayload,
 } from "@/types/consultation";
 import type { ExpertAvailability, ExpertProfile } from "@/types/expert";
+import { getConsultationOngoingInfo } from "@/utils/consultationTiming";
 
 export default function ExpertDashboardPage() {
   const { data: session } = useSession();
@@ -57,6 +58,15 @@ export default function ExpertDashboardPage() {
   // Scheduling modal state
   const [schedulingConsultation, setSchedulingConsultation] =
     useState<Consultation | null>(null);
+  const [now, setNow] = useState<number>(Date.now());
+
+  // 1-second live heartbeat for accurate 30-min timers
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -92,10 +102,10 @@ export default function ExpertDashboardPage() {
     (c) => c.status !== "PENDING" && c.status !== "ACCEPTED"
   );
   const upcomingConsultations = allConsultations.filter(
-    (c) => c.status === "SCHEDULED"
+    (c) => c.status === "SCHEDULED" && !getConsultationOngoingInfo(c, now).isOngoing
   );
   const ongoingConsultations = allConsultations.filter(
-    (c) => c.status === "ONGOING"
+    (c) => getConsultationOngoingInfo(c, now).isOngoing
   );
 
   return (
@@ -148,9 +158,9 @@ export default function ExpertDashboardPage() {
         <ExpertStatsCard stats={stats} isLoading={isLoading} />
       </section>
 
-      {/* Ongoing Consultation Alert Banner (if any) */}
+      {/* Ongoing Consultation Alert Banner (if any, showing for 30 minutes) */}
       {ongoingConsultations.length > 0 && (
-        <section className="rounded-2xl sm:rounded-3xl border-2 border-rose-200 bg-gradient-to-r from-rose-50/80 via-white to-rose-50/40 p-5 sm:p-6 shadow-sm">
+        <section className="rounded-2xl sm:rounded-3xl border-2 border-rose-200 bg-gradient-to-r from-rose-50/80 via-white to-rose-50/40 p-5 sm:p-6 shadow-sm relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-lg animate-pulse">
@@ -159,10 +169,14 @@ export default function ExpertDashboardPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="rounded-full bg-rose-600 px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white uppercase animate-pulse">
-                    Live Session Now
+                    Live Session Active (30m)
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
+                    <Clock className="h-3 w-3 text-rose-500" />
+                    {getConsultationOngoingInfo(ongoingConsultations[0], now).formattedRemaining} remaining
                   </span>
                   <span className="text-xs text-slate-500 font-medium truncate">
-                    Consultation with {ongoingConsultations[0].farmer?.name || ongoingConsultations[0].farmerName || "Farmer"}
+                    with {ongoingConsultations[0].farmer?.name || ongoingConsultations[0].farmerName || "Farmer"}
                   </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1 truncate">
@@ -331,6 +345,7 @@ export default function ExpertDashboardPage() {
                   <ConsultationCard
                     key={consultation._id || consultation.id}
                     consultation={consultation}
+                    now={now}
                     onOpenSchedule={(c) => setSchedulingConsultation(c)}
                   />
                 ))}

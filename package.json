@@ -14,6 +14,7 @@
     "@heroui/styles": "^3.2.4",
     "@hookform/resolvers": "^5.9.1",
     "better-auth": "^1.7.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.34.0",
     "mongodb": "^7.5.0",
     "motion": "^13.2.0",

@@ -5,7 +5,8 @@ export type ConsultationStatus =
   | "ONGOING"
   | "COMPLETED"
   | "CANCELLED"
-  | "REJECTED";
+  | "REJECTED"
+  | "MISSED";
 
 export type ConsultationUrgency = "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY";
 

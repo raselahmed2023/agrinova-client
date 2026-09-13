@@ -15,9 +15,11 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
+  Download,
 } from "lucide-react";
 import { getConsultations } from "@/services/consultation.service";
 import type { Consultation } from "@/types/consultation";
+import { downloadPrescriptionPDF } from "@/utils/prescriptionPdf";
 import ConsultationStatusBadge, {
   UrgencyBadge,
 } from "@/components/expert/ConsultationStatusBadge";
@@ -296,7 +298,16 @@ export default function FarmerConsultationsPage() {
                       </div>
                     )}
 
-                    <div className="pt-2 flex items-center justify-end">
+                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-emerald-100/60">
+                      <button
+                        type="button"
+                        onClick={() => downloadPrescriptionPDF(c)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-white border border-emerald-200 px-3 py-1.5 rounded-xl shadow-xs hover:bg-emerald-50 transition"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>PDF</span>
+                      </button>
+
                       <Link
                         href={`/dashboard/farmer/consultation/${c._id || c.id}`}
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950"
