@@ -2,80 +2,91 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
-  BriefcaseBusiness,
-  CloudSun,
+  Bot,
+  Camera,
+  ChevronRight,
+  ClipboardList,
+  Leaf,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
   Sprout,
-  Users,
 } from "lucide-react";
 import { motion } from "motion/react";
 
-type FeatureAccent = "emerald" | "blue" | "teal" | "green";
-
-type Feature = {
-  title: string;
-  description: string;
-  highlights: string[];
-  href: string;
-  actionLabel: string;
+type AIFeature = {
   icon: React.ComponentType<{
     className?: string;
   }>;
-  accent: FeatureAccent;
+  title: string;
+  description: string;
+  points: string[];
+  actionLabel: string;
+  href?: string;
+  badge: string;
+  accent: "emerald" | "blue" | "teal" | "lime";
 };
 
-const features: Feature[] = [
+const aiFeatures: AIFeature[] = [
   {
-    title: "My Farms",
+    icon: Camera,
+    title: "Crop Disease Detection",
     description:
-      "Create and manage your farm information, including farm type, location, land area, soil type, status, description, and cover image.",
-    highlights: [
-      "Farm Information",
-      "Location & Land Details",
+      "Upload a crop image for AI-assisted analysis of visible disease symptoms and possible crop health problems.",
+    points: [
+      "Image-based crop analysis",
+      "Disease and symptom insights",
+      "Recommended actions and prevention guidance",
     ],
-    href: "/dashboard/farmer/farms",
-    actionLabel: "Manage Farms",
-    icon: Sprout,
+    actionLabel: "Analyze Crop Image",
+    href: "/dashboard/farmer/ai/disease-detection",
+    badge: "Image AI",
     accent: "emerald",
   },
   {
-    title: "Weather Intelligence",
+    icon: Sprout,
+    title: "Smart Farming Recommendation",
     description:
-      "View weather information to better understand current conditions and support day-to-day farm planning.",
-    highlights: [
-      "Current Weather",
-      "Farm Planning Support",
+      "Get farming recommendations using your selected farm information and the agricultural problem you describe.",
+    points: [
+      "Uses your saved farm information",
+      "Considers farm type and location",
+      "Problem-specific farming guidance",
     ],
-    href: "/dashboard/farmer/weather",
-    actionLabel: "View Weather",
-    icon: CloudSun,
+    actionLabel: "Get Recommendation",
+    href: "/dashboard/farmer/ai/smart-farming-recommendation",
+    badge: "Farm-Aware AI",
     accent: "blue",
   },
   {
-    title: "Farm Finance",
+    icon: MessageCircle,
+    title: "AI Farming Assistant",
     description:
-      "Use the farm finance section to organize and review financial information related to your farming activities.",
-    highlights: [
-      "Farm Financial Records",
-      "Finance Overview",
+      "Ask farming-related questions and receive practical AI-assisted guidance for common agricultural activities and farm management.",
+    points: [
+      "Crop and soil questions",
+      "Irrigation and pest guidance",
+      "General farm management assistance",
     ],
-    href: "/dashboard/farmer/finance",
-    actionLabel: "Open Finance",
-    icon: BriefcaseBusiness,
+    actionLabel: "Ask Farming Assistant",
+    href: "/dashboard/farmer/ai/assistant",
+    badge: "AI Assistant",
     accent: "teal",
   },
   {
-    title: "Expert Consultation",
+    icon: ClipboardList,
+    title: "AI Treatment Recommendation",
     description:
-      "Connect with agricultural experts for professional guidance and consultation through the AgriNova platform.",
-    highlights: [
-      "Agricultural Experts",
-      "Consultation Support",
+      "Supports the expert consultation workflow with structured treatment guidance based on crop and problem information.",
+    points: [
+      "Structured treatment guidance",
+      "Recommended follow-up information",
+      "Supports expert recommendation workflow",
     ],
+    actionLabel: "Expert Consultation",
     href: "/consultant",
-    actionLabel: "Find an Expert",
-    icon: Users,
-    accent: "green",
+    badge: "Expert AI Support",
+    accent: "lime",
   },
 ];
 
@@ -91,8 +102,8 @@ const containerVariants = {
 const cardVariants = {
   hidden: {
     opacity: 0,
-    y: 30,
-    scale: 0.98,
+    y: 35,
+    scale: 0.97,
   },
   visible: {
     opacity: 1,
@@ -105,60 +116,61 @@ const cardVariants = {
   },
 };
 
-function getAccentStyles(accent: FeatureAccent) {
+function getAccentClasses(accent: AIFeature["accent"]) {
   switch (accent) {
     case "blue":
       return {
-        icon: "border-sky-100 bg-sky-50 text-sky-600",
-        badge: "bg-sky-50 text-sky-700",
-        glow: "bg-sky-300/20",
-        line: "from-sky-500 to-cyan-400",
+        icon: "border-blue-400/15 bg-blue-400/10 text-blue-300",
+        badge: "border-blue-400/15 bg-blue-400/10 text-blue-300",
+        glow: "bg-blue-400/15",
+        bullet: "text-blue-300",
+        line: "from-blue-400 to-cyan-300",
       };
 
     case "teal":
       return {
-        icon: "border-teal-100 bg-teal-50 text-teal-700",
-        badge: "bg-teal-50 text-teal-700",
-        glow: "bg-teal-300/20",
-        line: "from-teal-500 to-emerald-400",
+        icon: "border-teal-400/15 bg-teal-400/10 text-teal-300",
+        badge: "border-teal-400/15 bg-teal-400/10 text-teal-300",
+        glow: "bg-teal-400/15",
+        bullet: "text-teal-300",
+        line: "from-teal-400 to-emerald-300",
       };
 
-    case "green":
+    case "lime":
       return {
-        icon: "border-green-100 bg-green-50 text-green-700",
-        badge: "bg-green-50 text-green-700",
-        glow: "bg-green-300/20",
-        line: "from-green-500 to-emerald-400",
+        icon: "border-lime-400/15 bg-lime-400/10 text-lime-300",
+        badge: "border-lime-400/15 bg-lime-400/10 text-lime-300",
+        glow: "bg-lime-400/10",
+        bullet: "text-lime-300",
+        line: "from-lime-400 to-emerald-300",
       };
 
     default:
       return {
-        icon: "border-emerald-100 bg-emerald-50 text-emerald-700",
-        badge: "bg-emerald-50 text-emerald-700",
-        glow: "bg-emerald-300/20",
-        line: "from-emerald-500 to-teal-400",
+        icon: "border-emerald-400/15 bg-emerald-400/10 text-emerald-300",
+        badge:
+          "border-emerald-400/15 bg-emerald-400/10 text-emerald-300",
+        glow: "bg-emerald-400/15",
+        bullet: "text-emerald-300",
+        line: "from-emerald-400 to-teal-300",
       };
   }
 }
 
-export default function FeaturePreview() {
+export default function ServicesSection() {
   return (
-    <section
-      id="features"
-      aria-labelledby="features-title"
-      className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
-    >
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-100/50 blur-[120px]" />
+    <section className="relative w-full overflow-hidden bg-[#071C15] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      {/* Background glow */}
+      <div className="pointer-events-none absolute -left-48 top-10 h-[430px] w-[430px] rounded-full bg-emerald-400/[0.07] blur-[130px]" />
 
-      <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-sky-100/40 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-48 bottom-0 h-[450px] w-[450px] rounded-full bg-cyan-400/[0.06] blur-[140px]" />
 
       <div className="relative mx-auto max-w-7xl">
         {/* Header */}
-        <motion.header
+        <motion.div
           initial={{
             opacity: 0,
-            y: 22,
+            y: 24,
           }}
           whileInView={{
             opacity: 1,
@@ -172,26 +184,26 @@ export default function FeaturePreview() {
             duration: 0.6,
             ease: "easeOut",
           }}
-          className="mx-auto max-w-2xl text-center"
+          className="mx-auto max-w-3xl text-center"
         >
-          <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">
-              Farmer Tools
+          <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-3.5 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
+
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-emerald-300 sm:text-[11px]">
+              AgriNova AI
             </span>
           </div>
 
-          <h2
-            id="features-title"
-            className="text-3xl font-black tracking-[-0.04em] text-[#103F32] sm:text-4xl lg:text-[44px]"
-          >
-            Farm Management & Support
+          <h2 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl lg:text-[44px]">
+            AI Farming Tools
           </h2>
 
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 sm:text-[15px]">
-            Access your farm information, weather, finance tools, and
-            agricultural expert support through AgriNova.
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#9FB4AB] sm:text-[15px]">
+            AI-assisted tools for crop analysis, farm-specific
+            recommendations, farming questions, and expert treatment
+            workflows.
           </p>
-        </motion.header>
+        </motion.div>
 
         {/* Cards */}
         <motion.div
@@ -202,36 +214,36 @@ export default function FeaturePreview() {
             once: true,
             amount: 0.12,
           }}
-          className="mt-12 grid grid-cols-1 gap-5 sm:mt-14 md:grid-cols-2 lg:gap-6"
+          className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-14 lg:gap-6"
         >
-          {features.map((feature) => {
+          {aiFeatures.map((feature) => {
             const Icon = feature.icon;
-            const accent = getAccentStyles(feature.accent);
+            const accent = getAccentClasses(feature.accent);
 
             return (
               <motion.article
                 key={feature.title}
                 variants={cardVariants}
                 whileHover={{
-                  y: -7,
+                  y: -8,
                   scale: 1.01,
                   transition: {
-                    duration: 0.2,
+                    duration: 0.22,
                   },
                 }}
-                className="group relative flex min-h-[300px] flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-[#FAFCFB] p-6 shadow-[0_4px_20px_rgba(15,23,42,0.035)] transition-shadow duration-300 hover:border-emerald-200 hover:shadow-[0_24px_55px_rgba(11,72,53,0.12)] sm:p-7 lg:p-8"
+                className="group relative flex min-h-[350px] flex-col overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#10271D] p-6 shadow-[0_10px_35px_rgba(0,0,0,0.12)] transition-shadow duration-300 hover:border-white/[0.14] hover:shadow-[0_24px_55px_rgba(0,0,0,0.24)] sm:p-7 lg:p-8"
               >
                 {/* Hover glow */}
                 <div
-                  className={`pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100 ${accent.glow}`}
+                  className={`pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full opacity-0 blur-[70px] transition-opacity duration-500 group-hover:opacity-100 ${accent.glow}`}
                 />
 
                 {/* Top */}
                 <div className="relative z-10 flex items-start justify-between gap-4">
                   <motion.div
                     whileHover={{
+                      rotate: 4,
                       scale: 1.08,
-                      rotate: 3,
                     }}
                     transition={{
                       duration: 0.2,
@@ -242,35 +254,33 @@ export default function FeaturePreview() {
                   </motion.div>
 
                   <span
-                    className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${accent.badge}`}
+                    className={`rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-[0.13em] ${accent.badge}`}
                   >
-                    AgriNova
+                    {feature.badge}
                   </span>
                 </div>
 
                 {/* Content */}
                 <div className="relative z-10 mt-6">
-                  <h3 className="text-xl font-black tracking-[-0.025em] text-[#17372D] transition-colors duration-200 group-hover:text-emerald-700 sm:text-[22px]">
+                  <h3 className="text-xl font-black tracking-[-0.025em] text-white sm:text-[22px]">
                     {feature.title}
                   </h3>
 
-                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-sm">
+                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-[#9FB0A8] sm:text-sm">
                     {feature.description}
                   </p>
 
-                  <ul className="mt-6 space-y-2.5">
-                    {feature.highlights.map((highlight) => (
+                  <ul className="mt-6 space-y-3">
+                    {feature.points.map((point) => (
                       <li
-                        key={highlight}
-                        className="flex items-center gap-2.5 text-xs font-semibold text-[#49615A] sm:text-[13px]"
+                        key={point}
+                        className="flex items-start gap-2.5 text-xs font-medium text-[#BCCAC4] sm:text-[13px]"
                       >
-                        <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${accent.badge}`}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        </span>
+                        <ShieldCheck
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${accent.bullet}`}
+                        />
 
-                        {highlight}
+                        <span>{point}</span>
                       </li>
                     ))}
                   </ul>
@@ -278,25 +288,61 @@ export default function FeaturePreview() {
 
                 {/* Action */}
                 <div className="relative z-10 mt-auto pt-7">
-                  <div className="mb-5 h-px w-full bg-slate-100 transition-colors duration-300 group-hover:bg-emerald-100" />
+                  <div className="mb-5 h-px w-full bg-white/[0.08]" />
 
-                  <Link
-                    href={feature.href}
-                    className="group/link inline-flex items-center gap-2 text-sm font-bold text-[#174D3C] transition hover:text-emerald-700"
-                  >
-                    {feature.actionLabel}
+                  {feature.href ? (
+                    <Link
+                      href={feature.href}
+                      className="group/link inline-flex items-center gap-2 text-sm font-bold text-white transition hover:text-emerald-300"
+                    >
+                      {feature.actionLabel}
 
-                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-1" />
-                  </Link>
+                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-1" />
+                    </Link>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#9FB0A8]">
+                      {feature.actionLabel}
+
+                      <Bot className="h-4 w-4 text-emerald-300" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Bottom animation */}
+                {/* Bottom animated line */}
                 <div
                   className={`absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r transition-all duration-500 group-hover:w-full ${accent.line}`}
                 />
               </motion.article>
             );
           })}
+        </motion.div>
+
+        {/* Note */}
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+          }}
+          transition={{
+            duration: 0.5,
+            delay: 0.2,
+          }}
+          className="mt-7 flex items-start gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-4 sm:px-5"
+        >
+          <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+
+          <p className="text-xs leading-5 text-[#82988F]">
+            AI tools provide decision support and farming guidance.
+            Professional agricultural advice may still be appropriate for
+            serious crop health or treatment decisions.
+          </p>
         </motion.div>
       </div>
     </section>

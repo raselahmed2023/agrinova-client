@@ -112,6 +112,7 @@ export default function GrowSmarterCTA() {
               transition={{
                 delay: 0.36,
                 duration: 0.5,
+                
               }}
               className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
