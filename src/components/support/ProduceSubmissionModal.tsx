@@ -3,12 +3,16 @@
 import {
   ChangeEvent,
   FormEvent,
+  useEffect,
+  useMemo,
   useState,
 } from "react";
 
 import {
   Building2,
+  CheckCircle2,
   FileText,
+  ImagePlus,
   MapPin,
   Package,
   Sprout,
@@ -28,7 +32,7 @@ import {
   createSupplyRequest,
 } from "@/services/supply-chain.service";
 
-interface ProductSubmissionModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: () => void;
@@ -43,6 +47,7 @@ interface ProductFormData {
 
   quantity: string;
   unit: string;
+
   expectedPrice: string;
 
   division: string;
@@ -51,225 +56,155 @@ interface ProductFormData {
   location: string;
 
   branch: string;
-
   notes: string;
+
   images: File[];
 }
 
-interface CategoryOption {
-  value: string;
-  label: string;
-}
-
-interface UnitOption {
-  value: string;
-  label: string;
-}
-
-interface BranchOption {
-  value: string;
-  label: string;
-}
-
-interface ImgBBResponse {
-  success: boolean;
-
-  data?: {
-    url?: string;
-  };
-
-  error?: {
-    message?: string;
-  };
-}
-
-const CATEGORIES: CategoryOption[] = [
-  {
-    value: "vegetables",
-    label: "Vegetables",
-  },
-  {
-    value: "fruits",
-    label: "Fruits",
-  },
-  {
-    value: "grains_cereals",
-    label: "Grains & Cereals",
-  },
-  {
-    value: "pulses_seeds",
-    label: "Pulses & Seeds",
-  },
-  {
-    value: "spices",
-    label: "Spices",
-  },
-  {
-    value: "agricultural_by_products",
-    label:
-      "Agricultural By-products",
-  },
-  {
-    value: "other",
-    label: "Other",
-  },
+const CATEGORIES = [
+  ["vegetables", "Vegetables"],
+  ["fruits", "Fruits"],
+  ["grains_cereals", "Grains & Cereals"],
+  ["pulses_seeds", "Pulses & Seeds"],
+  ["spices", "Spices"],
+  [
+    "agricultural_by_products",
+    "Agricultural By-products",
+  ],
+  ["other", "Other"],
 ];
 
-const UNITS: UnitOption[] = [
-  {
-    value: "kg",
-    label: "Kg",
-  },
-  {
-    value: "maund",
-    label: "Maund",
-  },
-  {
-    value: "ton",
-    label: "Ton",
-  },
-  {
-    value: "bag",
-    label: "Bag",
-  },
-  {
-    value: "box",
-    label: "Box",
-  },
+const UNITS = [
+  ["kg", "Kg"],
+  ["maund", "Maund"],
+  ["ton", "Ton"],
+  ["bag", "Bag"],
+  ["box", "Box"],
 ];
 
-const BRANCHES: BranchOption[] = [
-  {
-    value: "rajshahi",
-    label:
-      "AgriNova Rajshahi Branch",
-  },
-  {
-    value: "bogura",
-    label:
-      "AgriNova Bogura Branch",
-  },
-  {
-    value: "kushtia",
-    label:
-      "AgriNova Kushtia Branch",
-  },
-  {
-    value: "chattogram",
-    label:
-      "AgriNova Chattogram Branch",
-  },
-  {
-    value: "dhaka",
-    label:
-      "AgriNova Dhaka Branch",
-  },
+const BRANCHES = [
+  ["rajshahi", "AgriNova Rajshahi Branch"],
+  ["bogura", "AgriNova Bogura Branch"],
+  ["kushtia", "AgriNova Kushtia Branch"],
+  ["chattogram", "AgriNova Chattogram Branch"],
+  ["dhaka", "AgriNova Dhaka Branch"],
 ];
 
-const initialFormData: ProductFormData =
-  {
-    farmerName: "",
-    phone: "",
+const MAX_IMAGES = 5;
+const MAX_SIZE = 5 * 1024 * 1024;
 
-    productName: "",
-    category: "",
+const initialForm: ProductFormData = {
+  farmerName: "",
+  phone: "",
 
-    quantity: "",
-    unit: "kg",
-    expectedPrice: "",
+  productName: "",
+  category: "",
 
-    division: "",
-    district: "",
-    upazila: "",
-    location: "",
+  quantity: "",
+  unit: "kg",
 
-    branch: "",
+  expectedPrice: "",
 
-    notes: "",
-    images: [],
-  };
+  division: "",
+  district: "",
+  upazila: "",
+  location: "",
 
-export default function ProductSubmissionModal({
+  branch: "",
+  notes: "",
+
+  images: [],
+};
+
+export default function ProduceSubmissionModal({
   isOpen,
   onClose,
   onSubmitSuccess,
-}: ProductSubmissionModalProps) {
-  const [
-    formData,
-    setFormData,
-  ] = useState<ProductFormData>(
-    initialFormData
-  );
+}: Props) {
+  const [form, setForm] =
+    useState<ProductFormData>(
+      initialForm
+    );
 
-  const [
-    previews,
-    setPreviews,
-  ] = useState<string[]>([]);
+  const [previews, setPreviews] =
+    useState<string[]>([]);
 
   const [
     isSubmitting,
     setIsSubmitting,
   ] = useState(false);
 
-  const [
-    formError,
-    setFormError,
-  ] = useState("");
+  const [error, setError] =
+    useState("");
 
   const [
-    successMessage,
-    setSuccessMessage,
+    trackingCode,
+    setTrackingCode,
   ] = useState("");
 
   const districts =
-    getDistrictsByDivision(
-      formData.division
+    useMemo(
+      () =>
+        getDistrictsByDivision(
+          form.division
+        ),
+      [form.division]
     );
 
   const upazilas =
-    getUpazilasByDistrict(
-      formData.division,
-      formData.district
+    useMemo(
+      () =>
+        getUpazilasByDistrict(
+          form.division,
+          form.district
+        ),
+      [
+        form.division,
+        form.district,
+      ]
     );
 
-  if (!isOpen) {
-    return null;
-  }
+  useEffect(() => {
+    return () => {
+      previews.forEach(
+        (preview) =>
+          URL.revokeObjectURL(
+            preview
+          )
+      );
+    };
+  }, [previews]);
+
+  if (!isOpen) return null;
 
   const inputClass =
-    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-800 outline-none transition focus:border-[#0b5d42] focus:ring-2 focus:ring-[#0b5d42]/15 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400";
+    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#0b5d42] focus:ring-2 focus:ring-[#0b5d42]/15 disabled:bg-gray-100";
 
-  const labelClass =
-    "mb-1.5 block text-xs font-semibold text-gray-700";
-
-  const clearPreviews = () => {
-    previews.forEach((preview) => {
-      URL.revokeObjectURL(
-        preview
+  const clearPreviews =
+    () => {
+      previews.forEach(
+        (preview) =>
+          URL.revokeObjectURL(
+            preview
+          )
       );
-    });
-  };
+    };
 
-  const resetForm = () => {
-    clearPreviews();
+  const closeModal =
+    () => {
+      if (isSubmitting) {
+        return;
+      }
 
-    setFormData(
-      initialFormData
-    );
+      clearPreviews();
 
-    setPreviews([]);
-    setFormError("");
-    setSuccessMessage("");
-  };
+      setForm(initialForm);
+      setPreviews([]);
+      setError("");
+      setTrackingCode("");
 
-  const handleClose = () => {
-    if (isSubmitting) {
-      return;
-    }
-
-    resetForm();
-    onClose();
-  };
+      onClose();
+    };
 
   const handleChange = (
     event: ChangeEvent<
@@ -283,12 +218,11 @@ export default function ProductSubmissionModal({
       value,
     } = event.target;
 
-    setFormError("");
-    setSuccessMessage("");
+    setError("");
 
     if (name === "division") {
-      setFormData((previous) => ({
-        ...previous,
+      setForm((prev) => ({
+        ...prev,
         division: value,
         district: "",
         upazila: "",
@@ -298,8 +232,8 @@ export default function ProductSubmissionModal({
     }
 
     if (name === "district") {
-      setFormData((previous) => ({
-        ...previous,
+      setForm((prev) => ({
+        ...prev,
         district: value,
         upazila: "",
       }));
@@ -307,361 +241,360 @@ export default function ProductSubmissionModal({
       return;
     }
 
-    setFormData((previous) => ({
-      ...previous,
+    setForm((prev) => ({
+      ...prev,
       [name]: value,
     }));
   };
 
-  const handleImageChange = (
+  const handleImages = (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const selectedFiles =
+    const selected =
       Array.from(
-        event.target.files || []
+        event.target.files ||
+          []
       );
 
-    if (
-      selectedFiles.length === 0
-    ) {
-      return;
-    }
+    event.target.value = "";
 
-    const remaining =
-      5 - formData.images.length;
+    const available =
+      MAX_IMAGES -
+      form.images.length;
 
-    if (remaining <= 0) {
-      setFormError(
-        "Maximum 5 product photos are allowed."
-      );
-
-      return;
-    }
-
-    const validFiles =
-      selectedFiles
-        .filter((file) =>
-          file.type.startsWith(
-            "image/"
-          )
-        )
+    const accepted =
+      selected
         .filter(
           (file) =>
+            [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+            ].includes(
+              file.type
+            ) &&
             file.size <=
-            5 * 1024 * 1024
+              MAX_SIZE
         )
-        .slice(0, remaining);
+        .slice(
+          0,
+          available
+        );
 
-    if (
-      validFiles.length === 0
-    ) {
-      setFormError(
-        "Please select valid images under 5 MB."
+    if (!accepted.length) {
+      setError(
+        "Please use JPG, PNG or WEBP images under 5MB."
       );
 
-      event.target.value = "";
       return;
     }
 
     const newPreviews =
-      validFiles.map((file) =>
-        URL.createObjectURL(file)
+      accepted.map(
+        (file) =>
+          URL.createObjectURL(
+            file
+          )
       );
 
-    setFormData((previous) => ({
-      ...previous,
+    setForm((prev) => ({
+      ...prev,
       images: [
-        ...previous.images,
-        ...validFiles,
+        ...prev.images,
+        ...accepted,
       ],
     }));
 
-    setPreviews((previous) => [
-      ...previous,
-      ...newPreviews,
-    ]);
-
-    if (
-      selectedFiles.length >
-      validFiles.length
-    ) {
-      setFormError(
-        "Some files were skipped. Maximum 5 images, 5 MB each."
-      );
-    } else {
-      setFormError("");
-    }
-
-    event.target.value = "";
+    setPreviews(
+      (prev) => [
+        ...prev,
+        ...newPreviews,
+      ]
+    );
   };
 
   const removeImage = (
     index: number
   ) => {
-    URL.revokeObjectURL(
-      previews[index]
-    );
+    const preview =
+      previews[index];
 
-    setPreviews((previous) =>
-      previous.filter(
-        (_, currentIndex) =>
-          currentIndex !== index
+    if (preview) {
+      URL.revokeObjectURL(
+        preview
+      );
+    }
+
+    setPreviews((prev) =>
+      prev.filter(
+        (_, i) =>
+          i !== index
       )
     );
 
-    setFormData((previous) => ({
-      ...previous,
-
+    setForm((prev) => ({
+      ...prev,
       images:
-        previous.images.filter(
-          (_, currentIndex) =>
-            currentIndex !== index
+        prev.images.filter(
+          (_, i) =>
+            i !== index
         ),
     }));
   };
 
-  const uploadSingleImage =
+  const uploadImage =
     async (
       file: File
-    ): Promise<string> => {
-      const apiKey =
-        process.env
-          .NEXT_PUBLIC_IMGBB_API_KEY;
-
-      if (!apiKey) {
-        throw new Error(
-          "Image upload is not configured."
-        );
-      }
-
-      const imageFormData =
+    ) => {
+      const body =
         new FormData();
 
-      imageFormData.append(
+      body.append(
         "image",
         file
       );
 
+      body.append(
+        "purpose",
+        "supply-chain"
+      );
+
       const response =
         await fetch(
-          `https://api.imgbb.com/1/upload?key=${apiKey}`,
+          "/api/upload",
           {
             method: "POST",
-            body: imageFormData,
+            body,
           }
         );
 
-      const result: ImgBBResponse =
-        await response.json();
+      const result =
+        await response
+          .json()
+          .catch(() => null);
 
       if (
         !response.ok ||
-        !result.success ||
-        !result.data?.url
+        !result?.success ||
+        !result?.url
       ) {
         throw new Error(
-          result.error?.message ||
-            "Image upload failed."
+          result?.message ||
+            "Unable to upload product image."
         );
       }
 
-      return result.data.url;
-    };
-
-  const uploadImages =
-    async (): Promise<
-      string[]
-    > => {
-      if (
-        formData.images.length === 0
-      ) {
-        return [];
-      }
-
-      return Promise.all(
-        formData.images.map(
-          uploadSingleImage
-        )
+      return String(
+        result.url
       );
     };
 
-  const validateForm = () => {
-    const phoneRegex =
-      /^01[3-9]\d{8}$/;
+  const validate = () => {
+    if (
+      form.farmerName
+        .trim().length < 2
+    ) {
+      return "Please enter your full name.";
+    }
 
     if (
-      !phoneRegex.test(
-        formData.phone
+      !/^01[3-9]\d{8}$/.test(
+        form.phone.trim()
       )
     ) {
-      setFormError(
-        "Please enter a valid Bangladeshi phone number."
-      );
+      return "Please enter a valid Bangladeshi phone number.";
+    }
 
-      return false;
+    if (
+      !form.productName.trim()
+    ) {
+      return "Product name is required.";
+    }
+
+    if (!form.category) {
+      return "Select a product category.";
     }
 
     if (
       Number(
-        formData.quantity
+        form.quantity
       ) <= 0
     ) {
-      setFormError(
-        "Quantity must be greater than 0."
-      );
-
-      return false;
+      return "Quantity must be greater than 0.";
     }
 
     if (
       Number(
-        formData.expectedPrice
+        form.expectedPrice
       ) < 0
     ) {
-      setFormError(
-        "Expected price cannot be negative."
-      );
-
-      return false;
+      return "Expected price cannot be negative.";
     }
 
     if (
-      !formData.division ||
-      !formData.district ||
-      !formData.upazila
+      !form.division ||
+      !form.district ||
+      !form.upazila
     ) {
-      setFormError(
-        "Please select division, district and upazila."
-      );
-
-      return false;
+      return "Please select division, district and upazila.";
     }
 
-    if (!formData.branch) {
-      setFormError(
-        "Please select an AgriNova branch."
-      );
-
-      return false;
+    if (!form.location.trim()) {
+      return "Farm location is required.";
     }
 
-    return true;
+    if (!form.branch) {
+      return "Please select an AgriNova branch.";
+    }
+
+    return "";
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+  const handleSubmit =
+    async (
+      event: FormEvent<HTMLFormElement>
+    ) => {
+      event.preventDefault();
 
-    setFormError("");
-    setSuccessMessage("");
+      const validation =
+        validate();
 
-    if (!validateForm()) {
-      return;
-    }
+      if (validation) {
+        setError(
+          validation
+        );
 
-    try {
-      setIsSubmitting(true);
-
-      const imageUrls =
-        await uploadImages();
-
-      await createSupplyRequest({
-        farmerName:
-          formData.farmerName.trim(),
-
-        phone:
-          formData.phone.trim(),
-
-        productName:
-          formData.productName.trim(),
-
-        category:
-          formData.category,
-
-        quantity: Number(
-          formData.quantity
-        ),
-
-        unit:
-          formData.unit,
-
-        expectedPrice:
-          Number(
-            formData.expectedPrice
-          ),
-
-        division:
-          formData.division,
-
-        district:
-          formData.district,
-
-        upazila:
-          formData.upazila,
-
-        location:
-          formData.location.trim(),
-
-        branch:
-          formData.branch,
-
-        notes:
-          formData.notes.trim(),
-
-        images: imageUrls,
-      });
-
-      clearPreviews();
-
-      setFormData(
-        initialFormData
-      );
-
-      setPreviews([]);
-
-      setSuccessMessage(
-        "Your product has been submitted successfully for AgriNova review."
-      );
-
-      if (onSubmitSuccess) {
-        onSubmitSuccess();
+        return;
       }
 
-      setTimeout(() => {
-        setSuccessMessage("");
-        onClose();
-      }, 1200);
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Submission failed. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      try {
+        setIsSubmitting(
+          true
+        );
+
+        setError("");
+
+        const imageUrls:
+          string[] =
+          [];
+
+        for (
+          const image of
+          form.images
+        ) {
+          imageUrls.push(
+            await uploadImage(
+              image
+            )
+          );
+        }
+
+        const response =
+          await createSupplyRequest(
+            {
+              farmerName:
+                form.farmerName.trim(),
+
+              phone:
+                form.phone.trim(),
+
+              productName:
+                form.productName.trim(),
+
+              category:
+                form.category,
+
+              quantity:
+                Number(
+                  form.quantity
+                ),
+
+              unit:
+                form.unit,
+
+              expectedPrice:
+                Number(
+                  form.expectedPrice
+                ),
+
+              division:
+                form.division,
+
+              district:
+                form.district,
+
+              upazila:
+                form.upazila,
+
+              location:
+                form.location.trim(),
+
+              branch:
+                form.branch,
+
+              notes:
+                form.notes.trim() ||
+                undefined,
+
+              images:
+                imageUrls,
+            }
+          );
+
+        const code =
+          response.data
+            .trackingCode;
+
+        setTrackingCode(
+          code
+        );
+
+        if (
+          typeof window !==
+          "undefined"
+        ) {
+          localStorage.setItem(
+            "agrinova:lastSupplyTrackingCode",
+            code
+          );
+        }
+
+        clearPreviews();
+
+        setPreviews([]);
+        setForm(initialForm);
+
+        onSubmitSuccess?.();
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Submission failed."
+        );
+      } finally {
+        setIsSubmitting(
+          false
+        );
+      }
+    };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm sm:p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
       <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="relative bg-[#053225] px-5 py-5 text-white sm:px-7">
+        <header className="relative bg-[#053225] px-6 py-5 text-white">
           <button
             type="button"
-            onClick={handleClose}
-            disabled={
-              isSubmitting
+            onClick={
+              closeModal
             }
-            className="absolute right-4 top-4 rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-            aria-label="Close"
+            className="absolute right-4 top-4 rounded-full p-2 hover:bg-white/10"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <div className="flex items-start gap-3 pr-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
-              <Sprout className="h-6 w-6 text-[#b2f2bb]" />
+          <div className="flex gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
+              <Sprout className="h-6 w-6" />
             </div>
 
             <div>
@@ -669,166 +602,129 @@ export default function ProductSubmissionModal({
                 Sell Through AgriNova
               </h2>
 
-              <p className="mt-1 max-w-xl text-sm leading-5 text-white/75">
-                Submit your farm product
-                details for AgriNova supply
+              <p className="mt-1 text-sm text-white/75">
+                Submit your farm product for AgriNova supply
                 chain review.
               </p>
             </div>
           </div>
-        </div>
+        </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="overflow-y-auto"
-        >
-          <div className="space-y-7 p-5 sm:p-7">
-            {formError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {formError}
+        {trackingCode ? (
+          <div className="overflow-y-auto p-8">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-7 text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-700" />
+
+              <h3 className="mt-4 text-xl font-bold">
+                Submission Received
+              </h3>
+
+              <p className="mt-4 text-xs font-bold uppercase text-emerald-700">
+                Tracking Code
+              </p>
+
+              <div className="mx-auto mt-2 w-fit rounded-xl bg-white px-6 py-3 font-mono text-xl font-black text-[#053225]">
+                {trackingCode}
               </div>
-            )}
 
-            {successMessage && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                {successMessage}
-              </div>
-            )}
-
-            <section>
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                  <UserRound className="h-4 w-4 text-[#0b5d42]" />
+              <button
+                type="button"
+                onClick={
+                  closeModal
+                }
+                className="mt-6 rounded-xl bg-[#053225] px-6 py-3 text-sm font-semibold text-white"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form
+            onSubmit={
+              handleSubmit
+            }
+            className="overflow-y-auto"
+          >
+            <div className="space-y-6 p-6">
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
                 </div>
+              )}
 
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Farmer Information
-                  </h3>
+              <Title
+                icon={
+                  <UserRound className="h-4 w-4" />
+                }
+                title="Farmer Information"
+              />
 
-                  <p className="text-xs text-gray-500">
-                    Enter your contact
-                    information.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Farmer Name *
-                  </label>
-
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Farmer Name">
                   <input
-                    type="text"
-                    name="farmerName"
                     required
+                    name="farmerName"
                     value={
-                      formData.farmerName
+                      form.farmerName
                     }
                     onChange={
                       handleChange
                     }
-                    placeholder="Enter your full name"
                     className={
                       inputClass
                     }
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Phone Number *
-                  </label>
-
+                <Field label="Phone Number">
                   <input
-                    type="tel"
-                    name="phone"
                     required
-                    maxLength={11}
+                    name="phone"
                     value={
-                      formData.phone
+                      form.phone
                     }
                     onChange={
                       handleChange
                     }
+                    maxLength={11}
                     placeholder="01XXXXXXXXX"
                     className={
                       inputClass
                     }
                   />
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                  <Package className="h-4 w-4 text-[#0b5d42]" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Product Information
-                  </h3>
-
-                  <p className="text-xs text-gray-500">
-                    Add details about the
-                    product you want to
-                    sell.
-                  </p>
-                </div>
+                </Field>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Product Name *
-                  </label>
+              <Title
+                icon={
+                  <Package className="h-4 w-4" />
+                }
+                title="Product Information"
+              />
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Product Name">
                   <input
-                    type="text"
-                    name="productName"
                     required
+                    name="productName"
                     value={
-                      formData.productName
+                      form.productName
                     }
                     onChange={
                       handleChange
                     }
-                    placeholder="e.g. Rice, Potato, Tomato"
                     className={
                       inputClass
                     }
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Category *
-                  </label>
-
+                <Field label="Category">
                   <select
-                    name="category"
                     required
+                    name="category"
                     value={
-                      formData.category
+                      form.category
                     }
                     onChange={
                       handleChange
@@ -838,72 +734,54 @@ export default function ProductSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select category
+                      Select Category
                     </option>
 
                     {CATEGORIES.map(
-                      (category) => (
+                      ([
+                        value,
+                        label,
+                      ]) => (
                         <option
                           key={
-                            category.value
+                            value
                           }
                           value={
-                            category.value
+                            value
                           }
                         >
-                          {
-                            category.label
-                          }
+                          {label}
                         </option>
                       )
                     )}
                   </select>
-                </div>
+                </Field>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Quantity *
-                  </label>
-
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Quantity">
                   <input
                     type="number"
-                    name="quantity"
-                    required
                     min="0.01"
                     step="0.01"
+                    name="quantity"
                     value={
-                      formData.quantity
+                      form.quantity
                     }
                     onChange={
                       handleChange
                     }
-                    placeholder="e.g. 500"
                     className={
                       inputClass
                     }
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Unit *
-                  </label>
-
+                <Field label="Unit">
                   <select
                     name="unit"
-                    required
                     value={
-                      formData.unit
+                      form.unit
                     }
                     onChange={
                       handleChange
@@ -913,93 +791,57 @@ export default function ProductSubmissionModal({
                     }
                   >
                     {UNITS.map(
-                      (unit) => (
+                      ([
+                        value,
+                        label,
+                      ]) => (
                         <option
                           key={
-                            unit.value
+                            value
                           }
                           value={
-                            unit.value
+                            value
                           }
                         >
-                          {
-                            unit.label
-                          }
+                          {label}
                         </option>
                       )
                     )}
                   </select>
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Expected Price
-                    (৳ / unit) *
-                  </label>
-
+                <Field label="Expected Price">
                   <input
                     type="number"
-                    name="expectedPrice"
-                    required
                     min="0"
                     step="0.01"
+                    name="expectedPrice"
                     value={
-                      formData.expectedPrice
+                      form.expectedPrice
                     }
                     onChange={
                       handleChange
                     }
-                    placeholder="0 if free"
                     className={
                       inputClass
                     }
                   />
-
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Enter 0 for a free
-                    product.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                  <MapPin className="h-4 w-4 text-[#0b5d42]" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Farm Location
-                  </h3>
-
-                  <p className="text-xs text-gray-500">
-                    Select your farm
-                    location.
-                  </p>
-                </div>
+                </Field>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Division *
-                  </label>
+              <Title
+                icon={
+                  <MapPin className="h-4 w-4" />
+                }
+                title="Farm Location"
+              />
 
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Division">
                   <select
                     name="division"
-                    required
                     value={
-                      formData.division
+                      form.division
                     }
                     onChange={
                       handleChange
@@ -1009,11 +851,13 @@ export default function ProductSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select division
+                      Division
                     </option>
 
                     {DIVISIONS.map(
-                      (division) => (
+                      (
+                        division
+                      ) => (
                         <option
                           key={
                             division
@@ -1022,30 +866,23 @@ export default function ProductSubmissionModal({
                             division
                           }
                         >
-                          {division}
+                          {
+                            division
+                          }
                         </option>
                       )
                     )}
                   </select>
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    District *
-                  </label>
-
+                <Field label="District">
                   <select
                     name="district"
-                    required
                     disabled={
-                      !formData.division
+                      !form.division
                     }
                     value={
-                      formData.district
+                      form.district
                     }
                     onChange={
                       handleChange
@@ -1055,13 +892,13 @@ export default function ProductSubmissionModal({
                     }
                   >
                     <option value="">
-                      {formData.division
-                        ? "Select district"
-                        : "Select division first"}
+                      District
                     </option>
 
                     {districts.map(
-                      (district) => (
+                      (
+                        district
+                      ) => (
                         <option
                           key={
                             district
@@ -1070,30 +907,23 @@ export default function ProductSubmissionModal({
                             district
                           }
                         >
-                          {district}
+                          {
+                            district
+                          }
                         </option>
                       )
                     )}
                   </select>
-                </div>
+                </Field>
 
-                <div>
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Upazila *
-                  </label>
-
+                <Field label="Upazila">
                   <select
                     name="upazila"
-                    required
                     disabled={
-                      !formData.district
+                      !form.district
                     }
                     value={
-                      formData.upazila
+                      form.upazila
                     }
                     onChange={
                       handleChange
@@ -1103,13 +933,13 @@ export default function ProductSubmissionModal({
                     }
                   >
                     <option value="">
-                      {formData.district
-                        ? "Select upazila"
-                        : "Select district first"}
+                      Upazila
                     </option>
 
                     {upazilas.map(
-                      (upazila) => (
+                      (
+                        upazila
+                      ) => (
                         <option
                           key={
                             upazila
@@ -1118,232 +948,171 @@ export default function ProductSubmissionModal({
                             upazila
                           }
                         >
-                          {upazila}
+                          {
+                            upazila
+                          }
                         </option>
                       )
                     )}
                   </select>
-                </div>
+                </Field>
               </div>
 
-              <div className="mt-4">
-                <label
-                  className={
-                    labelClass
-                  }
-                >
-                  Village / Union /
-                  Address *
-                </label>
-
+              <Field label="Village / Address">
                 <input
-                  type="text"
                   name="location"
-                  required
                   value={
-                    formData.location
+                    form.location
                   }
                   onChange={
                     handleChange
                   }
-                  placeholder="Village, Union, Ward or specific address"
                   className={
                     inputClass
                   }
                 />
-              </div>
-            </section>
+              </Field>
 
-            <section>
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                  <Building2 className="h-4 w-4 text-[#0b5d42]" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    AgriNova Branch
-                  </h3>
-
-                  <p className="text-xs text-gray-500">
-                    Select the branch
-                    where you can deliver
-                    the product if it is
-                    accepted.
-                  </p>
-                </div>
-              </div>
-
-              <label
-                className={labelClass}
-              >
-                Preferred / Nearest
-                Branch *
-              </label>
-
-              <select
-                name="branch"
-                required
-                value={
-                  formData.branch
+              <Title
+                icon={
+                  <Building2 className="h-4 w-4" />
                 }
-                onChange={
-                  handleChange
+                title="AgriNova Branch"
+              />
+
+              <Field label="Preferred Branch">
+                <select
+                  name="branch"
+                  value={
+                    form.branch
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className={
+                    inputClass
+                  }
+                >
+                  <option value="">
+                    Select Branch
+                  </option>
+
+                  {BRANCHES.map(
+                    ([
+                      value,
+                      label,
+                    ]) => (
+                      <option
+                        key={
+                          value
+                        }
+                        value={
+                          value
+                        }
+                      >
+                        {label}
+                      </option>
+                    )
+                  )}
+                </select>
+              </Field>
+
+              <Title
+                icon={
+                  <FileText className="h-4 w-4" />
                 }
-                className={
-                  inputClass
-                }
-              >
-                <option value="">
-                  Select an AgriNova
-                  branch
-                </option>
-
-                {BRANCHES.map(
-                  (branch) => (
-                    <option
-                      key={
-                        branch.value
-                      }
-                      value={
-                        branch.value
-                      }
-                    >
-                      {
-                        branch.label
-                      }
-                    </option>
-                  )
-                )}
-              </select>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-                  <FileText className="h-4 w-4 text-[#0b5d42]" />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Additional Details
-                  </h3>
-
-                  <p className="text-xs text-gray-500">
-                    Add quality, harvest
-                    date or any other
-                    useful information.
-                  </p>
-                </div>
-              </div>
+                title="Additional Details"
+              />
 
               <textarea
                 name="notes"
-                rows={3}
                 value={
-                  formData.notes
+                  form.notes
                 }
                 onChange={
                   handleChange
                 }
-                placeholder="Mention product quality, harvest date, variety, condition, or other details..."
-                className={`${inputClass} resize-none`}
+                rows={3}
+                maxLength={1000}
+                className={`${inputClass} h-auto resize-none`}
               />
-            </section>
 
-            <section>
-              <label
-                className={labelClass}
-              >
-                Upload Product Photos
-              </label>
-
-              <div className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center transition hover:border-[#0b5d42] hover:bg-green-50/30">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={
-                    handleImageChange
-                  }
-                  disabled={
-                    isSubmitting
-                  }
-                  className="absolute inset-0 z-10 cursor-pointer opacity-0"
-                />
-
-                <Upload className="mx-auto mb-2 h-6 w-6 text-gray-400" />
-
-                <p className="text-sm font-medium text-gray-600">
-                  Click or drag product
-                  photos here
-                </p>
-
-                <p className="mt-1 text-xs text-gray-400">
-                  Maximum 5 images,
-                  5 MB each
-                </p>
-              </div>
-
-              {previews.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
-                  {previews.map(
-                    (
-                      source,
-                      index
-                    ) => (
-                      <div
-                        key={
-                          source
-                        }
-                        className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
-                      >
-                        <img
-                          src={
-                            source
-                          }
-                          alt={`Product ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeImage(
-                              index
-                            )
-                          }
-                          disabled={
-                            isSubmitting
-                          }
-                          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-red-600"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )
-                  )}
+              <div>
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <ImagePlus className="h-4 w-4 text-[#0b5d42]" />
+                  Product Photos
                 </div>
-              )}
-            </section>
-          </div>
 
-          <div className="sticky bottom-0 flex items-center justify-between border-t border-gray-200 bg-white px-5 py-4 sm:px-7">
-            <p className="hidden text-xs text-gray-400 sm:block">
-              Your product will be
-              reviewed by AgriNova.
-            </p>
+                <label className="mt-3 block cursor-pointer rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-7 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={
+                      handleImages
+                    }
+                    className="hidden"
+                  />
 
-            <div className="ml-auto flex items-center gap-3">
+                  <Upload className="mx-auto h-6 w-6 text-gray-400" />
+
+                  <p className="mt-2 text-sm font-medium">
+                    Upload Product Photos
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    Maximum 5 images · 5MB each
+                  </p>
+                </label>
+
+                {previews.length >
+                  0 && (
+                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                    {previews.map(
+                      (
+                        preview,
+                        index
+                      ) => (
+                        <div
+                          key={
+                            preview
+                          }
+                          className="relative aspect-square overflow-hidden rounded-xl bg-gray-100"
+                        >
+                          <img
+                            src={
+                              preview
+                            }
+                            alt={`Product ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeImage(
+                                index
+                              )
+                            }
+                            className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white p-5">
               <button
                 type="button"
                 onClick={
-                  handleClose
+                  closeModal
                 }
-                disabled={
-                  isSubmitting
-                }
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 disabled:opacity-50"
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-600"
               >
                 Cancel
               </button>
@@ -1351,21 +1120,56 @@ export default function ProductSubmissionModal({
               <button
                 type="submit"
                 disabled={
-                  isSubmitting ||
-                  Boolean(
-                    successMessage
-                  )
+                  isSubmitting
                 }
-                className="rounded-xl bg-[#053225] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4a38] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-[#053225] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSubmitting
                   ? "Submitting..."
                   : "Submit for Review"}
               </button>
             </div>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
+  );
+}
+
+function Title({
+  icon,
+  title,
+}: {
+  icon: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 border-b pb-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-[#0b5d42]">
+        {icon}
+      </div>
+
+      <h3 className="text-sm font-bold text-gray-900">
+        {title}
+      </h3>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold text-gray-700">
+        {label}
+      </span>
+
+      {children}
+    </label>
   );
 }

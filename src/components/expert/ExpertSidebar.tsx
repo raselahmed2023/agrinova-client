@@ -138,20 +138,19 @@ export default function ExpertSidebar({
         lg:translate-x-0
         lg:shadow-none
 
-        ${
-          isOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
+        ${isOpen
+          ? "translate-x-0"
+          : "-translate-x-full"
         }
       `}
     >
       {/* Header */}
       <div className="mb-6 flex items-start justify-between px-3">
         <Link
-          href="/"
+          href="/dashboard/expert"
           onClick={onClose}
           className="flex items-center gap-2.5 transition hover:opacity-90"
-          title="AgriNova Home"
+          title="Expert Dashboard"
         >
           <Image
             src="/AgriNova-Logo.png"
@@ -191,11 +190,10 @@ export default function ExpertSidebar({
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-xs font-semibold transition ${
-                isActive
+              className={`flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-xs font-semibold transition ${isActive
                   ? "bg-emerald-950 text-white shadow-sm"
                   : "text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-950"
-              }`}
+                }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span>{item.label}</span>

@@ -18,13 +18,12 @@ export type TransactionType =
   | "sale"
   | "free";
 
+
 export type ProductStatus =
   | "pending"
   | "available"
   | "out_of_stock"
-  | "rejected"
-  | "disabled"
-  | "approved";
+  | "disabled";
 
 export interface IProduct {
   _id: string;
@@ -77,6 +76,18 @@ export interface IProduct {
   byProductUses?: string[];
 
   rejectionReason?: string;
+
+  moderationReason?: string;
+
+  moderatedAt?: string;
+
+  moderatedBy?: string;
+
+  approvedAt?: string;
+
+  approvedBy?: string;
+
+  isDeleted?: boolean;
 
   createdAt?: string;
 
@@ -144,7 +155,7 @@ export interface IOrderItem {
 
   sellerName: string;
 
-  sellerEmail: string;
+  sellerEmail?: string;
 
   quantity: number;
 
@@ -183,14 +194,15 @@ export type PaymentMethod =
 export type PaymentStatus =
   | "pending"
   | "paid"
-  | "failed";
+  | "failed"
+  | "refunded";
 
 export interface IOrderFulfillment {
   sellerId: string;
 
   sellerName: string;
 
-  sellerEmail: string;
+  sellerEmail?: string;
 
   items: IOrderItem[];
 
@@ -263,10 +275,52 @@ export interface IOrder {
 
   paymentReference?: string;
 
+  stockRestored?: boolean;
+
   notes?: string;
 
   createdAt?: string;
 
+  updatedAt?: string;
+}
+
+export interface ISellerOrderItem {
+  productId: string;
+  title: string;
+  image?: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  subtotal: number;
+}
+
+export interface ISellerOrderFulfillment {
+  sellerId: string;
+  sellerName: string;
+  items: ISellerOrderItem[];
+  subtotal: number;
+  commissionRate: number;
+  commissionAmount: number;
+  sellerPayout: number;
+  status: FulfillmentStatus;
+  pickupAddress?: string;
+  deliveryPartner?: {
+    name?: string;
+    phone?: string;
+  };
+}
+
+
+export interface ISellerOrder {
+  _id: string;
+  orderNumber: string;
+  customerName: string;
+  deliveryDistrict: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  status: OrderStatus;
+  fulfillment: ISellerOrderFulfillment;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -286,7 +340,7 @@ export interface ICreateOrderPayload {
 export interface IStripeSession {
   sessionId: string;
 
-  checkoutUrl: string;
+  url: string | null;
 }
 
 export const PRODUCT_CATEGORIES = [
@@ -294,34 +348,91 @@ export const PRODUCT_CATEGORIES = [
     value: "crops",
     label: "Crops",
   },
+
   {
     value: "seeds",
     label: "Seeds",
   },
+
   {
     value: "fertilizers",
     label: "Fertilizers",
   },
+
   {
     value: "pesticides",
     label: "Pesticides",
   },
+
   {
     value: "equipment",
     label: "Equipment",
   },
+
   {
     value: "poultry",
     label: "Poultry",
   },
+
   {
     value: "farm_foods",
     label: "Farm Food",
   },
+
   {
     value: "by_products",
     label: "By Products",
   },
+
+  {
+    value: "other",
+    label: "Other",
+  },
+] as const;
+
+export const POULTRY_TYPE_OPTIONS = [
+  {
+    value: "chicken",
+    label: "Chicken",
+  },
+
+  {
+    value: "duck",
+    label: "Duck",
+  },
+
+  {
+    value: "other",
+    label: "Other",
+  },
+] as const;
+
+export const BY_PRODUCT_USE_OPTIONS = [
+  {
+    value: "biogas",
+    label: "Biogas",
+  },
+
+  {
+    value: "compost",
+    label: "Compost",
+  },
+
+  {
+    value: "animal_feed",
+    label: "Animal Feed",
+  },
+
+  {
+    value: "biomass",
+    label: "Biomass",
+  },
+
+  {
+    value: "bedding",
+    label: "Bedding",
+  },
+
   {
     value: "other",
     label: "Other",

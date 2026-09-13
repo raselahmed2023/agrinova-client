@@ -7,198 +7,152 @@ import {
   useState,
 } from "react";
 
-import { authClient } from "@/lib/auth-client";
-
 import FinanceSummary, {
   FinanceOverviewChart,
   type FinanceTransaction,
 } from "@/components/dashboard/finance/FinanceSummary";
-
 import TransactionForm from "@/components/dashboard/finance/TransactionForm";
 import TransactionList from "@/components/dashboard/finance/TransactionList";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
-
-interface FarmOption {
-  _id?: string;
-  id?: string;
-  name?: string;
-  farmName?: string;
-  status?: "Active" | "Inactive";
-}
+import { apiRequest } from "@/services/api.client";
+import { getMyFarms } from "@/services/farm.service";
+import type { IFarm } from "@/types/farm";
 
 export default function FinancePage() {
   const [
     transactions,
     setTransactions,
-  ] = useState<FinanceTransaction[]>([]);
+  ] = useState<
+    FinanceTransaction[]
+  >([]);
 
-  const [farms, setFarms] =
-    useState<FarmOption[]>([]);
+  const [
+    farms,
+    setFarms,
+  ] = useState<IFarm[]>(
+    []
+  );
 
   const [
     selectedFarm,
     setSelectedFarm,
   ] = useState("all");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [
+    error,
+    setError,
+  ] = useState("");
 
   const fetchTransactions =
-    useCallback(async () => {
-      if (!API_URL) {
-        setError(
-          "API configuration is missing."
-        );
-        setLoading(false);
-        return;
-      }
+    useCallback(
+      async () => {
+        try {
+          setError("");
 
-      try {
-        setLoading(true);
-        setError("");
+          const data =
+            await apiRequest<
+              FinanceTransaction[]
+            >(
+              "/finance/transactions/me"
+            );
 
-        const {
-          data: tokenData,
-          error: tokenError,
-        } =
-          await authClient.token();
-
-        if (
-          tokenError ||
-          !tokenData?.token
-        ) {
-          throw new Error(
-            "Authentication required"
+          setTransactions(
+            Array.isArray(data)
+              ? data
+              : []
           );
+        } catch (err) {
+          setTransactions([]);
+
+          throw err;
         }
-
-        const response =
-          await fetch(
-            `${API_URL}/finance/transactions/me`,
-            {
-              headers: {
-                Accept:
-                  "application/json",
-                Authorization: `Bearer ${tokenData.token}`,
-              },
-              cache: "no-store",
-            }
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              "Failed to fetch transactions."
-          );
-        }
-
-        setTransactions(
-          Array.isArray(data?.data)
-            ? data.data
-            : []
-        );
-      } catch (err) {
-        setTransactions([]);
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load transactions."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+      },
+      []
+    );
 
   const fetchFarms =
-    useCallback(async () => {
-      if (!API_URL) return;
+    useCallback(
+      async () => {
+        try {
+          const data =
+            await getMyFarms();
 
-      try {
-        const {
-          data: tokenData,
-          error: tokenError,
-        } =
-          await authClient.token();
-
-        if (
-          tokenError ||
-          !tokenData?.token
-        ) {
-          setFarms([]);
-          return;
-        }
-
-        const response =
-          await fetch(
-            `${API_URL}/farms`,
-            {
-              headers: {
-                Accept:
-                  "application/json",
-                Authorization: `Bearer ${tokenData.token}`,
-              },
-              cache: "no-store",
-            }
+          setFarms(
+            Array.isArray(data)
+              ? data
+              : []
           );
-
-        if (!response.ok) {
+        } catch {
+          /*
+           * Finance should remain usable
+           * even if the farm lookup fails.
+           */
           setFarms([]);
-          return;
         }
+      },
+      []
+    );
 
-        const data =
-          await response.json();
+  const refreshFinance =
+    useCallback(
+      async () => {
+        try {
+          setLoading(true);
+          setError("");
 
-        const farmData =
-          data?.data?.farms ||
-          data?.data ||
-          data ||
-          [];
-
-        const activeFarms =
-          Array.isArray(farmData)
-            ? farmData.filter(
-                (
-                  farm: FarmOption
-                ) =>
-                  farm.status ===
-                  "Active"
-              )
-            : [];
-
-        setFarms(activeFarms);
-      } catch {
-        setFarms([]);
-      }
-    }, []);
+          await Promise.all([
+            fetchTransactions(),
+            fetchFarms(),
+          ]);
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load finance information."
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [
+        fetchTransactions,
+        fetchFarms,
+      ]
+    );
 
   useEffect(() => {
-    void fetchTransactions();
-    void fetchFarms();
-  }, [
-    fetchTransactions,
-    fetchFarms,
-  ]);
+    void refreshFinance();
+  }, [refreshFinance]);
 
   const filteredTransactions =
     useMemo(() => {
       if (
-        selectedFarm === "all"
+        selectedFarm ===
+        "all"
       ) {
         return transactions;
       }
 
+      if (
+        selectedFarm ===
+        "unassigned"
+      ) {
+        return transactions.filter(
+          (
+            transaction
+          ) =>
+            !transaction.farmId
+        );
+      }
+
       return transactions.filter(
-        (transaction) =>
+        (
+          transaction
+        ) =>
           transaction.farmId ===
           selectedFarm
       );
@@ -210,21 +164,30 @@ export default function FinancePage() {
   const selectedFarmName =
     useMemo(() => {
       if (
-        selectedFarm === "all"
+        selectedFarm ===
+        "all"
       ) {
         return "All Farms";
       }
 
-      const farm = farms.find(
-        (item) =>
-          (item._id ||
-            item.id) ===
-          selectedFarm
-      );
+      if (
+        selectedFarm ===
+        "unassigned"
+      ) {
+        return "General / No Farm";
+      }
+
+      const farm =
+        farms.find(
+          (
+            item
+          ) =>
+            item._id ===
+            selectedFarm
+        );
 
       return (
         farm?.name ||
-        farm?.farmName ||
         "Selected Farm"
       );
     }, [
@@ -234,51 +197,17 @@ export default function FinancePage() {
 
   const handleDeleteTransaction =
     async (
-      transactionId: string
+      transactionId:
+        string
     ) => {
-      if (!API_URL) {
-        throw new Error(
-          "API configuration is missing."
-        );
-      }
-
-      const {
-        data: tokenData,
-        error: tokenError,
-      } =
-        await authClient.token();
-
-      if (
-        tokenError ||
-        !tokenData?.token
-      ) {
-        throw new Error(
-          "Authentication required"
-        );
-      }
-
-      const response =
-        await fetch(
-          `${API_URL}/finance/transactions/${transactionId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Accept:
-                "application/json",
-              Authorization: `Bearer ${tokenData.token}`,
-            },
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            "Failed to delete transaction."
-        );
-      }
+      await apiRequest<{
+        transactionId?: string;
+      }>(
+        `/finance/transactions/${encodeURIComponent(
+          transactionId
+        )}`,
+        "DELETE"
+      );
 
       await fetchTransactions();
     };
@@ -293,13 +222,14 @@ export default function FinancePage() {
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Track your farming
-              income, expenses and
+              Track farm income,
+              expenses and net
               profit in one place.
             </p>
           </div>
 
           <TransactionForm
+            farms={farms}
             onAdd={
               fetchTransactions
             }
@@ -314,7 +244,8 @@ export default function FinancePage() {
               </h2>
 
               <p className="mt-1 text-xs text-slate-500">
-                Showing finance for{" "}
+                Showing finance
+                for{" "}
                 <span className="font-semibold text-[#0B513D]">
                   {
                     selectedFarmName
@@ -340,33 +271,36 @@ export default function FinancePage() {
                       .value
                   )
                 }
-                className="h-10 min-w-[180px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
+                className="h-10 min-w-[210px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
               >
                 <option value="all">
                   All Farms
                 </option>
 
+                <option value="unassigned">
+                  General / No
+                  Farm
+                </option>
+
                 {farms.map(
-                  (farm) => {
-                    const id =
-                      farm._id ||
-                      farm.id;
-
-                    if (!id) {
-                      return null;
-                    }
-
-                    return (
-                      <option
-                        key={id}
-                        value={id}
-                      >
-                        {farm.name ||
-                          farm.farmName ||
-                          "Unnamed Farm"}
-                      </option>
-                    );
-                  }
+                  (
+                    farm
+                  ) => (
+                    <option
+                      key={
+                        farm._id
+                      }
+                      value={
+                        farm._id
+                      }
+                    >
+                      {farm.name}
+                      {farm.status ===
+                      "Inactive"
+                        ? " (Inactive)"
+                        : ""}
+                    </option>
+                  )
                 )}
               </select>
             </div>
@@ -383,9 +317,13 @@ export default function FinancePage() {
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {[1, 2, 3].map(
-                (item) => (
+                (
+                  item
+                ) => (
                   <div
-                    key={item}
+                    key={
+                      item
+                    }
                     className="h-[185px] animate-pulse rounded-2xl border border-slate-200 bg-white"
                   />
                 )
@@ -419,6 +357,9 @@ export default function FinancePage() {
                 <TransactionList
                   transactions={
                     filteredTransactions
+                  }
+                  farms={
+                    farms
                   }
                   onDelete={
                     handleDeleteTransaction

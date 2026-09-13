@@ -1,154 +1,119 @@
-"use client";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import ProductPageClient from "@/components/marketplace/ProductPageClient";
+import type { IProduct } from "@/types/marketplace";
 
-import {
-  useParams,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+type Props = {
+  params: Promise<{ productId: string }>;
+};
 
-import ProductDetails from "@/components/marketplace/ProductDetails";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 
-import ManageProductForm from "@/components/marketplace/ManageProductForm";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+).replace(/\/$/, "");
 
-import {
-  MarketplaceService,
-} from "@/services/marketplace.service";
-
-import type {
-  IProduct,
-} from "@/types/marketplace";
-
-export default function MarketplaceProductPage() {
-  const params =
-    useParams<{
-      productId: string;
-    }>();
-
-  const searchParams =
-    useSearchParams();
-
-  const router =
-    useRouter();
-
-  const [product, setProduct] =
-    useState<IProduct | null>(
-      null
+async function getProductForSeo(productId: string): Promise<IProduct | null> {
+  try {
+    const response = await fetch(
+      `${API_URL}/marketplace/products/${encodeURIComponent(productId)}`,
+      { next: { revalidate: 60 } }
     );
 
-  const [error, setError] =
-    useState("");
+    if (!response.ok) return null;
+    const result = (await response.json()) as {
+      success?: boolean;
+      data?: IProduct;
+    };
+    return result.success && result.data ? result.data : null;
+  } catch {
+    return null;
+  }
+}
 
-  const [loading, setLoading] =
-    useState(true);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { productId } = await params;
+  const product = await getProductForSeo(productId);
 
-  const editing =
-    searchParams.get(
-      "edit"
-    ) === "1";
-
-  useEffect(() => {
-    if (!params.productId) {
-      return;
-    }
-
-    const load =
-      async () => {
-        try {
-          setLoading(true);
-          setError("");
-
-          const item =
-            await MarketplaceService.getProductById(
-              params.productId
-            );
-
-          setProduct(item);
-        } catch (err) {
-          try {
-            const response =
-              await MarketplaceService.getMyProducts(
-                {
-                  page: 1,
-                  limit: 50,
-                }
-              );
-
-            const own =
-              response.data.find(
-                (item) =>
-                  item._id ===
-                  params.productId
-              );
-
-            if (!own) {
-              throw new Error(
-                "Product not found."
-              );
-            }
-
-            setProduct(own);
-          } catch (innerError) {
-            setError(
-              innerError instanceof
-                Error
-                ? innerError.message
-                : err instanceof
-                    Error
-                  ? err.message
-                  : "Unable to load product."
-            );
-          }
-        } finally {
-          setLoading(false);
-        }
-      };
-
-    load();
-  }, [
-    params.productId,
-  ]);
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-10 text-center text-slate-500">
-        Loading product...
-      </main>
-    );
+  if (!product) {
+    return {
+      title: "Marketplace Product",
+      description: "View agricultural products on the AgriNova marketplace.",
+      robots: { index: false, follow: true },
+    };
   }
 
-  if (error || !product) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-10 text-center text-red-600">
-        {error ||
-          "Product not found."}
-      </main>
-    );
-  }
+  const description = product.description.slice(0, 155);
+  const canonical = `/marketplace/${product._id}`;
 
-  if (editing) {
-    return (
-      <ManageProductForm
-        product={product}
-        onSaved={(updated) => {
-          setProduct(updated);
+  return {
+    title: `${product.title} | Marketplace`,
+    description,
+    keywords: [
+      product.title,
+      product.category.replaceAll("_", " "),
+      product.district || "Bangladesh",
+      "AgriNova marketplace",
+      "farm products",
+    ],
+    alternates: { canonical },
+    openGraph: {
+      title: `${product.title} | Marketplace`,
+      description,
+      url: canonical,
+      siteName: "AgriNova",
+      type: "website",
+      images: product.images?.[0]
+        ? [{ url: product.images[0], alt: product.title }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.title} | Marketplace`,
+      description,
+      images: product.images?.[0] ? [product.images[0]] : undefined,
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
-          router.replace(
-            `/marketplace/${updated._id}`
-          );
-        }}
-      />
-    );
-  }
+export default async function MarketplaceProductPage({ params }: Props) {
+  const { productId } = await params;
+  const product = await getProductForSeo(productId);
+
+  const jsonLd = product
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.title,
+        description: product.description,
+        image: product.images || [],
+        category: product.category.replaceAll("_", " "),
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "BDT",
+          price: product.transactionType === "free" ? 0 : product.price,
+          availability:
+            product.status === "available" && product.quantity > 0
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          url: `${SITE_URL}/marketplace/${product._id}`,
+        },
+      }
+    : null;
 
   return (
-    <ProductDetails
-      product={product}
-      backHref="/marketplace"
-    />
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <Suspense fallback={<main className="min-h-screen bg-[#f5f8f2] px-4 py-16"><div className="mx-auto flex min-h-[420px] max-w-5xl items-center justify-center"><span className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" aria-label="Loading product" /></div></main>}>
+        <ProductPageClient productId={productId} />
+      </Suspense>
+    </>
   );
 }

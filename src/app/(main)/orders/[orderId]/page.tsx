@@ -10,19 +10,32 @@ import {
 import {
   ArrowLeft,
   Package,
+  Truck,
 } from "lucide-react";
 
-import {
-  useParams,
-} from "next/navigation";
+import { useParams } from "next/navigation";
 
-import {
-  OrderService,
-} from "@/services/order.service";
+import { OrderService } from "@/services/order.service";
 
 import type {
   IOrder,
 } from "@/types/marketplace";
+
+const statusClass = (status: string) => {
+  if (status === "delivered") {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "cancelled") {
+    return "bg-red-50 text-red-700";
+  }
+
+  if (status === "pending") {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  return "bg-blue-50 text-blue-700";
+};
 
 export default function OrderDetailsPage() {
   const params =
@@ -30,13 +43,8 @@ export default function OrderDetailsPage() {
       orderId: string;
     }>();
 
-  const [
-    order,
-    setOrder,
-  ] =
-    useState<IOrder | null>(
-      null
-    );
+  const [order, setOrder] =
+    useState<IOrder | null>(null);
 
   const [error, setError] =
     useState("");
@@ -57,9 +65,7 @@ export default function OrderDetailsPage() {
             : "Unable to load order."
         )
       );
-  }, [
-    params.orderId,
-  ]);
+  }, [params.orderId]);
 
   if (error) {
     return (
@@ -99,89 +105,168 @@ export default function OrderDetailsPage() {
             </p>
 
             <h1 className="mt-1 text-3xl font-bold">
-              {
-                order.orderNumber
-              }
+              {order.orderNumber}
             </h1>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Payment:{" "}
+              {order.paymentMethod.toUpperCase()} ·{" "}
+              <span className="font-semibold capitalize">
+                {order.paymentStatus}
+              </span>
+            </p>
           </div>
 
-          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm">
-            <span className="font-semibold capitalize text-emerald-700">
-              {order.status.replaceAll(
-                "_",
-                " "
-              )}
-            </span>
-          </div>
+          <span
+            className={`w-fit rounded-xl px-4 py-3 text-sm font-semibold capitalize ${statusClass(
+              order.status
+            )}`}
+          >
+            {order.status.replaceAll(
+              "_",
+              " "
+            )}
+          </span>
         </div>
 
         <div className="mt-7 grid gap-5 lg:grid-cols-[1fr_320px]">
-          <section className="rounded-2xl border bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold">
-              Items
-            </h2>
+          <div className="space-y-5">
+            <section className="rounded-2xl border bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold">
+                Items
+              </h2>
 
-            <div className="mt-5 space-y-4">
-              {order.items.map(
-                (item) => (
-                  <div
-                    key={
-                      item.productId
-                    }
-                    className="flex gap-4 border-b pb-4 last:border-0"
-                  >
-                    <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
-                      {item.image ? (
-                        <img
-                          src={
-                            item.image
-                          }
-                          alt={
-                            item.title
-                          }
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Package className="m-5 h-6 w-6 text-slate-300" />
-                      )}
-                    </div>
+              <div className="mt-5 space-y-4">
+                {order.items.map(
+                  (item, index) => (
+                    <div
+                      key={`${item.productId}-${index}`}
+                      className="flex gap-4 border-b pb-4 last:border-0"
+                    >
+                      <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Package className="m-5 h-6 w-6 text-slate-300" />
+                        )}
+                      </div>
 
-                    <div className="flex-1">
+                      <div className="flex-1">
+                        <p className="font-semibold">
+                          {item.title}
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {item.quantity}{" "}
+                          {item.unit} × ৳
+                          {Number(
+                            item.price
+                          ).toLocaleString(
+                            "en-BD"
+                          )}
+                        </p>
+                      </div>
+
                       <p className="font-semibold">
-                        {
-                          item.title
-                        }
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        {
-                          item.quantity
-                        }{" "}
-                        {
-                          item.unit
-                        }{" "}
-                        × ৳
+                        ৳
                         {Number(
-                          item.price
+                          item.subtotal
                         ).toLocaleString(
                           "en-BD"
                         )}
                       </p>
                     </div>
+                  )
+                )}
+              </div>
+            </section>
 
-                    <p className="font-semibold">
-                      ৳
-                      {Number(
-                        item.subtotal
-                      ).toLocaleString(
-                        "en-BD"
-                      )}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </section>
+            {order.fulfillments?.length >
+              0 && (
+              <section className="rounded-2xl border bg-white p-6 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-emerald-700" />
+
+                  <h2 className="text-lg font-bold">
+                    Delivery progress
+                  </h2>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {order.fulfillments.map(
+                    (
+                      fulfillment,
+                      index
+                    ) => (
+                      <div
+                        key={`${fulfillment.sellerId}-${index}`}
+                        className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {fulfillment.sellerName ||
+                                "Marketplace seller"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {fulfillment.items
+                                .map(
+                                  (
+                                    item
+                                  ) =>
+                                    item.title
+                                )
+                                .join(
+                                  ", "
+                                )}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass(
+                              fulfillment.status
+                            )}`}
+                          >
+                            {fulfillment.status.replaceAll(
+                              "_",
+                              " "
+                            )}
+                          </span>
+                        </div>
+
+                        {(fulfillment
+                          .deliveryPartner
+                          ?.name ||
+                          fulfillment
+                            .deliveryPartner
+                            ?.phone) && (
+                          <p className="mt-3 text-xs text-slate-600">
+                            Delivery
+                            partner:{" "}
+                            {fulfillment
+                              .deliveryPartner
+                              ?.name ||
+                              "Assigned"}
+
+                            {fulfillment
+                              .deliveryPartner
+                              ?.phone
+                              ? ` · ${fulfillment.deliveryPartner.phone}`
+                              : ""}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
 
           <aside className="h-fit rounded-2xl border bg-white p-6 shadow-sm">
             <h2 className="text-lg font-bold">
@@ -190,25 +275,19 @@ export default function OrderDetailsPage() {
 
             <Row
               label="Subtotal"
-              value={
-                order.subtotal
-              }
+              value={order.subtotal}
             />
 
             <Row
               label="Delivery"
-              value={
-                order.deliveryFee
-              }
+              value={order.deliveryFee}
             />
 
             <div className="my-4 border-t" />
 
             <Row
               label="Total"
-              value={
-                order.totalAmount
-              }
+              value={order.totalAmount}
               strong
             />
 
@@ -219,55 +298,44 @@ export default function OrderDetailsPage() {
 
               <p className="mt-2 text-slate-600">
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .fullName
                 }
                 <br />
+
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .phone
                 }
                 <br />
+
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .address
                 }
                 <br />
+
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .upazila
                 }
-                {order
-                  .shippingAddress
+
+                {order.shippingAddress
                   .upazila
                   ? ", "
                   : ""}
+
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .district
                 }
                 ,{" "}
                 {
-                  order
-                    .shippingAddress
+                  order.shippingAddress
                     .division
                 }
               </p>
             </div>
-
-            <p className="mt-4 text-xs text-slate-500">
-              Payment:{" "}
-              {order.paymentMethod.toUpperCase()}
-              {" • "}
-              {
-                order.paymentStatus
-              }
-            </p>
           </aside>
         </div>
       </div>
@@ -296,9 +364,7 @@ function Row({
 
       <span>
         ৳
-        {Number(
-          value
-        ).toLocaleString(
+        {Number(value).toLocaleString(
           "en-BD"
         )}
       </span>

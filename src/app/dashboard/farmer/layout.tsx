@@ -1,6 +1,7 @@
 "use client";
 
 import FarmerSidebar from "@/components/dashboard/FarmerSidebar";
+import NotificationBell from "@/components/shared/NotificationBell";
 import { Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,6 +58,8 @@ export default function FarmerDashboardLayout({
                 </p>
               </div>
             </div>
+
+            <NotificationBell />
           </header>
 
           <main className="min-w-0">

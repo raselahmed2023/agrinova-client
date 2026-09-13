@@ -5,85 +5,210 @@ const BASE_URL = (
   "http://localhost:5000/api/v1"
 ).replace(/\/$/, "");
 
-interface ApiEnvelope<T> {
+export interface ApiMeta {
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
+  [key: string]: unknown;
+}
+
+export interface ApiEnvelope<T> {
   success: boolean;
   message?: string;
   data: T;
-  meta?: unknown;
+  meta?: ApiMeta;
+}
+
+type ApiMethod =
+  | "GET"
+  | "POST"
+  | "PATCH"
+  | "DELETE";
+
+function normalizeEndpoint(
+  endpoint: string
+) {
+  return endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
+}
+
+
+export async function getAccessToken(): Promise<string> {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    throw new Error(
+      "Authentication token is only available in the browser."
+    );
+  }
+
+  const {
+    data: session,
+  } =
+    await authClient.getSession();
+
+  if (!session?.user) {
+    throw new Error(
+      "Authentication required."
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await authClient.token();
+
+  if (
+    error ||
+    !data?.token
+  ) {
+    throw new Error(
+      error?.message ||
+        "Unable to retrieve authentication token."
+    );
+  }
+
+  return data.token;
+}
+
+
+async function getOptionalAccessToken(): Promise<
+  string | null
+> {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return null;
+  }
+
+  try {
+    const {
+      data: session,
+    } =
+      await authClient.getSession();
+
+    if (!session?.user) {
+      return null;
+    }
+
+    const {
+      data,
+      error,
+    } =
+      await authClient.token();
+
+    if (
+      error ||
+      !data?.token
+    ) {
+      return null;
+    }
+
+    return data.token;
+  } catch {
+    return null;
+  }
 }
 
 async function getAuthHeaders(): Promise<
   Record<string, string>
 > {
-  const requestHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
+  const headers: Record<
+    string,
+    string
+  > = {
+    "Content-Type":
+      "application/json",
   };
 
-  try {
-    const { data } = await authClient.token();
+  const token =
+    await getOptionalAccessToken();
 
-    if (data?.token) {
-      requestHeaders.Authorization =
-        `Bearer ${data.token}`;
-    }
-  } catch (error) {
-    console.warn(
-      "Could not retrieve authentication token:",
-      error
+  if (token) {
+    headers.Authorization =
+      `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+async function requestEnvelope<T>(
+  endpoint: string,
+  method: ApiMethod = "GET",
+  body?: unknown,
+  queryString?: string
+): Promise<ApiEnvelope<T>> {
+  const url =
+    new URL(
+      `${BASE_URL}${normalizeEndpoint(
+        endpoint
+      )}`
+    );
+
+  if (queryString) {
+    const params =
+      new URLSearchParams(
+        queryString
+      );
+
+    params.forEach(
+      (
+        value,
+        key
+      ) => {
+        url.searchParams.set(
+          key,
+          value
+        );
+      }
     );
   }
 
-  return requestHeaders;
-}
-
-export async function apiRequest<T>(
-  endpoint: string,
-  method:
-    | "GET"
-    | "POST"
-    | "PATCH"
-    | "DELETE" = "GET",
-  body?: unknown,
-  queryString?: string
-): Promise<T> {
-  const cleanEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`;
-
-  const url = new URL(
-    `${BASE_URL}${cleanEndpoint}`
-  );
-
-  if (queryString) {
-    const params = new URLSearchParams(queryString);
-
-    params.forEach((value, key) => {
-      url.searchParams.set(key, value);
-    });
-  }
-
-  const headers = await getAuthHeaders();
+  const headers =
+    await getAuthHeaders();
 
   let response: Response;
 
   try {
-    response = await fetch(url.toString(), {
-      method,
-      headers,
-      cache: "no-store",
-      credentials: "include",
-      ...(body !== undefined
-        ? {
-            body: JSON.stringify(body),
-          }
-        : {}),
-    });
+    response =
+      await fetch(
+        url.toString(),
+        {
+          method,
+
+          headers,
+
+          cache:
+            "no-store",
+
+          credentials:
+            "include",
+
+          ...(body !==
+          undefined
+            ? {
+                body:
+                  JSON.stringify(
+                    body
+                  ),
+              }
+            : {}),
+        }
+      );
   } catch (error) {
     console.error(
       "API connection failed:",
       {
-        url: url.toString(),
+        url:
+          url.toString(),
+
         method,
+
         error,
       }
     );
@@ -93,50 +218,63 @@ export async function apiRequest<T>(
     );
   }
 
-  let result: ApiEnvelope<T> | null = null;
+  let result:
+    | ApiEnvelope<T>
+    | null = null;
 
   try {
-    result = await response.json();
+    result =
+      (await response.json()) as ApiEnvelope<T>;
   } catch {
     throw new Error(
       `API returned an invalid response (${response.status}).`
     );
   }
 
-  if (!response.ok || !result?.success) {
+  if (
+    !response.ok ||
+    !result?.success
+  ) {
     throw new Error(
       result?.message ||
         `Request failed with status ${response.status}.`
     );
   }
 
-  const data = result.data;
-  if (data && typeof data === "object") {
-    if (!("success" in data)) {
-      Object.defineProperty(data, "success", {
-        value: result.success,
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      });
-    }
-    if (result.meta !== undefined && !("meta" in data)) {
-      Object.defineProperty(data, "meta", {
-        value: result.meta,
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      });
-    }
-    if (!("data" in data)) {
-      Object.defineProperty(data, "data", {
-        value: data,
-        enumerable: false,
-        configurable: true,
-        writable: true,
-      });
-    }
-  }
-
-  return data;
+  return result;
 }
+
+export async function apiRequest<T>(
+  endpoint: string,
+  method: ApiMethod = "GET",
+  body?: unknown,
+  queryString?: string
+): Promise<T> {
+  const result =
+    await requestEnvelope<T>(
+      endpoint,
+      method,
+      body,
+      queryString
+    );
+
+  return result.data;
+}
+
+export async function apiRequestWithMeta<T>(
+  endpoint: string,
+  method: ApiMethod = "GET",
+  body?: unknown,
+  queryString?: string
+): Promise<ApiEnvelope<T>> {
+  return requestEnvelope<T>(
+    endpoint,
+    method,
+    body,
+    queryString
+  );
+}
+
+export {
+  BASE_URL,
+};

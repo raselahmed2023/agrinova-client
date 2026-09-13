@@ -13,18 +13,31 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+
 import Image from "next/image";
-import { ChangeEvent, DragEvent, useRef, useState } from "react";
+
+import {
+  ChangeEvent,
+  DragEvent,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  authClient,
+} from "@/lib/auth-client";
 
 import DiseaseResult, {
   type DiseaseResultType,
 } from "./DiseaseResult";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
+  process.env
+    .NEXT_PUBLIC_API_URL ||
   "http://localhost:5000/api/v1";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE =
+  5 * 1024 * 1024;
 
 const allowedTypes = [
   "image/jpeg",
@@ -33,70 +46,142 @@ const allowedTypes = [
 ];
 
 export default function DiseaseUploadForm() {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");
-  const [cropName, setCropName] = useState("");
-  const [result, setResult] =
-    useState<DiseaseResultType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState("");
+  const [
+    file,
+    setFile,
+  ] =
+    useState<File | null>(
+      null
+    );
 
-  const inputRef = useRef<HTMLInputElement | null>(
-    null
-  );
+  const [
+    preview,
+    setPreview,
+  ] = useState("");
 
-  const selectFile = (selectedFile: File) => {
+  const [
+    cropName,
+    setCropName,
+  ] = useState("");
+
+  const [
+    result,
+    setResult,
+  ] =
+    useState<DiseaseResultType | null>(
+      null
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(false);
+
+  const [
+    isDragging,
+    setIsDragging,
+  ] =
+    useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const inputRef =
+    useRef<HTMLInputElement | null>(
+      null
+    );
+
+  const selectFile = (
+    selectedFile: File
+  ) => {
     setError("");
     setResult(null);
 
-    if (!allowedTypes.includes(selectedFile.type)) {
+    if (
+      !allowedTypes.includes(
+        selectedFile.type
+      )
+    ) {
       setError(
         "Only JPG, PNG and WEBP images are supported."
       );
+
       return;
     }
 
-    if (selectedFile.size > MAX_FILE_SIZE) {
-      setError("Image size must be 5MB or less.");
+    if (
+      selectedFile.size >
+      MAX_FILE_SIZE
+    ) {
+      setError(
+        "Image size must be 5MB or less."
+      );
+
       return;
     }
 
     if (preview) {
-      URL.revokeObjectURL(preview);
+      URL.revokeObjectURL(
+        preview
+      );
     }
 
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
+    setFile(
+      selectedFile
+    );
+
+    setPreview(
+      URL.createObjectURL(
+        selectedFile
+      )
+    );
   };
 
   const handleFileChange = (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const selectedFile = event.target.files?.[0];
+    const selectedFile =
+      event.target
+        .files?.[0];
 
     if (selectedFile) {
-      selectFile(selectedFile);
+      selectFile(
+        selectedFile
+      );
     }
+
+    event.target.value =
+      "";
   };
 
   const handleDrop = (
     event: DragEvent<HTMLDivElement>
   ) => {
     event.preventDefault();
-    setIsDragging(false);
+
+    setIsDragging(
+      false
+    );
 
     const selectedFile =
-      event.dataTransfer.files?.[0];
+      event.dataTransfer
+        .files?.[0];
 
     if (selectedFile) {
-      selectFile(selectedFile);
+      selectFile(
+        selectedFile
+      );
     }
   };
 
   const removeImage = () => {
     if (preview) {
-      URL.revokeObjectURL(preview);
+      URL.revokeObjectURL(
+        preview
+      );
     }
 
     setFile(null);
@@ -104,64 +189,120 @@ export default function DiseaseUploadForm() {
     setResult(null);
     setError("");
 
-    if (inputRef.current) {
-      inputRef.current.value = "";
+    if (
+      inputRef.current
+    ) {
+      inputRef.current.value =
+        "";
     }
   };
 
   const reset = () => {
     removeImage();
+
     setCropName("");
     setResult(null);
   };
 
-  const analyzeImage = async () => {
-    if (!file) {
-      setError("Please upload a crop or leaf image.");
-      return;
-    }
+  const analyzeImage =
+    async () => {
+      if (!file) {
+        setError(
+          "Please upload a crop or leaf image."
+        );
 
-    setError("");
-    setResult(null);
-    setIsLoading(true);
-
-    try {
-      const formData = new FormData();
-
-      formData.append("image", file);
-
-      if (cropName.trim()) {
-        formData.append("cropName", cropName.trim());
+        return;
       }
 
-      const response = await fetch(
-        `${API_URL}/ai/disease-detection`,
-        {
-          method: "POST",
-          body: formData,
+      setError("");
+      setResult(null);
+      setIsLoading(true);
+
+      try {
+        const formData =
+          new FormData();
+
+        formData.append(
+          "image",
+          file
+        );
+
+        if (
+          cropName.trim()
+        ) {
+          formData.append(
+            "cropName",
+            cropName.trim()
+          );
         }
-      );
 
-      const data = await response.json();
+        const {
+          data:
+            tokenData,
+          error:
+            tokenError,
+        } =
+          await authClient.token();
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            "Unable to analyze the crop image."
+        if (
+          tokenError ||
+          !tokenData?.token
+        ) {
+          throw new Error(
+            "Please sign in again to use disease detection."
+          );
+        }
+
+        const response =
+          await fetch(
+            `${API_URL}/ai/disease-detection`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Authorization:
+                  `Bearer ${tokenData.token}`,
+              },
+
+              body:
+                formData,
+            }
+          );
+
+        const data =
+          await response
+            .json()
+            .catch(
+              () =>
+                null
+            );
+
+        if (
+          !response.ok ||
+          !data?.success
+        ) {
+          throw new Error(
+            data?.message ||
+              "Unable to analyze the crop image."
+          );
+        }
+
+        setResult(
+          data.data
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again."
+        );
+      } finally {
+        setIsLoading(
+          false
         );
       }
-
-      setResult(data.data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -191,7 +332,9 @@ export default function DiseaseUploadForm() {
         {(file || result) && (
           <button
             type="button"
-            onClick={reset}
+            onClick={
+              reset
+            }
             className="inline-flex h-10 items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
           >
             <RotateCcw className="h-4 w-4" />
@@ -211,6 +354,7 @@ export default function DiseaseUploadForm() {
               <h2 className="text-base font-semibold text-slate-900">
                 Upload Crop Image
               </h2>
+
               <p className="mt-0.5 text-xs text-slate-500">
                 Clear, close-up images provide better results.
               </p>
@@ -220,14 +364,31 @@ export default function DiseaseUploadForm() {
           <div className="mt-5">
             {!preview ? (
               <div
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
+                onDragEnter={(
+                  event
+                ) => {
+                  event.preventDefault();
+
+                  setIsDragging(
+                    true
+                  );
                 }}
-                onDragOver={(e) => e.preventDefault()}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => inputRef.current?.click()}
+                onDragOver={(
+                  event
+                ) =>
+                  event.preventDefault()
+                }
+                onDragLeave={() =>
+                  setIsDragging(
+                    false
+                  )
+                }
+                onDrop={
+                  handleDrop
+                }
+                onClick={() =>
+                  inputRef.current?.click()
+                }
                 className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition ${
                   isDragging
                     ? "border-[#0B513D] bg-[#F0F7F2]"
@@ -255,9 +416,12 @@ export default function DiseaseUploadForm() {
               <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                 <div className="relative aspect-[4/3] w-full">
                   <Image
-                    src={preview}
+                    src={
+                      preview
+                    }
                     alt="Uploaded crop"
                     fill
+                    sizes="(max-width: 768px) 100vw, 460px"
                     unoptimized
                     className="object-cover"
                   />
@@ -266,22 +430,29 @@ export default function DiseaseUploadForm() {
                 <div className="flex items-center justify-between border-t border-slate-200 bg-white p-3">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-medium text-slate-700">
-                      {file?.name}
+                      {
+                        file?.name
+                      }
                     </p>
+
                     <p className="mt-0.5 text-[10px] text-slate-400">
                       {file
                         ? `${(
                             file.size /
                             1024 /
                             1024
-                          ).toFixed(2)} MB`
+                          ).toFixed(
+                            2
+                          )} MB`
                         : ""}
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={removeImage}
+                    onClick={
+                      removeImage
+                    }
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
                   >
                     <X className="h-4 w-4" />
@@ -291,10 +462,14 @@ export default function DiseaseUploadForm() {
             )}
 
             <input
-              ref={inputRef}
+              ref={
+                inputRef
+              }
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
+              onChange={
+                handleFileChange
+              }
               className="hidden"
             />
           </div>
@@ -302,6 +477,7 @@ export default function DiseaseUploadForm() {
           <div className="mt-5">
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Crop Name
+
               <span className="ml-1 text-xs font-normal text-slate-400">
                 Optional
               </span>
@@ -311,9 +487,13 @@ export default function DiseaseUploadForm() {
               <Leaf className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
 
               <input
-                value={cropName}
+                value={
+                  cropName
+                }
                 onChange={(e) =>
-                  setCropName(e.target.value)
+                  setCropName(
+                    e.target.value
+                  )
                 }
                 placeholder="e.g. Tomato"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#8CB89A] focus:ring-4 focus:ring-[#0B513D]/5"
@@ -324,6 +504,7 @@ export default function DiseaseUploadForm() {
           {error && (
             <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+
               <p className="text-xs leading-5 text-red-600">
                 {error}
               </p>
@@ -332,8 +513,13 @@ export default function DiseaseUploadForm() {
 
           <button
             type="button"
-            disabled={!file || isLoading}
-            onClick={analyzeImage}
+            disabled={
+              !file ||
+              isLoading
+            }
+            onClick={
+              analyzeImage
+            }
             className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0B513D] text-sm font-semibold text-white shadow-sm transition hover:bg-[#084330] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? (
@@ -376,7 +562,11 @@ export default function DiseaseUploadForm() {
                 </p>
               </div>
 
-              <DiseaseResult result={result} />
+              <DiseaseResult
+                result={
+                  result
+                }
+              />
             </>
           ) : (
             <div className="flex min-h-[600px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
@@ -399,20 +589,29 @@ export default function DiseaseUploadForm() {
                     "Use good lighting",
                     "Focus affected area",
                     "Avoid blurry photos",
-                  ].map((tip, index) => (
-                    <div
-                      key={tip}
-                      className="rounded-xl border border-slate-100 bg-[#FAFBFA] p-3"
-                    >
-                      <span className="text-[10px] font-semibold text-[#477A5B]">
-                        0{index + 1}
-                      </span>
+                  ].map(
+                    (
+                      tip,
+                      index
+                    ) => (
+                      <div
+                        key={
+                          tip
+                        }
+                        className="rounded-xl border border-slate-100 bg-[#FAFBFA] p-3"
+                      >
+                        <span className="text-[10px] font-semibold text-[#477A5B]">
+                          0
+                          {index +
+                            1}
+                        </span>
 
-                      <p className="mt-1 text-xs font-medium leading-5 text-slate-600">
-                        {tip}
-                      </p>
-                    </div>
-                  ))}
+                        <p className="mt-1 text-xs font-medium leading-5 text-slate-600">
+                          {tip}
+                        </p>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -425,23 +624,27 @@ export default function DiseaseUploadForm() {
 
 function DiseaseSkeleton() {
   return (
-    <div className="space-y-5 animate-pulse">
+    <div className="animate-pulse space-y-5">
       <div className="h-32 rounded-2xl bg-slate-200" />
 
-      {[1, 2, 3].map((item) => (
-        <div
-          key={item}
-          className="rounded-2xl border border-slate-200 bg-white p-6"
-        >
-          <div className="h-4 w-32 rounded bg-slate-200" />
+      {[1, 2, 3].map(
+        (item) => (
+          <div
+            key={
+              item
+            }
+            className="rounded-2xl border border-slate-200 bg-white p-6"
+          >
+            <div className="h-4 w-32 rounded bg-slate-200" />
 
-          <div className="mt-5 space-y-3">
-            <div className="h-3 w-full rounded bg-slate-100" />
-            <div className="h-3 w-11/12 rounded bg-slate-100" />
-            <div className="h-3 w-4/5 rounded bg-slate-100" />
+            <div className="mt-5 space-y-3">
+              <div className="h-3 w-full rounded bg-slate-100" />
+              <div className="h-3 w-11/12 rounded bg-slate-100" />
+              <div className="h-3 w-4/5 rounded bg-slate-100" />
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      )}
     </div>
   );
 }

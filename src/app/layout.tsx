@@ -1,11 +1,16 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
 
 import { CartProvider } from "@/context/CartContext";
 
 export const metadata: Metadata = {
-  title: "AgriNova",
-  description: "Smart Agriculture & Digital Farming Platform",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  title: {
+    default: "AgriNova | Smart Agriculture Platform",
+    template: "%s | AgriNova",
+  },
+  description: "AgriNova connects farmers with digital farm management, agricultural marketplace, investment, expert support and AI-powered farming tools in Bangladesh.",
   icons: {
     icon: [
       { url: "/favicon.ico" },
