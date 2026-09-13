@@ -12,15 +12,13 @@ import {
 import {
   MarketplaceService,
 } from "@/services/marketplace.service";
+import { useSession } from "@/lib/auth-client";
 
 import type {
   IProduct,
 } from "@/types/marketplace";
 
-/**
- * Marketplace cart products use the same
- * product contract as the API.
- */
+
 export type CartProduct =
   IProduct;
 
@@ -71,8 +69,30 @@ const CartContext =
       | undefined
   >(undefined);
 
-const STORAGE_KEY =
+const STORAGE_KEY_PREFIX =
   "agrinova-marketplace-cart";
+
+
+const LEGACY_SHARED_STORAGE_KEY =
+  "agrinova-marketplace-cart";
+
+const getStorageKey = (userId?: string | null) =>
+  `${STORAGE_KEY_PREFIX}:${userId ? `user:${userId}` : "guest"}`;
+
+const readStoredCart = (storageKey: string): CartItem[] => {
+  try {
+    const saved = localStorage.getItem(storageKey);
+
+    if (!saved) return [];
+
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+  } catch (error) {
+    console.error("Unable to restore marketplace cart:", error);
+    localStorage.removeItem(storageKey);
+    return [];
+  }
+};
 
 export function CartProvider({
   children,
@@ -93,63 +113,51 @@ export function CartProvider({
   ] =
     useState(true);
 
+  const {
+    data: session,
+    isPending: sessionPending,
+  } = useSession();
 
+  const userId = session?.user?.id || null;
+  const storageKey = getStorageKey(userId);
 
+  const [
+    activeStorageKey,
+    setActiveStorageKey,
+  ] = useState<string | null>(null);
+
+  
   useEffect(() => {
-    try {
-      const saved =
-        localStorage.getItem(
-          STORAGE_KEY
-        );
+    if (sessionPending) return;
 
-      if (saved) {
-        const parsed =
-          JSON.parse(saved);
-
-        if (
-          Array.isArray(
-            parsed
-          )
-        ) {
-          setItems(
-            parsed as CartItem[]
-          );
-        }
-      }
-    } catch (
-      error
-    ) {
-      console.error(
-        "Unable to restore marketplace cart:",
-        error
-      );
-
-      localStorage.removeItem(
-        STORAGE_KEY
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    setLoading(true);
 
  
+    localStorage.removeItem(LEGACY_SHARED_STORAGE_KEY);
 
+    const restoredItems = readStoredCart(storageKey);
+
+    setItems(restoredItems);
+    setActiveStorageKey(storageKey);
+    setLoading(false);
+  }, [sessionPending, storageKey]);
+
+  
   useEffect(() => {
-    if (loading) {
+    if (
+      loading ||
+      sessionPending ||
+      activeStorageKey !== storageKey
+    ) {
       return;
     }
 
     try {
       localStorage.setItem(
-        STORAGE_KEY,
-
-        JSON.stringify(
-          items
-        )
+        storageKey,
+        JSON.stringify(items)
       );
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "Unable to save marketplace cart:",
         error
@@ -158,9 +166,10 @@ export function CartProvider({
   }, [
     items,
     loading,
+    sessionPending,
+    activeStorageKey,
+    storageKey,
   ]);
-
- 
 
   const addToCart = (
     product:
@@ -191,18 +200,17 @@ export function CartProvider({
       return;
     }
 
-    const safeQuantity =
+    const minimumQuantity = Math.min(1, available);
+    const requestedQuantity = Number.isFinite(Number(quantity))
+      ? Number(quantity)
+      : minimumQuantity;
+
+    const safeQuantity = Number(
       Math.min(
-        Math.max(
-          1,
-
-          Math.floor(
-            quantity
-          )
-        ),
-
+        Math.max(minimumQuantity, requestedQuantity),
         available
-      );
+      ).toFixed(3)
+    );
 
     setItems(
       (
@@ -264,8 +272,6 @@ export function CartProvider({
     );
   };
 
-
-
   const updateQuantity =
     (
       productId:
@@ -291,40 +297,33 @@ export function CartProvider({
                 return item;
               }
 
-              const available =
-                Math.max(
-                  1,
+              const available = Math.max(
+                0,
+                Number(item.product.quantity || 0)
+              );
 
-                  Number(
-                    item
-                      .product
-                      .quantity ||
-                      1
-                  )
-                );
+              if (available <= 0) {
+                return item;
+              }
+
+              const minimumQuantity = Math.min(1, available);
+              const requestedQuantity = Number.isFinite(Number(quantity))
+                ? Number(quantity)
+                : minimumQuantity;
 
               return {
                 ...item,
-
-                quantity:
+                quantity: Number(
                   Math.min(
-                    Math.max(
-                      1,
-
-                      Math.floor(
-                        quantity
-                      )
-                    ),
-
+                    Math.max(minimumQuantity, requestedQuantity),
                     available
-                  ),
+                  ).toFixed(3)
+                ),
               };
             }
           )
       );
     };
-
-
 
   const removeFromCart =
     (
@@ -351,8 +350,6 @@ export function CartProvider({
     () => {
       setItems([]);
     };
-
- 
 
   const refreshCart =
     async () => {
@@ -395,23 +392,18 @@ export function CartProvider({
                 return {
                   product,
 
-                  quantity:
+                  quantity: Number(
                     Math.min(
-                      item.quantity,
-
-                      Number(
-                        product.quantity
-                      )
-                    ),
+                      Math.max(
+                        Math.min(1, Number(product.quantity)),
+                        Number(item.quantity)
+                      ),
+                      Number(product.quantity)
+                    ).toFixed(3)
+                  ),
                 };
               } catch {
-                /**
-                 * Product may have been:
-                 * - deleted
-                 * - moderated
-                 * - removed
-                 * - otherwise unavailable
-                 */
+                
                 return null;
               }
             }
@@ -448,8 +440,6 @@ export function CartProvider({
         0
       );
     };
-
-
 
   const totalItems =
     useMemo(

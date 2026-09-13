@@ -18,10 +18,7 @@ export type TransactionType =
   | "sale"
   | "free";
 
-/**
- * pending is retained only for legacy database records.
- * New farmer listings publish immediately.
- */
+
 export type ProductStatus =
   | "pending"
   | "available"
@@ -78,23 +75,14 @@ export interface IProduct {
 
   byProductUses?: string[];
 
-  /**
-   * Legacy field only.
-   */
   rejectionReason?: string;
 
-  /**
-   * Current admin moderation fields.
-   */
   moderationReason?: string;
 
   moderatedAt?: string;
 
   moderatedBy?: string;
 
-  /**
-   * Legacy approval fields kept so old records do not break.
-   */
   approvedAt?: string;
 
   approvedBy?: string;
@@ -156,8 +144,6 @@ export interface IProductListResponse {
   data: IProduct[];
 }
 
-
-
 export interface IOrderItem {
   productId: string;
 
@@ -169,7 +155,7 @@ export interface IOrderItem {
 
   sellerName: string;
 
-  sellerEmail: string;
+  sellerEmail?: string;
 
   quantity: number;
 
@@ -216,7 +202,7 @@ export interface IOrderFulfillment {
 
   sellerName: string;
 
-  sellerEmail: string;
+  sellerEmail?: string;
 
   items: IOrderItem[];
 
@@ -298,6 +284,46 @@ export interface IOrder {
   updatedAt?: string;
 }
 
+export interface ISellerOrderItem {
+  productId: string;
+  title: string;
+  image?: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  subtotal: number;
+}
+
+export interface ISellerOrderFulfillment {
+  sellerId: string;
+  sellerName: string;
+  items: ISellerOrderItem[];
+  subtotal: number;
+  commissionRate: number;
+  commissionAmount: number;
+  sellerPayout: number;
+  status: FulfillmentStatus;
+  pickupAddress?: string;
+  deliveryPartner?: {
+    name?: string;
+    phone?: string;
+  };
+}
+
+
+export interface ISellerOrder {
+  _id: string;
+  orderNumber: string;
+  customerName: string;
+  deliveryDistrict: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  status: OrderStatus;
+  fulfillment: ISellerOrderFulfillment;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ICreateOrderPayload {
   items: {
     productId: string;
@@ -311,18 +337,11 @@ export interface ICreateOrderPayload {
   notes?: string;
 }
 
-
-
 export interface IStripeSession {
   sessionId: string;
 
-  /**
-   * Stripe Checkout redirect URL.
-   */
   url: string | null;
 }
-
-
 
 export const PRODUCT_CATEGORIES = [
   {

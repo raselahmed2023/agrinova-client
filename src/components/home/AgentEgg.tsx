@@ -108,13 +108,7 @@ export default function AgentEgg() {
     open,
   ]);
 
-  /* ============================================================
-     JUMP EVERY 10 SECONDS
-
-     Higher jump
-     smoother movement
-     slight landing shake
-  ============================================================ */
+  
 
   useEffect(() => {
     if (

@@ -21,7 +21,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForMongo.mongoClient = client;
 }
 
-const db = client.db("AgriNove-auth");
+export const authDb = client.db("AgriNove-auth");
 
 export const auth = betterAuth({
   emailAndPassword: {
@@ -34,12 +34,14 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "FARMER",
         required: false,
+        input: false,
       },
 
       status: {
         type: "string",
         defaultValue: "APPROVED",
         required: false,
+        input: false,
       },
 
       phone: {
@@ -69,7 +71,7 @@ export const auth = betterAuth({
     },
   },
 
-  database: mongodbAdapter(db, {
+  database: mongodbAdapter(authDb, {
     client,
   }),
 
