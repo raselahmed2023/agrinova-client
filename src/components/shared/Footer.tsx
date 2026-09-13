@@ -112,47 +112,7 @@ export default function Footer() {
       <div className="pointer-events-none absolute -bottom-44 right-0 h-[420px] w-[420px] rounded-full bg-teal-400/10 blur-[130px]" />
 
       <div className="relative mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
-        {/* top CTA */}
-        <div className="relative overflow-hidden rounded-[28px] border border-emerald-400/15 bg-gradient-to-br from-[#0a3729] via-[#092d23] to-[#061f18] px-6 py-8 shadow-2xl shadow-black/10 sm:px-8 lg:px-10 lg:py-9">
-          <div className="absolute -right-12 -top-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
-                <Leaf className="h-3.5 w-3.5" />
-                Digital Agriculture Ecosystem
-              </div>
-
-              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Grow smarter with AgriNova.
-              </h2>
-
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-[15px]">
-                Discover smarter farming solutions, connect with agricultural
-                experts and explore opportunities across the AgriNova
-                ecosystem.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/marketplace"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 text-sm font-bold text-[#042016] transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-300"
-              >
-                Explore Marketplace
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-
-              <Link
-                href="/consultant"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white transition duration-200 hover:border-white/25 hover:bg-white/10"
-              >
-                Find an Expert
-              </Link>
-            </div>
-          </div>
-        </div>
-
+      
         {/* main footer */}
         <div className="grid gap-12 py-14 lg:grid-cols-[1.3fr_2fr] lg:gap-20">
           {/* brand */}
