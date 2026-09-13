@@ -1,82 +1,133 @@
 "use client";
 
-import Image from "next/image";
-import { motion } from "motion/react";
 import {
-  Activity,
-  Check,
-  Droplets,
-  Leaf,
+  BriefcaseBusiness,
+  CloudSun,
   Sprout,
+  Users,
 } from "lucide-react";
+import { motion } from "motion/react";
 
-const features = [
+type FeatureAccent = "emerald" | "blue" | "teal" | "green";
+
+type Feature = {
+  title: string;
+  description: string;
+  highlights: string[];
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
+  accent: FeatureAccent;
+};
+
+const features: Feature[] = [
   {
-    title: "Crop Management",
+    title: "My Farms",
     description:
-      "Keep crop information, growth records, planting activities, and field updates organized for easier day-to-day farm management.",
+      "Create and manage your farm information, including farm type, location, land area, soil type, status, description, and cover image.",
     highlights: [
-      "Crop & Growth Records",
-      "Field Activity History",
+      "Farm Information",
+      "Location & Land Details",
     ],
-    image: "/images/home/crop-managment.jpeg",
-    imageAlt: "Crop management dashboard",
     icon: Sprout,
     accent: "emerald",
   },
   {
-    title: "Soil Analysis",
+    title: "Weather Intelligence",
     description:
-      "Keep soil-related information organized so you can review field conditions and make better decisions for crop planning and management.",
+      "View weather information to better understand current conditions and support day-to-day farm planning.",
     highlights: [
-      "Soil Information",
-      "Field Condition Records",
+      "Current Weather",
+      "Farm Planning Support",
     ],
-    image: "/images/home/soil-analysis.jpeg",
-    imageAlt: "Farmer reviewing soil and field information",
-    icon: Leaf,
-    accent: "green",
-  },
-  {
-    title: "Smart Irrigation",
-    description:
-      "Use farm and weather information to make more informed irrigation decisions and manage water use more efficiently.",
-    highlights: [
-      "Irrigation Planning",
-      "Weather-Aware Decisions",
-    ],
-    image: "/images/home/smart-irrigation.jpeg",
-    imageAlt: "Smart irrigation management in a field",
-    icon: Droplets,
+    icon: CloudSun,
     accent: "blue",
   },
   {
-    title: "Activity Tracking",
+    title: "Farm Finance",
     description:
-      "Record important farm activities and keep daily operational information organized in one place.",
+      "Use the farm finance section to organize and review financial information related to your farming activities.",
     highlights: [
-      "Daily Farm Activities",
-      "Operational Records",
+      "Farm Financial Records",
+      "Finance Overview",
     ],
-    image: "/images/home/activity-tracking.jpeg",
-    imageAlt: "Farm activity and operational tracking",
-    icon: Activity,
-    accent: "emerald",
+    icon: BriefcaseBusiness,
+    accent: "teal",
+  },
+  {
+    title: "Expert Consultation",
+    description:
+      "Connect with agricultural experts for professional guidance and consultation through the AgriNova platform.",
+    highlights: [
+      "Agricultural Experts",
+      "Consultation Support",
+    ],
+    icon: Users,
+    accent: "green",
   },
 ];
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
 
 const cardVariants = {
   hidden: {
     opacity: 0,
-    y: 32,
+    y: 30,
     scale: 0.98,
   },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
+    transition: {
+      duration: 0.55,
+      ease: "easeOut" as const,
+    },
   },
 };
+
+function getAccentStyles(accent: FeatureAccent) {
+  switch (accent) {
+    case "blue":
+      return {
+        icon: "border-sky-100 bg-sky-50 text-sky-600",
+        badge: "bg-sky-50 text-sky-700",
+        glow: "bg-sky-300/20",
+        line: "from-sky-500 to-cyan-400",
+      };
+
+    case "teal":
+      return {
+        icon: "border-teal-100 bg-teal-50 text-teal-700",
+        badge: "bg-teal-50 text-teal-700",
+        glow: "bg-teal-300/20",
+        line: "from-teal-500 to-emerald-400",
+      };
+
+    case "green":
+      return {
+        icon: "border-green-100 bg-green-50 text-green-700",
+        badge: "bg-green-50 text-green-700",
+        glow: "bg-green-300/20",
+        line: "from-green-500 to-emerald-400",
+      };
+
+    default:
+      return {
+        icon: "border-emerald-100 bg-emerald-50 text-emerald-700",
+        badge: "bg-emerald-50 text-emerald-700",
+        glow: "bg-emerald-300/20",
+        line: "from-emerald-500 to-teal-400",
+      };
+  }
+}
 
 export default function FeaturePreview() {
   return (
@@ -85,16 +136,15 @@ export default function FeaturePreview() {
       aria-labelledby="features-title"
       className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
     >
-      {/* subtle background */}
       <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-100/50 blur-[120px]" />
+
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-sky-100/40 blur-[120px]" />
 
       <div className="relative mx-auto max-w-7xl">
-        {/* Heading */}
         <motion.header
           initial={{
             opacity: 0,
-            y: 24,
+            y: 22,
           }}
           whileInView={{
             opacity: 1,
@@ -110,147 +160,114 @@ export default function FeaturePreview() {
           }}
           className="mx-auto max-w-2xl text-center"
         >
+          <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">
+              Farmer Tools
+            </span>
+          </div>
+
           <h2
             id="features-title"
             className="text-3xl font-black tracking-[-0.04em] text-[#103F32] sm:text-4xl lg:text-[44px]"
           >
-            Smart Farm Management
+            Farm Management & Support
           </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 sm:text-[15px]"
           >
-            Keep essential farm information, field activities, and management
-            tools organized in one place.
+            Access farm information, weather, finance tools, and
+            agricultural expert support through AgriNova.
           </p>
         </motion.header>
 
-        {/* Cards */}
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-14 lg:gap-6">
-          {features.map((feature, index) => {
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{
+            once: true,
+            amount: 0.12,
+          }}
+          className="mt-12 grid grid-cols-1 gap-5 sm:mt-14 md:grid-cols-2 lg:gap-6"
+        >
+          {features.map((feature) => {
             const Icon = feature.icon;
-
-            const iconStyle =
-              feature.accent === "blue"
-                ? "border-sky-100 bg-sky-50 text-sky-600"
-                : feature.accent === "green"
-                  ? "border-green-100 bg-green-50 text-green-700"
-                  : "border-emerald-100 bg-emerald-50 text-emerald-700";
-
-            const glowStyle =
-              feature.accent === "blue"
-                ? "bg-sky-300/20"
-                : "bg-emerald-300/20";
+            const accent = getAccentStyles(feature.accent);
 
             return (
               <motion.article
                 key={feature.title}
                 variants={cardVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{
-                  once: true,
-                  amount: 0.18,
-                }}
-                transition={{
-                  duration: 0.55,
-                  delay: index * 0.09,
-                  ease: "easeOut",
-                }}
                 whileHover={{
                   y: -7,
+                  scale: 1.01,
                   transition: {
-                    duration: 0.22,
+                    duration: 0.2,
                   },
                 }}
-                className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-[#FAFCFB] shadow-[0_4px_20px_rgba(15,23,42,0.035)] transition-shadow duration-300 hover:border-emerald-200 hover:shadow-[0_24px_55px_rgba(11,72,53,0.12)]"
+                className="group relative flex min-h-[280px] flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-[#FAFCFB] p-6 shadow-[0_4px_20px_rgba(15,23,42,0.035)] transition-shadow duration-300 hover:border-emerald-200 hover:shadow-[0_24px_55px_rgba(11,72,53,0.12)] sm:p-7 lg:p-8"
               >
-                {/* Hover glow */}
                 <div
-                  className={`pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100 ${glowStyle}`}
+                  className={`pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100 ${accent.glow}`}
                 />
 
-                <div className="grid min-h-[310px] grid-cols-1 sm:grid-cols-[minmax(0,1fr)_200px] lg:grid-cols-[minmax(0,1fr)_220px]">
-                  {/* Content */}
-                  <div className="relative z-10 flex flex-col p-6 sm:p-7 lg:p-8">
-                    <motion.div
-                      whileHover={{
-                        scale: 1.08,
-                        rotate: 3,
-                      }}
-                      transition={{
-                        duration: 0.2,
-                      }}
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${iconStyle}`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </motion.div>
+                <div className="relative z-10 flex items-start justify-between gap-4">
+                  <motion.div
+                    whileHover={{
+                      scale: 1.08,
+                      rotate: 3,
+                    }}
+                    transition={{
+                      duration: 0.2,
+                    }}
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${accent.icon}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </motion.div>
 
-                    <h3 className="mt-5 text-xl font-black tracking-[-0.025em] text-[#17372D] transition-colors duration-200 group-hover:text-emerald-700"
-                    >
-                      {feature.title}
-                    </h3>
-
-                    <p className="mt-3 text-[13px] leading-6 text-slate-500 sm:text-sm"
-                    >
-                      {feature.description}
-                    </p>
-
-                    <ul className="mt-auto space-y-2.5 pt-6">
-                      {feature.highlights.map((highlight) => (
-                        <li
-                          key={highlight}
-                          className="flex items-center gap-2.5 text-xs font-semibold text-[#49615A]"
-                        >
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"
-                          >
-                            <Check className="h-3 w-3" />
-                          </span>
-
-                          {highlight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Image */}
-                  <div className="relative min-h-[220px] overflow-hidden sm:min-h-full">
-                    <Image
-                      src={feature.image}
-                      alt={feature.imageAlt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 35vw, 220px"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.07]"
-                    />
-
-                    {/* image overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#062e23]/20 via-transparent to-transparent sm:bg-gradient-to-r sm:from-[#FAFCFB] sm:via-transparent sm:to-transparent"
-                    />
-
-                    {/* floating icon */}
-                    <motion.div
-                      animate={{
-                        y: [0, -5, 0],
-                      }}
-                      transition={{
-                        duration: 3.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: index * 0.35,
-                      }}
-                      className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/85 text-[#0D644B] shadow-lg backdrop-blur-md"
-                    >
-                      <Icon className="h-4 w-4" />
-                    </motion.div>
-                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${accent.badge}`}
+                  >
+                    AgriNova
+                  </span>
                 </div>
 
-                {/* animated bottom line */}
-                <div className="absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 group-hover:w-full"
+                <div className="relative z-10 mt-6">
+                  <h3 className="text-xl font-black tracking-[-0.025em] text-[#17372D] transition-colors duration-200 group-hover:text-emerald-700 sm:text-[22px]"
+                  >
+                    {feature.title}
+                  </h3>
+
+                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-sm"
+                  >
+                    {feature.description}
+                  </p>
+
+                  <ul className="mt-6 space-y-2.5">
+                    {feature.highlights.map((highlight) => (
+                      <li
+                        key={highlight}
+                        className="flex items-center gap-2.5 text-xs font-semibold text-[#49615A] sm:text-[13px]"
+                      >
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${accent.badge}`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        </span>
+
+                        {highlight}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div
+                  className={`absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r transition-all duration-500 group-hover:w-full ${accent.line}`}
                 />
               </motion.article>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
