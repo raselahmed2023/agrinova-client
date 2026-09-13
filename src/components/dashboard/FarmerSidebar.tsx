@@ -35,7 +35,7 @@ interface FarmerSidebarProps {
   onClose: () => void;
 }
 
-const menuItems = [
+const mainItems = [
   {
     label: "Dashboard",
     href: "/dashboard/farmer",
@@ -116,8 +116,8 @@ export default function FarmerSidebar({
   isOpen,
   onClose,
 }: FarmerSidebarProps) {
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
 
   const {
     data: session,
@@ -135,37 +135,24 @@ export default function FarmerSidebar({
     router.refresh();
   };
 
-  const getInitials = (
-    name?: string
-  ) => {
-    if (!name) {
-      return "U";
-    }
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
 
     return name
       .split(" ")
-      .map((part) => part[0])
+      .filter(Boolean)
+      .map((part) => part.charAt(0))
       .join("")
       .slice(0, 2)
       .toUpperCase();
   };
 
-  const isActive = (
-    href: string
-  ) => {
-    if (
-      href ===
-      "/dashboard/farmer"
-    ) {
+  const isActive = (href: string) => {
+    if (href === "/dashboard/farmer") {
       return pathname === href;
     }
 
-    return (
-      pathname === href ||
-      pathname.startsWith(
-        `${href}/`
-      )
-    );
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   const renderItem = (item: {
@@ -174,9 +161,7 @@ export default function FarmerSidebar({
     icon: React.ElementType;
   }) => {
     const Icon = item.icon;
-
-    const active =
-      isActive(item.href);
+    const active = isActive(item.href);
 
     return (
       <Link
@@ -191,9 +176,7 @@ export default function FarmerSidebar({
       >
         <Icon
           className={`h-[18px] w-[18px] shrink-0 ${
-            active
-              ? "text-[#0B513D]"
-              : "text-slate-400"
+            active ? "text-[#0B513D]" : "text-slate-400"
           }`}
         />
 
@@ -214,10 +197,8 @@ export default function FarmerSidebar({
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${
-          isOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-300 lg:sticky lg:z-20 lg:translate-x-0 lg:shadow-none ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
@@ -252,29 +233,19 @@ export default function FarmerSidebar({
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            {menuItems.map(renderItem)}
+            {mainItems.map(renderItem)}
           </div>
 
-          <div className="mt-6">
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              AI Tools
-            </p>
+          <SectionTitle>AI Tools</SectionTitle>
 
-            <div className="space-y-1">
-              {aiItems.map(renderItem)}
-            </div>
+          <div className="space-y-1">
+            {aiItems.map(renderItem)}
           </div>
 
-          <div className="mt-6">
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Marketplace
-            </p>
+          <SectionTitle>Marketplace</SectionTitle>
 
-            <div className="space-y-1">
-              {marketplaceItems.map(
-                renderItem
-              )}
-            </div>
+          <div className="space-y-1">
+            {marketplaceItems.map(renderItem)}
           </div>
 
           <div className="mt-6 space-y-1">
@@ -282,42 +253,29 @@ export default function FarmerSidebar({
           </div>
         </nav>
 
-        <div className="border-t border-slate-200 bg-white p-3">
+        <div className="border-t border-slate-200 p-3">
           <div className="rounded-xl bg-slate-50 p-3">
             {isPending ? (
-              <div className="flex animate-pulse items-center gap-3">
-                <div className="h-9 w-9 shrink-0 rounded-full bg-slate-200" />
-
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="h-3.5 w-20 rounded bg-slate-200" />
-
-                  <div className="h-2.5 w-28 rounded bg-slate-200" />
-                </div>
+              <div className="animate-pulse">
+                <div className="h-10 rounded bg-slate-200" />
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B]">
-                    {getInitials(
-                      user?.name
-                    )}
+                    {getInitials(user?.name)}
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold leading-tight text-slate-900">
-                      {user?.name ||
-                        "Farmer Account"}
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-slate-900">
+                      {user?.name || "Farmer Account"}
                     </p>
 
                     <p
-                      className="mt-0.5 truncate text-[11px] leading-tight text-slate-500"
-                      title={
-                        user?.email ||
-                        "Signed In"
-                      }
+                      title={user?.email || "Signed in account"}
+                      className="mt-0.5 truncate text-[11px] text-slate-500"
                     >
-                      {user?.email ||
-                        "farmer@agrinova.io"}
+                      {user?.email || "Email unavailable"}
                     </p>
                   </div>
                 </div>
@@ -325,9 +283,8 @@ export default function FarmerSidebar({
                 <button
                   type="button"
                   onClick={handleLogout}
-                  title="Logout from AgriNova"
-                  aria-label="Logout"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"
+                  title="Logout"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -337,5 +294,17 @@ export default function FarmerSidebar({
         </div>
       </aside>
     </>
+  );
+}
+
+function SectionTitle({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <p className="mb-2 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      {children}
+    </p>
   );
 }

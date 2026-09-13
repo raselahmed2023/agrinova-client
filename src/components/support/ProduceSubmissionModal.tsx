@@ -32,7 +32,7 @@ import {
   createSupplyRequest,
 } from "@/services/supply-chain.service";
 
-interface ProductSubmissionModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: () => void;
@@ -47,6 +47,7 @@ interface ProductFormData {
 
   quantity: string;
   unit: string;
+
   expectedPrice: string;
 
   division: string;
@@ -55,93 +56,44 @@ interface ProductFormData {
   location: string;
 
   branch: string;
-
   notes: string;
 
   images: File[];
 }
 
 const CATEGORIES = [
-  {
-    value: "vegetables",
-    label: "Vegetables",
-  },
-  {
-    value: "fruits",
-    label: "Fruits",
-  },
-  {
-    value: "grains_cereals",
-    label: "Grains & Cereals",
-  },
-  {
-    value: "pulses_seeds",
-    label: "Pulses & Seeds",
-  },
-  {
-    value: "spices",
-    label: "Spices",
-  },
-  {
-    value: "agricultural_by_products",
-    label: "Agricultural By-products",
-  },
-  {
-    value: "other",
-    label: "Other",
-  },
+  ["vegetables", "Vegetables"],
+  ["fruits", "Fruits"],
+  ["grains_cereals", "Grains & Cereals"],
+  ["pulses_seeds", "Pulses & Seeds"],
+  ["spices", "Spices"],
+  [
+    "agricultural_by_products",
+    "Agricultural By-products",
+  ],
+  ["other", "Other"],
 ];
 
 const UNITS = [
-  {
-    value: "kg",
-    label: "Kg",
-  },
-  {
-    value: "maund",
-    label: "Maund",
-  },
-  {
-    value: "ton",
-    label: "Ton",
-  },
-  {
-    value: "bag",
-    label: "Bag",
-  },
-  {
-    value: "box",
-    label: "Box",
-  },
+  ["kg", "Kg"],
+  ["maund", "Maund"],
+  ["ton", "Ton"],
+  ["bag", "Bag"],
+  ["box", "Box"],
 ];
 
 const BRANCHES = [
-  {
-    value: "rajshahi",
-    label: "AgriNova Rajshahi Branch",
-  },
-  {
-    value: "bogura",
-    label: "AgriNova Bogura Branch",
-  },
-  {
-    value: "kushtia",
-    label: "AgriNova Kushtia Branch",
-  },
-  {
-    value: "chattogram",
-    label: "AgriNova Chattogram Branch",
-  },
-  {
-    value: "dhaka",
-    label: "AgriNova Dhaka Branch",
-  },
+  ["rajshahi", "AgriNova Rajshahi Branch"],
+  ["bogura", "AgriNova Bogura Branch"],
+  ["kushtia", "AgriNova Kushtia Branch"],
+  ["chattogram", "AgriNova Chattogram Branch"],
+  ["dhaka", "AgriNova Dhaka Branch"],
 ];
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = 5 * 1024 * 1024;
 
-const initialFormData: ProductFormData = {
+const initialForm: ProductFormData = {
   farmerName: "",
   phone: "",
 
@@ -150,6 +102,7 @@ const initialFormData: ProductFormData = {
 
   quantity: "",
   unit: "kg",
+
   expectedPrice: "",
 
   division: "",
@@ -158,101 +111,100 @@ const initialFormData: ProductFormData = {
   location: "",
 
   branch: "",
-
   notes: "",
 
   images: [],
 };
 
-interface UploadResponse {
-  success?: boolean;
-  url?: string;
-  message?: string;
-}
-
 export default function ProduceSubmissionModal({
   isOpen,
   onClose,
   onSubmitSuccess,
-}: ProductSubmissionModalProps) {
-  const [formData, setFormData] =
+}: Props) {
+  const [form, setForm] =
     useState<ProductFormData>(
-      initialFormData
+      initialForm
     );
 
   const [previews, setPreviews] =
     useState<string[]>([]);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [formError, setFormError] =
+  const [error, setError] =
     useState("");
 
-  const [trackingCode, setTrackingCode] =
-    useState("");
+  const [
+    trackingCode,
+    setTrackingCode,
+  ] = useState("");
 
-  const districts = useMemo(
-    () =>
-      getDistrictsByDivision(
-        formData.division
-      ),
-    [formData.division]
-  );
+  const districts =
+    useMemo(
+      () =>
+        getDistrictsByDivision(
+          form.division
+        ),
+      [form.division]
+    );
 
-  const upazilas = useMemo(
-    () =>
-      getUpazilasByDistrict(
-        formData.division,
-        formData.district
-      ),
-    [
-      formData.division,
-      formData.district,
-    ]
-  );
+  const upazilas =
+    useMemo(
+      () =>
+        getUpazilasByDistrict(
+          form.division,
+          form.district
+        ),
+      [
+        form.division,
+        form.district,
+      ]
+    );
 
   useEffect(() => {
     return () => {
-      previews.forEach((preview) =>
-        URL.revokeObjectURL(preview)
+      previews.forEach(
+        (preview) =>
+          URL.revokeObjectURL(
+            preview
+          )
       );
     };
   }, [previews]);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   const inputClass =
-    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-800 outline-none transition focus:border-[#0b5d42] focus:ring-2 focus:ring-[#0b5d42]/15 disabled:cursor-not-allowed disabled:bg-gray-100";
+    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#0b5d42] focus:ring-2 focus:ring-[#0b5d42]/15 disabled:bg-gray-100";
 
-  const labelClass =
-    "mb-1.5 block text-xs font-semibold text-gray-700";
+  const clearPreviews =
+    () => {
+      previews.forEach(
+        (preview) =>
+          URL.revokeObjectURL(
+            preview
+          )
+      );
+    };
 
-  const clearPreviewUrls = () => {
-    previews.forEach((preview) =>
-      URL.revokeObjectURL(preview)
-    );
-  };
+  const closeModal =
+    () => {
+      if (isSubmitting) {
+        return;
+      }
 
-  const resetForm = () => {
-    clearPreviewUrls();
+      clearPreviews();
 
-    setFormData(initialFormData);
-    setPreviews([]);
-    setFormError("");
-    setTrackingCode("");
-  };
+      setForm(initialForm);
+      setPreviews([]);
+      setError("");
+      setTrackingCode("");
 
-  const handleClose = () => {
-    if (isSubmitting) {
-      return;
-    }
-
-    resetForm();
-    onClose();
-  };
+      onClose();
+    };
 
   const handleChange = (
     event: ChangeEvent<
@@ -266,11 +218,11 @@ export default function ProduceSubmissionModal({
       value,
     } = event.target;
 
-    setFormError("");
+    setError("");
 
     if (name === "division") {
-      setFormData((previous) => ({
-        ...previous,
+      setForm((prev) => ({
+        ...prev,
         division: value,
         district: "",
         upazila: "",
@@ -280,8 +232,8 @@ export default function ProduceSubmissionModal({
     }
 
     if (name === "district") {
-      setFormData((previous) => ({
-        ...previous,
+      setForm((prev) => ({
+        ...prev,
         district: value,
         upazila: "",
       }));
@@ -289,103 +241,76 @@ export default function ProduceSubmissionModal({
       return;
     }
 
-    setFormData((previous) => ({
-      ...previous,
+    setForm((prev) => ({
+      ...prev,
       [name]: value,
     }));
   };
 
-  const handleImageChange = (
+  const handleImages = (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const selectedFiles =
+    const selected =
       Array.from(
-        event.target.files || []
+        event.target.files ||
+          []
       );
 
     event.target.value = "";
 
-    if (!selectedFiles.length) {
-      return;
-    }
-
-    const remaining =
+    const available =
       MAX_IMAGES -
-      formData.images.length;
+      form.images.length;
 
-    if (remaining <= 0) {
-      setFormError(
-        `Maximum ${MAX_IMAGES} images are allowed.`
-      );
-
-      return;
-    }
-
-    const accepted: File[] = [];
-
-    for (const file of selectedFiles) {
-      if (
-        accepted.length >=
-        remaining
-      ) {
-        break;
-      }
-
-      if (
-        !file.type.startsWith(
-          "image/"
+    const accepted =
+      selected
+        .filter(
+          (file) =>
+            [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+            ].includes(
+              file.type
+            ) &&
+            file.size <=
+              MAX_SIZE
         )
-      ) {
-        continue;
-      }
-
-      if (
-        file.size >
-        MAX_IMAGE_SIZE
-      ) {
-        continue;
-      }
-
-      accepted.push(file);
-    }
+        .slice(
+          0,
+          available
+        );
 
     if (!accepted.length) {
-      setFormError(
-        "Please select valid image files under 5 MB."
+      setError(
+        "Please use JPG, PNG or WEBP images under 5MB."
       );
 
       return;
     }
 
-    const nextPreviews =
-      accepted.map((file) =>
-        URL.createObjectURL(file)
+    const newPreviews =
+      accepted.map(
+        (file) =>
+          URL.createObjectURL(
+            file
+          )
       );
 
-    setFormData((previous) => ({
-      ...previous,
-
+    setForm((prev) => ({
+      ...prev,
       images: [
-        ...previous.images,
+        ...prev.images,
         ...accepted,
       ],
     }));
 
-    setPreviews((previous) => [
-      ...previous,
-      ...nextPreviews,
-    ]);
-
-    if (
-      accepted.length <
-      selectedFiles.length
-    ) {
-      setFormError(
-        "Some files were skipped. Maximum 5 images are allowed and each image must be under 5 MB."
-      );
-    } else {
-      setFormError("");
-    }
+    setPreviews(
+      (prev) => [
+        ...prev,
+        ...newPreviews,
+      ]
+    );
   };
 
   const removeImage = (
@@ -400,320 +325,285 @@ export default function ProduceSubmissionModal({
       );
     }
 
-    setPreviews((previous) =>
-      previous.filter(
-        (_, currentIndex) =>
-          currentIndex !== index
+    setPreviews((prev) =>
+      prev.filter(
+        (_, i) =>
+          i !== index
       )
     );
 
-    setFormData((previous) => ({
-      ...previous,
-
+    setForm((prev) => ({
+      ...prev,
       images:
-        previous.images.filter(
-          (_, currentIndex) =>
-            currentIndex !== index
+        prev.images.filter(
+          (_, i) =>
+            i !== index
         ),
     }));
   };
 
-  const uploadImage = async (
-    file: File
-  ): Promise<string> => {
-    const body =
-      new FormData();
+  const uploadImage =
+    async (
+      file: File
+    ) => {
+      const body =
+        new FormData();
 
-    body.append(
-      "image",
-      file
-    );
-
-    
-    const response =
-      await fetch(
-        "/api/upload",
-        {
-          method: "POST",
-          body,
-        }
+      body.append(
+        "image",
+        file
       );
 
-    let result:
-      UploadResponse | null =
-      null;
-
-    try {
-      result =
-        (await response.json()) as UploadResponse;
-    } catch {
-      throw new Error(
-        "Image upload returned an invalid response."
+      body.append(
+        "purpose",
+        "supply-chain"
       );
+
+      const response =
+        await fetch(
+          "/api/upload",
+          {
+            method: "POST",
+            body,
+          }
+        );
+
+      const result =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (
+        !response.ok ||
+        !result?.success ||
+        !result?.url
+      ) {
+        throw new Error(
+          result?.message ||
+            "Unable to upload product image."
+        );
+      }
+
+      return String(
+        result.url
+      );
+    };
+
+  const validate = () => {
+    if (
+      form.farmerName
+        .trim().length < 2
+    ) {
+      return "Please enter your full name.";
     }
 
     if (
-      !response.ok ||
-      !result?.success ||
-      !result.url
+      !/^01[3-9]\d{8}$/.test(
+        form.phone.trim()
+      )
     ) {
-      throw new Error(
-        result?.message ||
-          "Unable to upload product image."
-      );
+      return "Please enter a valid Bangladeshi phone number.";
     }
 
-    return result.url;
+    if (
+      !form.productName.trim()
+    ) {
+      return "Product name is required.";
+    }
+
+    if (!form.category) {
+      return "Select a product category.";
+    }
+
+    if (
+      Number(
+        form.quantity
+      ) <= 0
+    ) {
+      return "Quantity must be greater than 0.";
+    }
+
+    if (
+      Number(
+        form.expectedPrice
+      ) < 0
+    ) {
+      return "Expected price cannot be negative.";
+    }
+
+    if (
+      !form.division ||
+      !form.district ||
+      !form.upazila
+    ) {
+      return "Please select division, district and upazila.";
+    }
+
+    if (!form.location.trim()) {
+      return "Farm location is required.";
+    }
+
+    if (!form.branch) {
+      return "Please select an AgriNova branch.";
+    }
+
+    return "";
   };
 
-  const uploadImages =
-    async () => {
-      const uploaded:
-        string[] = [];
+  const handleSubmit =
+    async (
+      event: FormEvent<HTMLFormElement>
+    ) => {
+      event.preventDefault();
 
-      
-      for (
-        const file of
-        formData.images
-      ) {
-        uploaded.push(
-          await uploadImage(
-            file
-          )
+      const validation =
+        validate();
+
+      if (validation) {
+        setError(
+          validation
         );
+
+        return;
       }
 
-      return uploaded;
-    };
+      try {
+        setIsSubmitting(
+          true
+        );
 
-  const validateForm =
-    () => {
-      const phoneRegex =
-        /^01[3-9]\d{8}$/;
+        setError("");
 
-      if (
-        formData.farmerName
-          .trim()
-          .length < 2
-      ) {
-        return "Please enter your full name.";
-      }
+        const imageUrls:
+          string[] =
+          [];
 
-      if (
-        !phoneRegex.test(
-          formData.phone.trim()
-        )
-      ) {
-        return "Please enter a valid Bangladeshi phone number.";
-      }
+        for (
+          const image of
+          form.images
+        ) {
+          imageUrls.push(
+            await uploadImage(
+              image
+            )
+          );
+        }
 
-      if (
-        formData.productName
-          .trim()
-          .length < 2
-      ) {
-        return "Please enter the product name.";
-      }
+        const response =
+          await createSupplyRequest(
+            {
+              farmerName:
+                form.farmerName.trim(),
 
-      if (!formData.category) {
-        return "Please select a product category.";
-      }
+              phone:
+                form.phone.trim(),
 
-      if (
-        !Number.isFinite(
-          Number(
-            formData.quantity
-          )
-        ) ||
-        Number(
-          formData.quantity
-        ) <= 0
-      ) {
-        return "Quantity must be greater than 0.";
-      }
+              productName:
+                form.productName.trim(),
 
-      if (
-        !Number.isFinite(
-          Number(
-            formData.expectedPrice
-          )
-        ) ||
-        Number(
-          formData.expectedPrice
-        ) < 0
-      ) {
-        return "Expected price cannot be negative.";
-      }
+              category:
+                form.category,
 
-      if (
-        !formData.division ||
-        !formData.district ||
-        !formData.upazila
-      ) {
-        return "Please select division, district and upazila.";
-      }
+              quantity:
+                Number(
+                  form.quantity
+                ),
 
-      if (
-        formData.location
-          .trim()
-          .length < 2
-      ) {
-        return "Please enter your village, union or farm address.";
-      }
+              unit:
+                form.unit,
 
-      if (!formData.branch) {
-        return "Please select an AgriNova branch.";
-      }
+              expectedPrice:
+                Number(
+                  form.expectedPrice
+                ),
 
-      return "";
-    };
+              division:
+                form.division,
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+              district:
+                form.district,
 
-    const validation =
-      validateForm();
+              upazila:
+                form.upazila,
 
-    if (validation) {
-      setFormError(
-        validation
-      );
+              location:
+                form.location.trim(),
 
-      return;
-    }
+              branch:
+                form.branch,
 
-    try {
-      setIsSubmitting(true);
-      setFormError("");
-      setTrackingCode("");
+              notes:
+                form.notes.trim() ||
+                undefined,
 
-      const imageUrls =
-        await uploadImages();
+              images:
+                imageUrls,
+            }
+          );
 
-      const response =
-        await createSupplyRequest({
-          farmerName:
-            formData.farmerName.trim(),
+        const code =
+          response.data
+            .trackingCode;
 
-          phone:
-            formData.phone.trim(),
-
-          productName:
-            formData.productName.trim(),
-
-          category:
-            formData.category,
-
-          quantity:
-            Number(
-              formData.quantity
-            ),
-
-          unit:
-            formData.unit,
-
-          expectedPrice:
-            Number(
-              formData.expectedPrice
-            ),
-
-          division:
-            formData.division,
-
-          district:
-            formData.district,
-
-          upazila:
-            formData.upazila,
-
-          location:
-            formData.location.trim(),
-
-          branch:
-            formData.branch,
-
-          notes:
-            formData.notes
-              .trim() ||
-            undefined,
-
-          images:
-            imageUrls,
-        });
-
-      const code =
-        response.data
-          .trackingCode;
-
-      setTrackingCode(
-        code
-      );
-
-      if (
-        typeof window !==
-        "undefined"
-      ) {
-        localStorage.setItem(
-          "agrinova:lastSupplyTrackingCode",
+        setTrackingCode(
           code
         );
+
+        if (
+          typeof window !==
+          "undefined"
+        ) {
+          localStorage.setItem(
+            "agrinova:lastSupplyTrackingCode",
+            code
+          );
+        }
+
+        clearPreviews();
+
+        setPreviews([]);
+        setForm(initialForm);
+
+        onSubmitSuccess?.();
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Submission failed."
+        );
+      } finally {
+        setIsSubmitting(
+          false
+        );
       }
-
-      clearPreviewUrls();
-
-      setPreviews([]);
-
-      setFormData(
-        initialFormData
-      );
-
-      onSubmitSuccess?.();
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Submission failed. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm sm:p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
       <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <header className="relative bg-[#053225] px-5 py-5 text-white sm:px-7">
+        <header className="relative bg-[#053225] px-6 py-5 text-white">
           <button
             type="button"
             onClick={
-              handleClose
+              closeModal
             }
-            disabled={
-              isSubmitting
-            }
-            aria-label="Close"
-            className="absolute right-4 top-4 rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            className="absolute right-4 top-4 rounded-full p-2 hover:bg-white/10"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <div className="flex items-start gap-3 pr-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
-              <Sprout className="h-6 w-6 text-[#b2f2bb]" />
+          <div className="flex gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
+              <Sprout className="h-6 w-6" />
             </div>
 
             <div>
               <h2 className="text-xl font-bold">
-                Sell Through
-                AgriNova
+                Sell Through AgriNova
               </h2>
 
-              <p className="mt-1 max-w-xl text-sm leading-5 text-white/75">
-                Submit your farm
-                product for
-                AgriNova supply
+              <p className="mt-1 text-sm text-white/75">
+                Submit your farm product for AgriNova supply
                 chain review.
               </p>
             </div>
@@ -721,47 +611,28 @@ export default function ProduceSubmissionModal({
         </header>
 
         {trackingCode ? (
-          <div className="overflow-y-auto p-6 sm:p-8">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+          <div className="overflow-y-auto p-8">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-7 text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-700" />
 
-              <h3 className="mt-4 text-xl font-bold text-slate-900">
+              <h3 className="mt-4 text-xl font-bold">
                 Submission Received
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                AgriNova will review
-                your product before
-                asking you to deliver
-                it to the selected
-                branch.
-              </p>
-
-              <p className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+              <p className="mt-4 text-xs font-bold uppercase text-emerald-700">
                 Tracking Code
               </p>
 
-              <div className="mx-auto mt-2 w-fit rounded-xl border border-emerald-200 bg-white px-6 py-3 font-mono text-xl font-black tracking-wider text-[#053225]">
+              <div className="mx-auto mt-2 w-fit rounded-xl bg-white px-6 py-3 font-mono text-xl font-black text-[#053225]">
                 {trackingCode}
               </div>
-
-              <p className="mx-auto mt-4 max-w-lg text-xs leading-5 text-slate-500">
-                Save this code. You
-                can use it on the
-                B2B Support page to
-                check whether the
-                request is Submitted,
-                Accepted, Rejected,
-                Received or
-                Completed.
-              </p>
 
               <button
                 type="button"
                 onClick={
-                  handleClose
+                  closeModal
                 }
-                className="mt-6 rounded-xl bg-[#053225] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0b4a38]"
+                className="mt-6 rounded-xl bg-[#053225] px-6 py-3 text-sm font-semibold text-white"
               >
                 Done
               </button>
@@ -774,32 +645,27 @@ export default function ProduceSubmissionModal({
             }
             className="overflow-y-auto"
           >
-            <div className="space-y-7 p-5 sm:p-7">
-              {formError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {formError}
+            <div className="space-y-6 p-6">
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
                 </div>
               )}
 
-              <SectionHeading
+              <Title
                 icon={
                   <UserRound className="h-4 w-4" />
                 }
                 title="Farmer Information"
-                description="Enter your contact information."
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="Farmer Name"
-                  required
-                >
+                <Field label="Farmer Name">
                   <input
-                    type="text"
-                    name="farmerName"
                     required
+                    name="farmerName"
                     value={
-                      formData.farmerName
+                      form.farmerName
                     }
                     onChange={
                       handleChange
@@ -807,52 +673,42 @@ export default function ProduceSubmissionModal({
                     className={
                       inputClass
                     }
-                    placeholder="Enter your full name"
                   />
                 </Field>
 
-                <Field
-                  label="Phone Number"
-                  required
-                >
+                <Field label="Phone Number">
                   <input
-                    type="tel"
-                    name="phone"
                     required
-                    maxLength={11}
+                    name="phone"
                     value={
-                      formData.phone
+                      form.phone
                     }
                     onChange={
                       handleChange
                     }
+                    maxLength={11}
+                    placeholder="01XXXXXXXXX"
                     className={
                       inputClass
                     }
-                    placeholder="01XXXXXXXXX"
                   />
                 </Field>
               </div>
 
-              <SectionHeading
+              <Title
                 icon={
                   <Package className="h-4 w-4" />
                 }
                 title="Product Information"
-                description="Add details about the product you want to sell."
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="Product Name"
-                  required
-                >
+                <Field label="Product Name">
                   <input
-                    type="text"
-                    name="productName"
                     required
+                    name="productName"
                     value={
-                      formData.productName
+                      form.productName
                     }
                     onChange={
                       handleChange
@@ -860,19 +716,15 @@ export default function ProduceSubmissionModal({
                     className={
                       inputClass
                     }
-                    placeholder="Rice, Potato, Tomato..."
                   />
                 </Field>
 
-                <Field
-                  label="Category"
-                  required
-                >
+                <Field label="Category">
                   <select
-                    name="category"
                     required
+                    name="category"
                     value={
-                      formData.category
+                      form.category
                     }
                     onChange={
                       handleChange
@@ -882,22 +734,23 @@ export default function ProduceSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select category
+                      Select Category
                     </option>
 
                     {CATEGORIES.map(
-                      (category) => (
+                      ([
+                        value,
+                        label,
+                      ]) => (
                         <option
                           key={
-                            category.value
+                            value
                           }
                           value={
-                            category.value
+                            value
                           }
                         >
-                          {
-                            category.label
-                          }
+                          {label}
                         </option>
                       )
                     )}
@@ -906,18 +759,14 @@ export default function ProduceSubmissionModal({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <Field
-                  label="Quantity"
-                  required
-                >
+                <Field label="Quantity">
                   <input
                     type="number"
-                    name="quantity"
-                    required
                     min="0.01"
                     step="0.01"
+                    name="quantity"
                     value={
-                      formData.quantity
+                      form.quantity
                     }
                     onChange={
                       handleChange
@@ -928,15 +777,11 @@ export default function ProduceSubmissionModal({
                   />
                 </Field>
 
-                <Field
-                  label="Unit"
-                  required
-                >
+                <Field label="Unit">
                   <select
                     name="unit"
-                    required
                     value={
-                      formData.unit
+                      form.unit
                     }
                     onChange={
                       handleChange
@@ -946,36 +791,33 @@ export default function ProduceSubmissionModal({
                     }
                   >
                     {UNITS.map(
-                      (unit) => (
+                      ([
+                        value,
+                        label,
+                      ]) => (
                         <option
                           key={
-                            unit.value
+                            value
                           }
                           value={
-                            unit.value
+                            value
                           }
                         >
-                          {
-                            unit.label
-                          }
+                          {label}
                         </option>
                       )
                     )}
                   </select>
                 </Field>
 
-                <Field
-                  label="Expected Price (৳ / unit)"
-                  required
-                >
+                <Field label="Expected Price">
                   <input
                     type="number"
-                    name="expectedPrice"
-                    required
                     min="0"
                     step="0.01"
+                    name="expectedPrice"
                     value={
-                      formData.expectedPrice
+                      form.expectedPrice
                     }
                     onChange={
                       handleChange
@@ -983,29 +825,23 @@ export default function ProduceSubmissionModal({
                     className={
                       inputClass
                     }
-                    placeholder="0 if free"
                   />
                 </Field>
               </div>
 
-              <SectionHeading
+              <Title
                 icon={
                   <MapPin className="h-4 w-4" />
                 }
                 title="Farm Location"
-                description="Tell AgriNova where the product is located."
               />
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field
-                  label="Division"
-                  required
-                >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Division">
                   <select
                     name="division"
-                    required
                     value={
-                      formData.division
+                      form.division
                     }
                     onChange={
                       handleChange
@@ -1015,11 +851,13 @@ export default function ProduceSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select division
+                      Division
                     </option>
 
                     {DIVISIONS.map(
-                      (division) => (
+                      (
+                        division
+                      ) => (
                         <option
                           key={
                             division
@@ -1028,25 +866,23 @@ export default function ProduceSubmissionModal({
                             division
                           }
                         >
-                          {division}
+                          {
+                            division
+                          }
                         </option>
                       )
                     )}
                   </select>
                 </Field>
 
-                <Field
-                  label="District"
-                  required
-                >
+                <Field label="District">
                   <select
                     name="district"
-                    required
                     disabled={
-                      !formData.division
+                      !form.division
                     }
                     value={
-                      formData.district
+                      form.district
                     }
                     onChange={
                       handleChange
@@ -1056,11 +892,13 @@ export default function ProduceSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select district
+                      District
                     </option>
 
                     {districts.map(
-                      (district) => (
+                      (
+                        district
+                      ) => (
                         <option
                           key={
                             district
@@ -1069,25 +907,23 @@ export default function ProduceSubmissionModal({
                             district
                           }
                         >
-                          {district}
+                          {
+                            district
+                          }
                         </option>
                       )
                     )}
                   </select>
                 </Field>
 
-                <Field
-                  label="Upazila"
-                  required
-                >
+                <Field label="Upazila">
                   <select
                     name="upazila"
-                    required
                     disabled={
-                      !formData.district
+                      !form.district
                     }
                     value={
-                      formData.upazila
+                      form.upazila
                     }
                     onChange={
                       handleChange
@@ -1097,11 +933,13 @@ export default function ProduceSubmissionModal({
                     }
                   >
                     <option value="">
-                      Select upazila
+                      Upazila
                     </option>
 
                     {upazilas.map(
-                      (upazila) => (
+                      (
+                        upazila
+                      ) => (
                         <option
                           key={
                             upazila
@@ -1110,7 +948,9 @@ export default function ProduceSubmissionModal({
                             upazila
                           }
                         >
-                          {upazila}
+                          {
+                            upazila
+                          }
                         </option>
                       )
                     )}
@@ -1118,16 +958,11 @@ export default function ProduceSubmissionModal({
                 </Field>
               </div>
 
-              <Field
-                label="Village / Union / Address"
-                required
-              >
+              <Field label="Village / Address">
                 <input
-                  type="text"
                   name="location"
-                  required
                   value={
-                    formData.location
+                    form.location
                   }
                   onChange={
                     handleChange
@@ -1135,27 +970,21 @@ export default function ProduceSubmissionModal({
                   className={
                     inputClass
                   }
-                  placeholder="Village, Union, Ward or specific address"
                 />
               </Field>
 
-              <SectionHeading
+              <Title
                 icon={
                   <Building2 className="h-4 w-4" />
                 }
                 title="AgriNova Branch"
-                description="Select where you could deliver the product after approval."
               />
 
-              <Field
-                label="Preferred / Nearest Branch"
-                required
-              >
+              <Field label="Preferred Branch">
                 <select
                   name="branch"
-                  required
                   value={
-                    formData.branch
+                    form.branch
                   }
                   onChange={
                     handleChange
@@ -1165,87 +994,74 @@ export default function ProduceSubmissionModal({
                   }
                 >
                   <option value="">
-                    Select branch
+                    Select Branch
                   </option>
 
                   {BRANCHES.map(
-                    (branch) => (
+                    ([
+                      value,
+                      label,
+                    ]) => (
                       <option
                         key={
-                          branch.value
+                          value
                         }
                         value={
-                          branch.value
+                          value
                         }
                       >
-                        {
-                          branch.label
-                        }
+                        {label}
                       </option>
                     )
                   )}
                 </select>
               </Field>
 
-              <SectionHeading
+              <Title
                 icon={
                   <FileText className="h-4 w-4" />
                 }
                 title="Additional Details"
-                description="Optional harvest, quality or variety information."
               />
 
               <textarea
                 name="notes"
-                rows={3}
-                maxLength={1000}
                 value={
-                  formData.notes
+                  form.notes
                 }
                 onChange={
                   handleChange
                 }
-                className={`${inputClass} resize-none`}
-                placeholder="Harvest date, variety, quality, condition..."
+                rows={3}
+                maxLength={1000}
+                className={`${inputClass} h-auto resize-none`}
               />
 
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-sm font-bold">
                   <ImagePlus className="h-4 w-4 text-[#0b5d42]" />
-
-                  <label className="text-sm font-bold text-gray-900">
-                    Product Photos
-                  </label>
+                  Product Photos
                 </div>
 
-                <label className="relative mt-3 block cursor-pointer rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-7 text-center transition hover:border-[#0b5d42] hover:bg-green-50/40">
+                <label className="mt-3 block cursor-pointer rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-7 text-center">
                   <input
                     type="file"
-                    accept="image/*"
                     multiple
-                    disabled={
-                      isSubmitting ||
-                      formData.images
-                        .length >=
-                        MAX_IMAGES
-                    }
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={
-                      handleImageChange
+                      handleImages
                     }
-                    className="sr-only"
+                    className="hidden"
                   />
 
                   <Upload className="mx-auto h-6 w-6 text-gray-400" />
 
-                  <p className="mt-2 text-sm font-medium text-gray-600">
-                    Select product
-                    photos
+                  <p className="mt-2 text-sm font-medium">
+                    Upload Product Photos
                   </p>
 
                   <p className="mt-1 text-xs text-gray-400">
-                    Maximum 5
-                    images, 5 MB
-                    each
+                    Maximum 5 images · 5MB each
                   </p>
                 </label>
 
@@ -1254,18 +1070,18 @@ export default function ProduceSubmissionModal({
                   <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
                     {previews.map(
                       (
-                        source,
+                        preview,
                         index
                       ) => (
                         <div
                           key={
-                            source
+                            preview
                           }
-                          className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+                          className="relative aspect-square overflow-hidden rounded-xl bg-gray-100"
                         >
                           <img
                             src={
-                              source
+                              preview
                             }
                             alt={`Product ${index + 1}`}
                             className="h-full w-full object-cover"
@@ -1273,16 +1089,12 @@ export default function ProduceSubmissionModal({
 
                           <button
                             type="button"
-                            disabled={
-                              isSubmitting
-                            }
                             onClick={() =>
                               removeImage(
                                 index
                               )
                             }
-                            aria-label="Remove image"
-                            className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-red-600"
+                            className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1294,40 +1106,29 @@ export default function ProduceSubmissionModal({
               </div>
             </div>
 
-            <footer className="sticky bottom-0 flex items-center justify-between border-t border-gray-200 bg-white px-5 py-4 sm:px-7">
-              <p className="hidden text-xs text-gray-400 sm:block">
-                Do not deliver the
-                product until AgriNova
-                accepts the request.
-              </p>
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white p-5">
+              <button
+                type="button"
+                onClick={
+                  closeModal
+                }
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-600"
+              >
+                Cancel
+              </button>
 
-              <div className="ml-auto flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={
-                    handleClose
-                  }
-                  disabled={
-                    isSubmitting
-                  }
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={
-                    isSubmitting
-                  }
-                  className="rounded-xl bg-[#053225] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4a38] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting
-                    ? "Submitting..."
-                    : "Submit for Review"}
-                </button>
-              </div>
-            </footer>
+              <button
+                type="submit"
+                disabled={
+                  isSubmitting
+                }
+                className="rounded-xl bg-[#053225] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? "Submitting..."
+                  : "Submit for Review"}
+              </button>
+            </div>
           </form>
         )}
       </div>
@@ -1335,55 +1136,37 @@ export default function ProduceSubmissionModal({
   );
 }
 
-function SectionHeading({
+function Title({
   icon,
   title,
-  description,
 }: {
-  icon:
-    React.ReactNode;
+  icon: React.ReactNode;
   title: string;
-  description: string;
 }) {
   return (
-    <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+    <div className="flex items-center gap-2 border-b pb-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-[#0b5d42]">
         {icon}
       </div>
 
-      <div>
-        <h3 className="text-sm font-bold text-gray-900">
-          {title}
-        </h3>
-
-        <p className="text-xs text-gray-500">
-          {description}
-        </p>
-      </div>
+      <h3 className="text-sm font-bold text-gray-900">
+        {title}
+      </h3>
     </div>
   );
 }
 
 function Field({
   label,
-  required,
   children,
 }: {
   label: string;
-  required?: boolean;
-  children:
-    React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-gray-700">
         {label}
-
-        {required && (
-          <span className="ml-1 text-red-500">
-            *
-          </span>
-        )}
       </span>
 
       {children}

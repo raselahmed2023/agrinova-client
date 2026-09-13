@@ -26,43 +26,94 @@ type ApiMethod =
   | "PATCH"
   | "DELETE";
 
+function normalizeEndpoint(
+  endpoint: string
+) {
+  return endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
+}
+
 
 export async function getAccessToken(): Promise<string> {
-  if (typeof window === "undefined") {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     throw new Error(
       "Authentication token is only available in the browser."
     );
   }
 
+  const {
+    data: session,
+  } =
+    await authClient.getSession();
+
+  if (!session?.user) {
+    throw new Error(
+      "Authentication required."
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await authClient.token();
+
+  if (
+    error ||
+    !data?.token
+  ) {
+    throw new Error(
+      error?.message ||
+        "Unable to retrieve authentication token."
+    );
+  }
+
+  return data.token;
+}
+
+
+async function getOptionalAccessToken(): Promise<
+  string | null
+> {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return null;
+  }
+
   try {
+    const {
+      data: session,
+    } =
+      await authClient.getSession();
+
+    if (!session?.user) {
+      return null;
+    }
+
     const {
       data,
       error,
-    } = await authClient.token();
+    } =
+      await authClient.token();
 
     if (
       error ||
       !data?.token
     ) {
-      throw new Error(
-        error?.message ||
-          "Authentication required."
-      );
+      return null;
     }
 
     return data.token;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-
-    throw new Error(
-      "Unable to retrieve authentication token."
-    );
+  } catch {
+    return null;
   }
 }
-
-
 
 async function getAuthHeaders(): Promise<
   Record<string, string>
@@ -75,32 +126,16 @@ async function getAuthHeaders(): Promise<
       "application/json",
   };
 
-  
-  if (
-    typeof window ===
-    "undefined"
-  ) {
-    return headers;
-  }
+  const token =
+    await getOptionalAccessToken();
 
-  try {
-    const token =
-      await getAccessToken();
-
+  if (token) {
     headers.Authorization =
       `Bearer ${token}`;
-  } catch (error) {
-   
-    console.warn(
-      "Could not retrieve authentication token:",
-      error
-    );
   }
 
   return headers;
 }
-
-
 
 async function requestEnvelope<T>(
   endpoint: string,
@@ -108,14 +143,11 @@ async function requestEnvelope<T>(
   body?: unknown,
   queryString?: string
 ): Promise<ApiEnvelope<T>> {
-  const cleanEndpoint =
-    endpoint.startsWith("/")
-      ? endpoint
-      : `/${endpoint}`;
-
   const url =
     new URL(
-      `${BASE_URL}${cleanEndpoint}`
+      `${BASE_URL}${normalizeEndpoint(
+        endpoint
+      )}`
     );
 
   if (queryString) {
@@ -192,7 +224,7 @@ async function requestEnvelope<T>(
 
   try {
     result =
-      await response.json();
+      (await response.json()) as ApiEnvelope<T>;
   } catch {
     throw new Error(
       `API returned an invalid response (${response.status}).`
@@ -212,8 +244,6 @@ async function requestEnvelope<T>(
   return result;
 }
 
-
-
 export async function apiRequest<T>(
   endpoint: string,
   method: ApiMethod = "GET",
@@ -230,8 +260,6 @@ export async function apiRequest<T>(
 
   return result.data;
 }
-
-
 
 export async function apiRequestWithMeta<T>(
   endpoint: string,
