@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 import ConsultationStatusBadge from "./ConsultationStatusBadge";
+import { getConsultationOngoingInfo } from "@/utils/consultationTiming";
 
 interface ConsultationCardProps {
   consultation: Consultation;
   onStartCall?: (id: string) => void;
   onOpenSchedule?: (consultation: Consultation) => void;
   onDelete?: (id: string) => void;
+  now?: number;
 }
 
 export default function ConsultationCard({
@@ -25,23 +27,34 @@ export default function ConsultationCard({
   onStartCall,
   onOpenSchedule,
   onDelete,
+  now,
 }: ConsultationCardProps) {
-  const isOngoing = consultation.status === "ONGOING";
-  const isScheduled = consultation.status === "SCHEDULED";
+  const timing = getConsultationOngoingInfo(consultation, now);
+  const isOngoing = timing.isOngoing;
+  const isMissed = timing.isMissedOrIncomplete;
+  const isScheduled = consultation.status === "SCHEDULED" && !isOngoing && !isMissed;
   const isAccepted = consultation.status === "ACCEPTED";
   const isCompleted = consultation.status === "COMPLETED";
+
+  const effectiveStatus = isOngoing
+    ? "ONGOING"
+    : isMissed
+    ? "MISSED"
+    : consultation.status;
 
   return (
     <div
       className={`group relative overflow-hidden rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md ${
         isOngoing
-          ? "border-rose-300 ring-1 ring-rose-200/70"
+          ? "border-rose-300 ring-2 ring-rose-200/80 shadow-rose-100/50"
+          : isMissed
+          ? "border-amber-200 bg-amber-50/20"
           : "border-slate-200/90 hover:border-emerald-300"
       }`}
     >
       {/* Ongoing Live Banner */}
       {isOngoing && (
-        <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 animate-pulse" />
+        <div className="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 animate-pulse" />
       )}
 
       <div className="flex flex-col justify-between h-full space-y-4">
@@ -72,7 +85,20 @@ export default function ConsultationCard({
             </div>
           </div>
 
-          <ConsultationStatusBadge status={consultation.status} size="sm" />
+          <div className="flex flex-col items-end gap-1">
+            <ConsultationStatusBadge status={effectiveStatus} size="sm" />
+            {isOngoing && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-ping" />
+                {timing.formattedRemaining} left
+              </span>
+            )}
+            {isMissed && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                Session Incomplete
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Problem description info */}
@@ -102,13 +128,33 @@ export default function ConsultationCard({
         {/* Actions bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
           {isOngoing && (
-            <Link
-              href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-rose-700 animate-pulse"
-            >
-              <Video className="h-4 w-4" />
-              Join Live Consultation
-            </Link>
+            <>
+              {onStartCall ? (
+                <button
+                  type="button"
+                  onClick={() => onStartCall(consultation._id || consultation.id || "")}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-rose-700 animate-pulse"
+                >
+                  <Video className="h-4 w-4" />
+                  Join Live Session ({timing.formattedRemaining})
+                </button>
+              ) : (
+                <Link
+                  href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-rose-700 animate-pulse"
+                >
+                  <Video className="h-4 w-4" />
+                  Join Live Session ({timing.formattedRemaining})
+                </Link>
+              )}
+              <Link
+                href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                title="View Room & Prescription"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
           )}
 
           {isScheduled && (
@@ -178,7 +224,29 @@ export default function ConsultationCard({
             </Link>
           )}
 
-          {!isOngoing && !isScheduled && !isAccepted && !isCompleted && (
+          {isMissed && (
+            <>
+              <Link
+                href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/70 py-2 px-3 text-xs font-semibold text-amber-900 transition hover:bg-amber-100"
+              >
+                <span>View Incomplete Session</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(consultation._id || consultation.id || "")}
+                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/60 p-2 text-rose-600 transition hover:bg-rose-100 hover:text-rose-800"
+                  title="Remove consultation"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </>
+          )}
+
+          {!isOngoing && !isScheduled && !isAccepted && !isCompleted && !isMissed && (
             <>
               <Link
                 href={`/dashboard/expert/consultations/${consultation._id || consultation.id}`}

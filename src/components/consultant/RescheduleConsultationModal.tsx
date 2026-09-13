@@ -147,6 +147,8 @@ export default function RescheduleConsultationModal({
     }
   };
 
+  if (!isOpen || consultation.status === "COMPLETED") return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-2 sm:p-4 md:p-6 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-slate-200 shadow-2xl transition-all my-auto max-h-[94vh] flex flex-col">

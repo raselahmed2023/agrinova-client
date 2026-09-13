@@ -77,7 +77,7 @@ export default function EditConsultationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || consultation.status === "COMPLETED") return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
