@@ -1,99 +1,255 @@
+"use client";
+
 import Image from "next/image";
+import { motion } from "motion/react";
+import {
+  Activity,
+  Check,
+  Droplets,
+  Leaf,
+  Sprout,
+} from "lucide-react";
 
-type FeatureIcon = "crop" | "soil" | "irrigation" | "activity";
-
-const features: {
-  title: string;
-  description: string;
-  highlights: string[];
-  image: string;
-  imageAlt: string;
-  icon: FeatureIcon;
-}[] = [
+const features = [
   {
     title: "Crop Management",
     description:
-      "Monitor growth cycles, health indices, and planting schedules for every plot. Get automated alerts for harvesting windows and potential health issues.",
-    highlights: ["Growth Phase Tracking", "Historical Field Data"],
+      "Keep crop information, growth records, planting activities, and field updates organized for easier day-to-day farm management.",
+    highlights: [
+      "Crop & Growth Records",
+      "Field Activity History",
+    ],
     image: "/images/home/crop-managment.jpeg",
     imageAlt: "Crop management dashboard",
-    icon: "crop",
+    icon: Sprout,
+    accent: "emerald",
   },
   {
     title: "Soil Analysis",
     description:
-      "Advanced mapping of soil health, nutrient levels, and pH balance. Integration with soil sensors provides 24/7 subterranean visibility.",
-    highlights: ["Nutrient Heatmaps", "pH Level Monitoring"],
+      "Keep soil-related information organized so you can review field conditions and make better decisions for crop planning and management.",
+    highlights: [
+      "Soil Information",
+      "Field Condition Records",
+    ],
     image: "/images/home/soil-analysis.jpeg",
-    imageAlt: "Farmer reviewing field data on a tablet",
-    icon: "soil",
+    imageAlt: "Farmer reviewing soil and field information",
+    icon: Leaf,
+    accent: "green",
   },
   {
     title: "Smart Irrigation",
     description:
-      "Automated watering based on real-time soil moisture and evapotranspiration data. Reduce water waste while keeping your crops perfectly hydrated.",
-    highlights: ["Schedule Automation", "Water Usage Analytics"],
+      "Use farm and weather information to make more informed irrigation decisions and manage water use more efficiently.",
+    highlights: [
+      "Irrigation Planning",
+      "Weather-Aware Decisions",
+    ],
     image: "/images/home/smart-irrigation.jpeg",
-    imageAlt: "Smart irrigation app used in a field",
-    icon: "irrigation",
+    imageAlt: "Smart irrigation management in a field",
+    icon: Droplets,
+    accent: "blue",
   },
   {
     title: "Activity Tracking",
     description:
-      "Log daily tasks, coordinate with your team, and track machinery usage. A comprehensive logbook for audits and operational efficiency.",
-    highlights: ["Team Management", "Inventory Log"],
+      "Record important farm activities and keep daily operational information organized in one place.",
+    highlights: [
+      "Daily Farm Activities",
+      "Operational Records",
+    ],
     image: "/images/home/activity-tracking.jpeg",
-    imageAlt: "Farm team reviewing inventory",
-    icon: "activity",
+    imageAlt: "Farm activity and operational tracking",
+    icon: Activity,
+    accent: "emerald",
   },
 ];
 
-function FeatureIcon({ icon }: { icon: FeatureIcon }) {
-  const paths = {
-    crop: <><path d="M5 10h14l-1.1 8H6.1L5 10Z" /><path d="M9 6.5h6M12 3.5v3M8.2 14h7.6" /></>,
-    soil: <><path d="M12 3.5v8" /><path d="M12 3.5c-2.6 2.3-4 4.4-4 6.5a4 4 0 1 0 8 0c0-2.1-1.4-4.2-4-6.5Z" /><path d="M5 20h14" /></>,
-    irrigation: <><path d="M12 3.5C8.8 7 7 9.4 7 12a5 5 0 0 0 10 0c0-2.6-1.8-5-5-8.5Z" /><path d="M8.5 17.5h7" /></>,
-    activity: <><rect x="5" y="4" width="14" height="16" rx="2" /><path d="M9 4V2.8M15 4V2.8M8.5 10h7M8.5 14h5" /></>,
-  };
-
-  return (
-    <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-[#174d3c] text-white">
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        {paths[icon]}
-      </svg>
-    </span>
-  );
-}
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 32,
+    scale: 0.98,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+  },
+};
 
 export default function FeaturePreview() {
   return (
-    <section id="features" className="bg-white px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24" aria-labelledby="features-title">
-      <div className="mx-auto max-w-6xl">
-        <header className="mx-auto max-w-2xl text-center">
-          <h2 id="features-title" className="text-3xl font-extrabold tracking-[-0.04em] text-[#202934] sm:text-4xl">
+    <section
+      id="features"
+      aria-labelledby="features-title"
+      className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
+    >
+      {/* subtle background */}
+      <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-100/50 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-sky-100/40 blur-[120px]" />
+
+      <div className="relative mx-auto max-w-7xl">
+        {/* Heading */}
+        <motion.header
+          initial={{
+            opacity: 0,
+            y: 24,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+            amount: 0.35,
+          }}
+          transition={{
+            duration: 0.6,
+            ease: "easeOut",
+          }}
+          className="mx-auto max-w-2xl text-center"
+        >
+          <h2
+            id="features-title"
+            className="text-3xl font-black tracking-[-0.04em] text-[#103F32] sm:text-4xl lg:text-[44px]"
+          >
             Smart Farm Management
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#48525a]">
-            Harness the power of real-time data to streamline your daily operations and maximize every acre of your land.
-          </p>
-        </header>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 md:gap-6 lg:mt-12">
-          {features.map((feature) => (
-            <article key={feature.title} className="group grid min-h-[250px] grid-cols-[minmax(0,1fr)_7.25rem] gap-4 overflow-hidden rounded-2xl bg-[#edf4ff] p-4 transition-all duration-300 ease-out hover:-translate-y-1 hover:bg-[#e7f1ff] hover:shadow-[0_18px_32px_rgba(34,75,103,0.16)] sm:grid-cols-[minmax(0,1fr)_9.5rem] sm:gap-5 sm:p-5 lg:min-h-[275px] lg:grid-cols-[minmax(0,1fr)_10rem] lg:p-6">
-              <div className="flex min-w-0 flex-col">
-                <FeatureIcon icon={feature.icon} />
-                <h3 className="mt-2.5 text-base font-extrabold tracking-[-0.025em] text-[#27313a] sm:text-lg">{feature.title}</h3>
-                <p className="mt-2 text-[11px] leading-[1.45] text-[#4a545d] sm:text-xs">{feature.description}</p>
-                <ul className="mt-auto space-y-1 pt-4 text-[10px] font-medium text-[#43534e] sm:text-[11px]">
-                  {feature.highlights.map((highlight) => <li key={highlight} className="flex items-center gap-1.5"><span aria-hidden="true" className="grid size-2.5 place-items-center rounded-full border border-[#46655b] text-[7px] leading-none">✓</span>{highlight}</li>)}
-                </ul>
-              </div>
-              <div className="relative my-auto aspect-[.93] w-full overflow-hidden rounded-lg border border-white/80 shadow-sm">
-                <Image src={feature.image} alt={feature.imageAlt} fill className="object-cover transition-transform duration-500 ease-out group-hover:scale-105" sizes="(max-width: 640px) 116px, (max-width: 1024px) 152px, 160px" />
-              </div>
-            </article>
-          ))}
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 sm:text-[15px]"
+          >
+            Keep essential farm information, field activities, and management
+            tools organized in one place.
+          </p>
+        </motion.header>
+
+        {/* Cards */}
+        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-14 lg:gap-6">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+
+            const iconStyle =
+              feature.accent === "blue"
+                ? "border-sky-100 bg-sky-50 text-sky-600"
+                : feature.accent === "green"
+                  ? "border-green-100 bg-green-50 text-green-700"
+                  : "border-emerald-100 bg-emerald-50 text-emerald-700";
+
+            const glowStyle =
+              feature.accent === "blue"
+                ? "bg-sky-300/20"
+                : "bg-emerald-300/20";
+
+            return (
+              <motion.article
+                key={feature.title}
+                variants={cardVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{
+                  once: true,
+                  amount: 0.18,
+                }}
+                transition={{
+                  duration: 0.55,
+                  delay: index * 0.09,
+                  ease: "easeOut",
+                }}
+                whileHover={{
+                  y: -7,
+                  transition: {
+                    duration: 0.22,
+                  },
+                }}
+                className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-[#FAFCFB] shadow-[0_4px_20px_rgba(15,23,42,0.035)] transition-shadow duration-300 hover:border-emerald-200 hover:shadow-[0_24px_55px_rgba(11,72,53,0.12)]"
+              >
+                {/* Hover glow */}
+                <div
+                  className={`pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100 ${glowStyle}`}
+                />
+
+                <div className="grid min-h-[310px] grid-cols-1 sm:grid-cols-[minmax(0,1fr)_200px] lg:grid-cols-[minmax(0,1fr)_220px]">
+                  {/* Content */}
+                  <div className="relative z-10 flex flex-col p-6 sm:p-7 lg:p-8">
+                    <motion.div
+                      whileHover={{
+                        scale: 1.08,
+                        rotate: 3,
+                      }}
+                      transition={{
+                        duration: 0.2,
+                      }}
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${iconStyle}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </motion.div>
+
+                    <h3 className="mt-5 text-xl font-black tracking-[-0.025em] text-[#17372D] transition-colors duration-200 group-hover:text-emerald-700"
+                    >
+                      {feature.title}
+                    </h3>
+
+                    <p className="mt-3 text-[13px] leading-6 text-slate-500 sm:text-sm"
+                    >
+                      {feature.description}
+                    </p>
+
+                    <ul className="mt-auto space-y-2.5 pt-6">
+                      {feature.highlights.map((highlight) => (
+                        <li
+                          key={highlight}
+                          className="flex items-center gap-2.5 text-xs font-semibold text-[#49615A]"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"
+                          >
+                            <Check className="h-3 w-3" />
+                          </span>
+
+                          {highlight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Image */}
+                  <div className="relative min-h-[220px] overflow-hidden sm:min-h-full">
+                    <Image
+                      src={feature.image}
+                      alt={feature.imageAlt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 35vw, 220px"
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.07]"
+                    />
+
+                    {/* image overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#062e23]/20 via-transparent to-transparent sm:bg-gradient-to-r sm:from-[#FAFCFB] sm:via-transparent sm:to-transparent"
+                    />
+
+                    {/* floating icon */}
+                    <motion.div
+                      animate={{
+                        y: [0, -5, 0],
+                      }}
+                      transition={{
+                        duration: 3.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: index * 0.35,
+                      }}
+                      className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/85 text-[#0D644B] shadow-lg backdrop-blur-md"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* animated bottom line */}
+                <div className="absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 group-hover:w-full"
+                />
+              </motion.article>
+            );
+          })}
         </div>
       </div>
     </section>
