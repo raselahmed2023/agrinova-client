@@ -5,12 +5,12 @@ import {
   Bot,
   Camera,
   ChevronRight,
-  ClipboardPlus,
-  Farm,
+  ClipboardList,
   Leaf,
-  MessageCircleMore,
+  MessageCircle,
   ShieldCheck,
   Sparkles,
+  Sprout,
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -35,68 +35,66 @@ const aiFeatures: AIFeature[] = [
       "Upload a crop image for AI-assisted analysis of visible disease symptoms and possible crop health problems.",
     points: [
       "Image-based crop analysis",
-      "Symptoms & possible disease result",
-      "Recommended actions & prevention",
+      "Disease and symptom insights",
+      "Recommended actions and prevention guidance",
     ],
     actionLabel: "Analyze Crop Image",
     href: "/dashboard/farmer/ai/disease-detection",
     badge: "Image AI",
     accent: "emerald",
   },
-
   {
-    icon: Farm,
+    icon: Sprout,
     title: "Smart Farming Recommendation",
     description:
-      "Get recommendations based on your selected active farm and the farming problem you describe.",
+      "Get farming recommendations using your selected farm information and the agricultural problem you describe.",
     points: [
       "Uses your saved farm information",
-      "Considers farm type & location",
+      "Considers farm type and location",
       "Problem-specific farming guidance",
     ],
     actionLabel: "Get Recommendation",
     href: "/dashboard/farmer/ai/smart-farming-recommendation",
-    badge: "Farm-aware AI",
+    badge: "Farm-Aware AI",
     accent: "blue",
   },
-
   {
-    icon: MessageCircleMore,
+    icon: MessageCircle,
     title: "AI Farming Assistant",
     description:
-      "Ask farming-related questions and receive practical guidance for common agricultural activities and farm management.",
+      "Ask farming-related questions and receive practical AI-assisted guidance for common agricultural activities and farm management.",
     points: [
-      "Crop, orchard & soil questions",
-      "Livestock, poultry & fish farming",
-      "Irrigation, pests & farm management",
+      "Crop and soil questions",
+      "Irrigation and pest guidance",
+      "General farm management assistance",
     ],
     actionLabel: "Ask Farming Assistant",
     href: "/dashboard/farmer/ai/assistant",
     badge: "AI Assistant",
     accent: "teal",
   },
-
   {
-    icon: ClipboardPlus,
+    icon: ClipboardList,
     title: "AI Treatment Recommendation",
     description:
-      "Supports the expert recommendation workflow by generating structured treatment guidance from crop and problem information.",
+      "Supports the expert consultation workflow with structured treatment guidance based on crop and problem information.",
     points: [
-      "Treatment steps & recommendations",
-      "Follow-up period guidance",
-      "Integrated, organic or chemical mode",
+      "Structured treatment guidance",
+      "Recommended follow-up information",
+      "Supports expert recommendation workflow",
     ],
-    actionLabel: "Expert Consultation Workflow",
+    actionLabel: "Expert Consultation",
+    href: "/consultant",
     badge: "Expert AI Support",
     accent: "lime",
   },
 ];
 
-const sectionVariants = {
+const containerVariants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.11,
+      staggerChildren: 0.1,
     },
   },
 };
@@ -201,14 +199,15 @@ export default function ServicesSection() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#9FB4AB] sm:text-[15px]">
-            AI-assisted tools for crop analysis, farming questions,
-            farm-specific recommendations, and expert treatment workflows.
+            AI-assisted tools for crop analysis, farm-specific
+            recommendations, farming questions, and expert treatment
+            workflows.
           </p>
         </motion.div>
 
         {/* Cards */}
         <motion.div
-          variants={sectionVariants}
+          variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{
@@ -267,8 +266,7 @@ export default function ServicesSection() {
                     {feature.title}
                   </h3>
 
-                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-[#9FB0A8] sm:text-sm"
-                  >
+                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-[#9FB0A8] sm:text-sm">
                     {feature.description}
                   </p>
 
@@ -302,8 +300,7 @@ export default function ServicesSection() {
                       <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-1" />
                     </Link>
                   ) : (
-                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#9FB0A8]"
-                    >
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#9FB0A8]">
                       {feature.actionLabel}
 
                       <Bot className="h-4 w-4 text-emerald-300" />
@@ -320,7 +317,7 @@ export default function ServicesSection() {
           })}
         </motion.div>
 
-        {/* Safety note */}
+        {/* Note */}
         <motion.div
           initial={{
             opacity: 0,
@@ -342,10 +339,9 @@ export default function ServicesSection() {
           <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
 
           <p className="text-xs leading-5 text-[#82988F]">
-            AI results provide farming guidance and decision support.
-            Serious crop disease, chemical treatment, or other
-            professional issues should be reviewed with a qualified
-            agricultural expert.
+            AI tools provide decision support and farming guidance.
+            Professional agricultural advice may still be appropriate for
+            serious crop health or treatment decisions.
           </p>
         </motion.div>
       </div>
