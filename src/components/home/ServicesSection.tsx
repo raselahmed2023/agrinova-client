@@ -1,125 +1,353 @@
 "use client";
 
-import { FaRobot, FaLeaf, FaArrowRight } from "react-icons/fa";
-import { HiTrendingUp } from "react-icons/hi";
+import Link from "next/link";
+import {
+  Bot,
+  Camera,
+  ChevronRight,
+  ClipboardPlus,
+  Farm,
+  Leaf,
+  MessageCircleMore,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { motion } from "motion/react";
 
-interface FeatureCard {
-  icon: React.ReactNode;
+type AIFeature = {
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
   title: string;
   description: string;
-  linkLabel: string;
-}
+  points: string[];
+  actionLabel: string;
+  href?: string;
+  badge: string;
+  accent: "emerald" | "blue" | "teal" | "lime";
+};
 
-const features: FeatureCard[] = [
+const aiFeatures: AIFeature[] = [
   {
-    icon: <span className="text-sm font-bold tracking-tight">4G</span>,
+    icon: Camera,
     title: "Crop Disease Detection",
     description:
-      "Snap a photo of your plant and our AI will diagnose pests or diseases in seconds with treatment advice.",
-    linkLabel: "Detect Disease",
+      "Upload a crop image for AI-assisted analysis of visible disease symptoms and possible crop health problems.",
+    points: [
+      "Image-based crop analysis",
+      "Symptoms & possible disease result",
+      "Recommended actions & prevention",
+    ],
+    actionLabel: "Analyze Crop Image",
+    href: "/dashboard/farmer/ai/disease-detection",
+    badge: "Image AI",
+    accent: "emerald",
   },
+
   {
-    icon: <FaLeaf className="h-5 w-5" />,
-    title: "Crop Recommendation",
+    icon: Farm,
+    title: "Smart Farming Recommendation",
     description:
-      "Not sure what to plant? Get AI suggestions based on your soil type, season, and market demand.",
-    linkLabel: "Explore Recommendations",
+      "Get recommendations based on your selected active farm and the farming problem you describe.",
+    points: [
+      "Uses your saved farm information",
+      "Considers farm type & location",
+      "Problem-specific farming guidance",
+    ],
+    actionLabel: "Get Recommendation",
+    href: "/dashboard/farmer/ai/smart-farming-recommendation",
+    badge: "Farm-aware AI",
+    accent: "blue",
   },
+
   {
-    icon: <FaRobot className="h-5 w-5" />,
+    icon: MessageCircleMore,
     title: "AI Farming Assistant",
     description:
-      "Chat with our agricultural LLM trained on millions of farming journals and expert papers.",
-    linkLabel: "Ask AI",
+      "Ask farming-related questions and receive practical guidance for common agricultural activities and farm management.",
+    points: [
+      "Crop, orchard & soil questions",
+      "Livestock, poultry & fish farming",
+      "Irrigation, pests & farm management",
+    ],
+    actionLabel: "Ask Farming Assistant",
+    href: "/dashboard/farmer/ai/assistant",
+    badge: "AI Assistant",
+    accent: "teal",
   },
+
   {
-    icon: <HiTrendingUp className="h-5 w-5" />,
-    title: "Yield Prediction",
+    icon: ClipboardPlus,
+    title: "AI Treatment Recommendation",
     description:
-      "Forecast your harvest volume months in advance using historical data and current field stats.",
-    linkLabel: "Predict Yield",
+      "Supports the expert recommendation workflow by generating structured treatment guidance from crop and problem information.",
+    points: [
+      "Treatment steps & recommendations",
+      "Follow-up period guidance",
+      "Integrated, organic or chemical mode",
+    ],
+    actionLabel: "Expert Consultation Workflow",
+    badge: "Expert AI Support",
+    accent: "lime",
   },
 ];
 
+const sectionVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.11,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 35,
+    scale: 0.97,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.55,
+      ease: "easeOut" as const,
+    },
+  },
+};
+
+function getAccentClasses(accent: AIFeature["accent"]) {
+  switch (accent) {
+    case "blue":
+      return {
+        icon: "border-blue-400/15 bg-blue-400/10 text-blue-300",
+        badge: "border-blue-400/15 bg-blue-400/10 text-blue-300",
+        glow: "bg-blue-400/15",
+        bullet: "text-blue-300",
+        line: "from-blue-400 to-cyan-300",
+      };
+
+    case "teal":
+      return {
+        icon: "border-teal-400/15 bg-teal-400/10 text-teal-300",
+        badge: "border-teal-400/15 bg-teal-400/10 text-teal-300",
+        glow: "bg-teal-400/15",
+        bullet: "text-teal-300",
+        line: "from-teal-400 to-emerald-300",
+      };
+
+    case "lime":
+      return {
+        icon: "border-lime-400/15 bg-lime-400/10 text-lime-300",
+        badge: "border-lime-400/15 bg-lime-400/10 text-lime-300",
+        glow: "bg-lime-400/10",
+        bullet: "text-lime-300",
+        line: "from-lime-400 to-emerald-300",
+      };
+
+    default:
+      return {
+        icon: "border-emerald-400/15 bg-emerald-400/10 text-emerald-300",
+        badge:
+          "border-emerald-400/15 bg-emerald-400/10 text-emerald-300",
+        glow: "bg-emerald-400/15",
+        bullet: "text-emerald-300",
+        line: "from-emerald-400 to-teal-300",
+      };
+  }
+}
+
 export default function ServicesSection() {
   return (
-    <section className="relative w-full overflow-hidden bg-[#0E1F16] px-6 py-20 md:px-12 lg:px-20">
-      {/* Background Glow */}
-      <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#2A6B4D]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-[#A9D8B4]/5 blur-3xl" />
+    <section className="relative w-full overflow-hidden bg-[#071C15] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      {/* Background glow */}
+      <div className="pointer-events-none absolute -left-48 top-10 h-[430px] w-[430px] rounded-full bg-emerald-400/[0.07] blur-[130px]" />
+
+      <div className="pointer-events-none absolute -right-48 bottom-0 h-[450px] w-[450px] rounded-full bg-cyan-400/[0.06] blur-[140px]" />
 
       <div className="relative mx-auto max-w-7xl">
-
-        {/* Heading */}
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center"
+          initial={{
+            opacity: 0,
+            y: 24,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+            amount: 0.35,
+          }}
+          transition={{
+            duration: 0.6,
+            ease: "easeOut",
+          }}
+          className="mx-auto max-w-3xl text-center"
         >
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#A9D8B4]">
-            Smart Technology
-          </span>
+          <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-3.5 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
 
-          <h2 className="mt-3 text-3xl font-extrabold text-white md:text-4xl">
-            AI-Powered Farming Intelligence
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-emerald-300 sm:text-[11px]">
+              AgriNova AI
+            </span>
+          </div>
+
+          <h2 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl lg:text-[44px]">
+            AI Farming Tools
           </h2>
+
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#9FB4AB] sm:text-[15px]">
+            AI-assisted tools for crop analysis, farming questions,
+            farm-specific recommendations, and expert treatment workflows.
+          </p>
         </motion.div>
 
         {/* Cards */}
-        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 35 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{
-                duration: 0.55,
-                delay: index * 0.1,
-                ease: "easeOut",
-              }}
-              whileHover={{
-                y: -6,
-                transition: { duration: 0.25 },
-              }}
-              className="group rounded-2xl border border-white/10 bg-[#16291D] p-8 shadow-sm transition-all duration-300 hover:border-[#A9D8B4]/25 hover:bg-[#192F21] hover:shadow-[0_18px_40px_rgba(0,0,0,0.2)]"
-            >
-              {/* Icon */}
-              <motion.div
-                whileHover={{ scale: 1.08, rotate: 3 }}
-                transition={{ duration: 0.2 }}
-                className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#2A4433] text-[#A9D8B4] shadow-sm"
+        <motion.div
+          variants={sectionVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{
+            once: true,
+            amount: 0.12,
+          }}
+          className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-14 lg:gap-6"
+        >
+          {aiFeatures.map((feature) => {
+            const Icon = feature.icon;
+            const accent = getAccentClasses(feature.accent);
+
+            return (
+              <motion.article
+                key={feature.title}
+                variants={cardVariants}
+                whileHover={{
+                  y: -8,
+                  scale: 1.01,
+                  transition: {
+                    duration: 0.22,
+                  },
+                }}
+                className="group relative flex min-h-[350px] flex-col overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#10271D] p-6 shadow-[0_10px_35px_rgba(0,0,0,0.12)] transition-shadow duration-300 hover:border-white/[0.14] hover:shadow-[0_24px_55px_rgba(0,0,0,0.24)] sm:p-7 lg:p-8"
               >
-                {feature.icon}
-              </motion.div>
+                {/* Hover glow */}
+                <div
+                  className={`pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full opacity-0 blur-[70px] transition-opacity duration-500 group-hover:opacity-100 ${accent.glow}`}
+                />
 
-              {/* Title */}
-              <h3 className="mt-6 text-xl font-bold text-white">
-                {feature.title}
-              </h3>
+                {/* Top */}
+                <div className="relative z-10 flex items-start justify-between gap-4">
+                  <motion.div
+                    whileHover={{
+                      rotate: 4,
+                      scale: 1.08,
+                    }}
+                    transition={{
+                      duration: 0.2,
+                    }}
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${accent.icon}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </motion.div>
 
-              {/* Description */}
-              <p className="mt-3 text-[15px] leading-relaxed text-[#A3B3AC]">
-                {feature.description}
-              </p>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-[0.13em] ${accent.badge}`}
+                  >
+                    {feature.badge}
+                  </span>
+                </div>
 
-              {/* Link */}
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                className="group/link mt-6 flex items-center gap-2 text-[15px] font-semibold text-white"
-              >
-                <span className="transition-colors duration-300 group-hover/link:text-[#A9D8B4]">
-                  {feature.linkLabel}
-                </span>
+                {/* Content */}
+                <div className="relative z-10 mt-6">
+                  <h3 className="text-xl font-black tracking-[-0.025em] text-white sm:text-[22px]">
+                    {feature.title}
+                  </h3>
 
-                <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/link:translate-x-1 group-hover/link:text-[#A9D8B4]" />
-              </motion.button>
-            </motion.div>
-          ))}
-        </div>
+                  <p className="mt-3 max-w-xl text-[13px] leading-6 text-[#9FB0A8] sm:text-sm"
+                  >
+                    {feature.description}
+                  </p>
+
+                  <ul className="mt-6 space-y-3">
+                    {feature.points.map((point) => (
+                      <li
+                        key={point}
+                        className="flex items-start gap-2.5 text-xs font-medium text-[#BCCAC4] sm:text-[13px]"
+                      >
+                        <ShieldCheck
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${accent.bullet}`}
+                        />
+
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Action */}
+                <div className="relative z-10 mt-auto pt-7">
+                  <div className="mb-5 h-px w-full bg-white/[0.08]" />
+
+                  {feature.href ? (
+                    <Link
+                      href={feature.href}
+                      className="group/link inline-flex items-center gap-2 text-sm font-bold text-white transition hover:text-emerald-300"
+                    >
+                      {feature.actionLabel}
+
+                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-1" />
+                    </Link>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#9FB0A8]"
+                    >
+                      {feature.actionLabel}
+
+                      <Bot className="h-4 w-4 text-emerald-300" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom animated line */}
+                <div
+                  className={`absolute bottom-0 left-0 h-[3px] w-0 bg-gradient-to-r transition-all duration-500 group-hover:w-full ${accent.line}`}
+                />
+              </motion.article>
+            );
+          })}
+        </motion.div>
+
+        {/* Safety note */}
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+          }}
+          transition={{
+            duration: 0.5,
+            delay: 0.2,
+          }}
+          className="mt-7 flex items-start gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-4 sm:px-5"
+        >
+          <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+
+          <p className="text-xs leading-5 text-[#82988F]">
+            AI results provide farming guidance and decision support.
+            Serious crop disease, chemical treatment, or other
+            professional issues should be reviewed with a qualified
+            agricultural expert.
+          </p>
+        </motion.div>
       </div>
     </section>
   );
