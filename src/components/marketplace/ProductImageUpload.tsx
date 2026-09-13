@@ -21,93 +21,51 @@ interface ProductImageUploadProps {
   setImages: Dispatch<SetStateAction<string[]>>;
 }
 
+interface UploadResponse {
+  success?: boolean;
+  url?: string;
+  message?: string;
+}
+
 export default function ProductImageUpload({
   images,
   setImages,
 }: ProductImageUploadProps) {
-  const [uploading, setUploading] =
-    useState(false);
-  const [error, setError] =
-    useState("");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
-  const uploadToImgBB = async (
-    file: File
-  ): Promise<string> => {
-    const apiKey =
-      process.env.NEXT_PUBLIC_IMGBB_API_KEY;
-
-    if (!apiKey) {
-      throw new Error(
-        "NEXT_PUBLIC_IMGBB_API_KEY is not configured."
-      );
-    }
-
+  const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("image", file);
 
-    const response = await fetch(
-      `https://api.imgbb.com/1/upload?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-    let result: {
-      success?: boolean;
-      data?: {
-        url?: string;
-        display_url?: string;
-      };
-      error?: {
-        message?: string;
-      };
-    } | null = null;
+    let result: UploadResponse | null = null;
 
     try {
-      result = await response.json();
+      result = (await response.json()) as UploadResponse;
     } catch {
+      throw new Error("Image upload returned an invalid response.");
+    }
+
+    if (!response.ok || !result?.success || !result.url) {
       throw new Error(
-        "ImgBB returned an invalid response."
+        result?.message || "Unable to upload product image."
       );
     }
 
-    if (
-      !response.ok ||
-      !result?.success ||
-      !result.data
-    ) {
-      throw new Error(
-        result?.error?.message ||
-          "ImgBB upload failed."
-      );
-    }
-
-    const url =
-      result.data.display_url ||
-      result.data.url;
-
-    if (!url) {
-      throw new Error(
-        "ImgBB did not return an image URL."
-      );
-    }
-
-    return url;
+    return result.url;
   };
 
   const handleFiles = async (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const files = Array.from(
-      event.target.files || []
-    );
+    const files = Array.from(event.target.files || []);
 
-    if (!files.length) {
-      return;
-    }
+    if (!files.length) return;
 
     const remainingSlots = Math.max(
       MAX_IMAGES - images.length,
@@ -115,7 +73,10 @@ export default function ProductImageUpload({
     );
 
     if (remainingSlots === 0) {
-      setError(`You can upload up to ${MAX_IMAGES} product images.`);
+      setError(
+        `You can upload up to ${MAX_IMAGES} product images.`
+      );
+
       event.target.value = "";
       return;
     }
@@ -135,21 +96,18 @@ export default function ProductImageUpload({
           );
         }
 
-        const url =
-          await uploadToImgBB(file);
+        if (file.size > 8 * 1024 * 1024) {
+          throw new Error(
+            `${file.name} must be 8 MB or smaller.`
+          );
+        }
 
-        uploaded.push(url);
+        uploaded.push(await uploadImage(file));
       }
 
-      setImages((current) => [
-        ...current,
-        ...uploaded,
-      ]);
+      setImages((current) => [...current, ...uploaded]);
     } catch (err) {
-      console.error(
-        "Product image upload failed:",
-        err
-      );
+      console.error("Product image upload failed:", err);
 
       setError(
         err instanceof Error
@@ -165,8 +123,7 @@ export default function ProductImageUpload({
   const removeImage = (index: number) => {
     setImages((current) =>
       current.filter(
-        (_, currentIndex) =>
-          currentIndex !== index
+        (_, currentIndex) => currentIndex !== index
       )
     );
   };
@@ -202,7 +159,7 @@ export default function ProductImageUpload({
         </p>
 
         <p className="mt-1 text-xs text-slate-500">
-          Select up to 5 product photos
+          Select up to 5 product photos, maximum 8 MB each
         </p>
       </label>
 
@@ -231,13 +188,9 @@ export default function ProductImageUpload({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    removeImage(index)
-                  }
+                  onClick={() => removeImage(index)}
                   disabled={uploading}
-                  aria-label={`Remove image ${
-                    index + 1
-                  }`}
+                  aria-label={`Remove image ${index + 1}`}
                   className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-red-500 opacity-0 shadow-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -246,8 +199,9 @@ export default function ProductImageUpload({
 
               <div className="flex items-center gap-2 px-3 py-2.5">
                 <ImagePlus className="h-4 w-4 shrink-0 text-emerald-600" />
+
                 <span className="truncate text-xs text-slate-500">
-                  ImgBB image {index + 1}
+                  Product image {index + 1}
                 </span>
               </div>
             </div>

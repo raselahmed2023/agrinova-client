@@ -137,8 +137,6 @@ export default function ExpertRegisterPage() {
         email: data.email,
         password: data.password,
         name: data.name,
-        role: "EXPERT",
-        status: "PENDING",
         phone: data.phone,
         specialization: data.specialization,
         experienceYears: Number(data.experienceYears),
@@ -151,10 +149,33 @@ export default function ExpertRegisterPage() {
         setAuthError(
           error.message || "Failed to submit application. Please try again."
         );
-      } else {
-        await authClient.signOut();
-        setIsSubmitted(true);
+        return;
       }
+
+      const applicationResponse = await fetch("/api/expert-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          phone: data.phone,
+          specialization: data.specialization,
+          experienceYears: Number(data.experienceYears),
+          qualification: data.qualification,
+        }),
+      });
+
+      const applicationResult = await applicationResponse.json().catch(() => null);
+
+      if (!applicationResponse.ok || !applicationResult?.success) {
+        setAuthError(
+          applicationResult?.message ||
+            "Your account was created, but the expert application could not be submitted. Please contact AgriNova support."
+        );
+        return;
+      }
+
+      await authClient.signOut();
+      setIsSubmitted(true);
     } catch {
       setAuthError("An unexpected error occurred. Please try again.");
     }

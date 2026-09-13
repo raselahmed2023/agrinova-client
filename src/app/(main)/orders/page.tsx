@@ -1,58 +1,59 @@
 "use client";
 
 import Link from "next/link";
-
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
 
 import {
+  ChevronLeft,
+  ChevronRight,
   Package,
   RefreshCw,
 } from "lucide-react";
 
-import {
-  OrderService,
-} from "@/services/order.service";
+import { OrderService } from "@/services/order.service";
+import type { IOrder } from "@/types/marketplace";
 
-import type {
-  IOrder,
-} from "@/types/marketplace";
+const PAGE_SIZE = 10;
 
-const statusClass =
-  (status: string) => {
-    if (
-      status ===
-      "delivered"
-    ) {
-      return "bg-emerald-50 text-emerald-700";
-    }
+const statusClass = (status: string) => {
+  if (status === "delivered") {
+    return "bg-emerald-50 text-emerald-700";
+  }
 
-    if (
-      status ===
-      "cancelled"
-    ) {
-      return "bg-red-50 text-red-700";
-    }
+  if (status === "cancelled") {
+    return "bg-red-50 text-red-700";
+  }
 
-    if (
-      status ===
-      "pending"
-    ) {
-      return "bg-amber-50 text-amber-700";
-    }
+  if (status === "pending") {
+    return "bg-amber-50 text-amber-700";
+  }
 
-    return "bg-blue-50 text-blue-700";
-  };
+  return "bg-blue-50 text-blue-700";
+};
+
+const paymentClass = (status: string) => {
+  if (status === "paid") {
+    return "text-emerald-700";
+  }
+
+  if (status === "failed") {
+    return "text-red-600";
+  }
+
+  if (status === "refunded") {
+    return "text-violet-700";
+  }
+
+  return "text-amber-700";
+};
 
 export default function OrdersPage() {
-  const [
-    orders,
-    setOrders,
-  ] = useState<IOrder[]>(
-    []
-  );
+  const [orders, setOrders] =
+    useState<IOrder[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -60,14 +61,44 @@ export default function OrdersPage() {
   const [error, setError] =
     useState("");
 
-  const load = async () => {
+  const [page, setPage] =
+    useState(1);
+
+  const [total, setTotal] =
+    useState(0);
+
+  const [totalPages, setTotalPages] =
+    useState(1);
+
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      setOrders(
-        await OrderService.getMyOrders()
+      const result =
+        await OrderService.getMyOrdersPage(
+          page,
+          PAGE_SIZE
+        );
+
+      setOrders(result.data);
+      setTotal(result.meta.total);
+
+      setTotalPages(
+        Math.max(
+          result.meta.totalPages,
+          1
+        )
       );
+
+      if (
+        page > result.meta.totalPages &&
+        result.meta.totalPages > 0
+      ) {
+        setPage(
+          result.meta.totalPages
+        );
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -77,35 +108,47 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
               My Orders
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Orders you placed as a
-              farmer-buyer.
+              Track your marketplace purchases and payment status.
             </p>
           </div>
 
           <button
             type="button"
             onClick={load}
-            className="rounded-xl border bg-white p-3 text-slate-600"
+            disabled={loading}
+            aria-label="Refresh orders"
+            className="rounded-xl border bg-white p-3 text-slate-600 disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw
+              className={`h-4 w-4 ${
+                loading ? "animate-spin" : ""
+              }`}
+            />
           </button>
         </div>
+
+        {!loading && !error && total > 0 && (
+          <p className="mt-3 text-xs font-medium text-slate-500">
+            {total} order
+            {total === 1 ? "" : "s"} total
+          </p>
+        )}
 
         {loading && (
           <div className="mt-7 rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
@@ -113,12 +156,11 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {!loading &&
-          error && (
-            <div className="mt-7 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+        {!loading && error && (
+          <div className="mt-7 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         {!loading &&
           !error &&
@@ -131,8 +173,7 @@ export default function OrdersPage() {
               </h2>
 
               <p className="mt-2 text-sm text-slate-500">
-                Your marketplace purchases
-                will appear here.
+                Your marketplace purchases will appear here.
               </p>
 
               <Link
@@ -148,83 +189,130 @@ export default function OrdersPage() {
           !error &&
           orders.length > 0 && (
             <div className="mt-7 space-y-4">
-              {orders.map(
-                (order) => (
-                  <Link
-                    key={
-                      order._id
-                    }
-                    href={`/orders/${order._id}`}
-                    className="block rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-                  >
-                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-slate-400">
-                          Order
-                        </p>
+              {orders.map((order) => (
+                <Link
+                  key={order._id}
+                  href={`/orders/${order._id}`}
+                  className="block rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-400">
+                        Order
+                      </p>
 
-                        <h2 className="mt-1 font-bold text-slate-900">
-                          {
-                            order.orderNumber
-                          }
-                        </h2>
+                      <h2 className="mt-1 font-bold text-slate-900">
+                        {order.orderNumber}
+                      </h2>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          {
-                            order.items
-                              .length
-                          }{" "}
-                          item
-                          {order
-                            .items
-                            .length !==
-                          1
-                            ? "s"
-                            : ""}
-
-                          {" • "}
-
-                          {order.createdAt
-                            ? new Date(
-                                order.createdAt
-                              ).toLocaleString(
-                                "en-BD"
-                              )
-                            : "Date unavailable"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900">
-                            ৳
-                            {Number(
-                              order.totalAmount
+                      <p className="mt-1 text-sm text-slate-500">
+                        {order.items.length} item
+                        {order.items.length !== 1
+                          ? "s"
+                          : ""}
+                        {" • "}
+                        {order.createdAt
+                          ? new Date(
+                              order.createdAt
                             ).toLocaleString(
                               "en-BD"
-                            )}
-                          </p>
-
-                          <p className="text-xs text-slate-500">
-                            {order.paymentMethod.toUpperCase()}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(
-                            order.status
-                          )}`}
-                        >
-                          {order.status.replaceAll(
-                            "_",
-                            " "
-                          )}
-                        </span>
-                      </div>
+                            )
+                          : "Date unavailable"}
+                      </p>
                     </div>
-                  </Link>
-                )
-              )}
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-bold text-slate-900">
+                          ৳
+                          {Number(
+                            order.totalAmount
+                          ).toLocaleString(
+                            "en-BD"
+                          )}
+                        </p>
+
+                        <p className="text-xs text-slate-500">
+                          {order.paymentMethod.toUpperCase()}
+                          {" • "}
+
+                          <span
+                            className={`font-semibold capitalize ${paymentClass(
+                              order.paymentStatus
+                            )}`}
+                          >
+                            {order.paymentStatus}
+                          </span>
+                        </p>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass(
+                          order.status
+                        )}`}
+                      >
+                        {order.status.replaceAll(
+                          "_",
+                          " "
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+        {!loading &&
+          !error &&
+          totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between rounded-2xl border bg-white px-4 py-3 shadow-sm">
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) =>
+                    Math.max(
+                      current - 1,
+                      1
+                    )
+                  )
+                }
+                disabled={page <= 1}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+
+              <p className="text-sm text-slate-500">
+                Page{" "}
+                <strong className="text-slate-900">
+                  {page}
+                </strong>{" "}
+                of{" "}
+                <strong className="text-slate-900">
+                  {totalPages}
+                </strong>
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) =>
+                    Math.min(
+                      current + 1,
+                      totalPages
+                    )
+                  )
+                }
+                disabled={
+                  page >= totalPages
+                }
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           )}
       </div>

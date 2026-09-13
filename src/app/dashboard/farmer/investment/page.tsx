@@ -1,23 +1,83 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, Loader2, PlusCircle, XCircle } from "lucide-react";
-import { getMyFarms } from "@/services/farm.service";
-import { createInvestmentProject, getMyInvestmentProjects } from "@/services/investment.service";
-import type { IFarm } from "@/types/farm";
-import type { CreateInvestmentProjectPayload, InvestmentCategory, InvestmentProject } from "@/types/investment";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-const categories: Array<{ value: InvestmentCategory; label: string }> = [
-  { value: "vegetable_farming", label: "Vegetable Farming" },
-  { value: "organic_farming", label: "Organic Farming" },
-  { value: "poultry", label: "Poultry" },
-  { value: "livestock", label: "Livestock" },
-  { value: "fishery", label: "Fishery" },
-  { value: "greenhouse", label: "Greenhouse" },
-  { value: "irrigation", label: "Irrigation" },
-  { value: "equipment", label: "Equipment" },
-  { value: "technology", label: "Technology" },
-  { value: "other", label: "Other" },
+import {
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  PlusCircle,
+  XCircle,
+} from "lucide-react";
+
+import {
+  getMyFarms,
+} from "@/services/farm.service";
+
+import {
+  createInvestmentProject,
+  getMyInvestmentProjects,
+} from "@/services/investment.service";
+
+import type {
+  IFarm,
+} from "@/types/farm";
+
+import type {
+  CreateInvestmentProjectPayload,
+  InvestmentCategory,
+  InvestmentProject,
+} from "@/types/investment";
+
+const categories: Array<{
+  value: InvestmentCategory;
+  label: string;
+}> = [
+  {
+    value: "vegetable_farming",
+    label: "Vegetable Farming",
+  },
+  {
+    value: "organic_farming",
+    label: "Organic Farming",
+  },
+  {
+    value: "poultry",
+    label: "Poultry",
+  },
+  {
+    value: "livestock",
+    label: "Livestock",
+  },
+  {
+    value: "fishery",
+    label: "Fishery",
+  },
+  {
+    value: "greenhouse",
+    label: "Greenhouse",
+  },
+  {
+    value: "irrigation",
+    label: "Irrigation",
+  },
+  {
+    value: "equipment",
+    label: "Equipment",
+  },
+  {
+    value: "technology",
+    label: "Technology",
+  },
+  {
+    value: "other",
+    label: "Other",
+  },
 ];
 
 const initialForm: CreateInvestmentProjectPayload = {
@@ -30,7 +90,6 @@ const initialForm: CreateInvestmentProjectPayload = {
   description: "",
   useOfFunds: "",
 };
-
 const money = (value: number) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
 
 export default function NeedInvestmentPage() {

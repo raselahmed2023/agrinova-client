@@ -27,27 +27,70 @@ type ApiMethod =
   | "DELETE";
 
 
+export async function getAccessToken(): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error(
+      "Authentication token is only available in the browser."
+    );
+  }
+
+  try {
+    const {
+      data,
+      error,
+    } = await authClient.token();
+
+    if (
+      error ||
+      !data?.token
+    ) {
+      throw new Error(
+        error?.message ||
+          "Authentication required."
+      );
+    }
+
+    return data.token;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error(
+      "Unable to retrieve authentication token."
+    );
+  }
+}
+
+
 
 async function getAuthHeaders(): Promise<
   Record<string, string>
 > {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+  const headers: Record<
+    string,
+    string
+  > = {
+    "Content-Type":
+      "application/json",
   };
 
-  if (typeof window === "undefined") {
+  
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     return headers;
   }
 
   try {
-    const { data } =
-      await authClient.token();
+    const token =
+      await getAccessToken();
 
-    if (data?.token) {
-      headers.Authorization =
-        `Bearer ${data.token}`;
-    }
+    headers.Authorization =
+      `Bearer ${token}`;
   } catch (error) {
+   
     console.warn(
       "Could not retrieve authentication token:",
       error
@@ -70,9 +113,10 @@ async function requestEnvelope<T>(
       ? endpoint
       : `/${endpoint}`;
 
-  const url = new URL(
-    `${BASE_URL}${cleanEndpoint}`
-  );
+  const url =
+    new URL(
+      `${BASE_URL}${cleanEndpoint}`
+    );
 
   if (queryString) {
     const params =
@@ -81,7 +125,10 @@ async function requestEnvelope<T>(
       );
 
     params.forEach(
-      (value, key) => {
+      (
+        value,
+        key
+      ) => {
         url.searchParams.set(
           key,
           value
@@ -96,28 +143,31 @@ async function requestEnvelope<T>(
   let response: Response;
 
   try {
-    response = await fetch(
-      url.toString(),
-      {
-        method,
+    response =
+      await fetch(
+        url.toString(),
+        {
+          method,
 
-        headers,
+          headers,
 
-        cache: "no-store",
+          cache:
+            "no-store",
 
-        credentials:
-          "include",
+          credentials:
+            "include",
 
-        ...(body !== undefined
-          ? {
-              body:
-                JSON.stringify(
-                  body
-                ),
-            }
-          : {}),
-      }
-    );
+          ...(body !==
+          undefined
+            ? {
+                body:
+                  JSON.stringify(
+                    body
+                  ),
+              }
+            : {}),
+        }
+      );
   } catch (error) {
     console.error(
       "API connection failed:",
@@ -197,4 +247,6 @@ export async function apiRequestWithMeta<T>(
   );
 }
 
-export { BASE_URL };
+export {
+  BASE_URL,
+};

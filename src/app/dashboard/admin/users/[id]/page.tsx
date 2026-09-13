@@ -1,65 +1,178 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { adminUserService } from "@/services/admin.user.service";
-import { ArrowLeft, Mail, Shield, CheckCircle2, Ban, Calendar } from "lucide-react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-interface UserProfile {
-  _id?: string;
-  id?: string;
-  name: string;
-  email: string;
-  role: string;
-  status?: string;
-  emailVerified?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
 
-interface IUserResponse {
-  success?: boolean;
-  data?: UserProfile;
-}
+import {
+  ArrowLeft,
+  Ban,
+  Calendar,
+  CheckCircle2,
+  Mail,
+  Phone,
+  Shield,
+  ShieldCheck,
+} from "lucide-react";
+
+import {
+  adminUserService,
+  type AdminUser,
+} from "@/services/admin.user.service";
 
 export default function UserDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const userId = params.id as string;
+  const params =
+    useParams<{
+      id: string;
+    }>();
 
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const router =
+    useRouter();
+
+  const userId =
+    params.id;
+
+  const [
+    user,
+    setUser,
+  ] =
+    useState<
+      AdminUser | null
+    >(null);
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(true);
+
+  const [
+    actionLoading,
+    setActionLoading,
+  ] =
+    useState(false);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const load =
+    async () => {
+      try {
+        setLoading(
+          true
+        );
+
+        setError("");
+
+        const result =
+          await adminUserService.getUserById(
+            userId
+          );
+
+        setUser(
+          result
+        );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof
+            Error
+            ? err.message
+            : "Unable to load user."
+        );
+      } finally {
+        setLoading(
+          false
+        );
+      }
+    };
 
   useEffect(() => {
     if (userId) {
-      adminUserService
-        .getUserById(userId)
-        .then((response: unknown) => {
-          const res = response as IUserResponse;
-          if (res && (res.success || res.data)) {
-            setUser(res.data || (res as unknown as UserProfile));
-          }
-        })
-        .catch((err: unknown) => console.error("Failed to load user details", err))
-        .finally(() => setLoading(false));
+      void load();
     }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  const toggleStatus =
+    async () => {
+      if (
+        !user ||
+        user.role ===
+          "ADMIN"
+      ) {
+        return;
+      }
+
+      try {
+        setActionLoading(
+          true
+        );
+
+        setError("");
+
+        const updated =
+          user.status ===
+          "BLOCKED"
+            ? await adminUserService.unblockUser(
+                user._id
+              )
+            : await adminUserService.blockUser(
+                user._id
+              );
+
+        setUser(
+          updated
+        );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof
+            Error
+            ? err.message
+            : "Unable to update user."
+        );
+      } finally {
+        setActionLoading(
+          false
+        );
+      }
+    };
 
   if (loading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <div className="text-sm font-medium text-slate-500 animate-pulse">Loading user details...</div>
+      <div className="flex h-[70vh] items-center justify-center text-sm font-medium text-slate-500">
+        Loading user
+        details...
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="p-8 text-center space-y-4">
-        <p className="text-slate-500">User not found.</p>
-        <button 
-          onClick={() => router.back()}
-          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium"
+      <div className="p-8 text-center">
+        <p className="text-slate-500">
+          {error ||
+            "User not found."}
+        </p>
+
+        <button
+          onClick={() =>
+            router.back()
+          }
+          className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
         >
           Go Back
         </button>
@@ -68,73 +181,192 @@ export default function UserDetailsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-      <button 
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-medium transition shadow-sm"
+    <div className="mx-auto max-w-4xl space-y-6 p-6 lg:p-8">
+      <button
+        onClick={() =>
+          router.back()
+        }
+        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to Users
+        <ArrowLeft className="h-4 w-4" />
+
+        Back to Users
       </button>
 
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 lg:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+        <div className="flex flex-col justify-between gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-2xl">
-              {user.name?.charAt(0) || "U"}
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-2xl font-bold text-emerald-700">
+              {user.name
+                ?.charAt(0)
+                .toUpperCase() ||
+                "U"}
             </div>
+
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{user.name}</h1>
-              <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
-                <Mail className="h-3.5 w-3.5" /> {user.email}
+              <h1 className="text-xl font-bold text-slate-900">
+                {user.name}
+              </h1>
+
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                <Mail className="h-3.5 w-3.5" />
+
+                {user.email}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-              user.role === "ADMIN" ? "bg-purple-50 text-purple-700" :
-              user.role === "EXPERT" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"
-            }`}>
-              <Shield className="h-3 w-3 mr-1" /> {user.role}
-            </span>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-              user.status === "ACTIVE" || user.status === "APPROVED" ? "bg-emerald-50 text-emerald-700" : 
-              user.status === "PENDING" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
-            }`}>
-              {user.status === "BLOCKED" ? <Ban className="h-3 w-3 mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-              {user.status || "ACTIVE"}
-            </span>
-          </div>
+          {user.role !==
+            "ADMIN" && (
+            <button
+              type="button"
+              disabled={
+                actionLoading
+              }
+              onClick={() =>
+                void toggleStatus()
+              }
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${
+                user.status ===
+                "BLOCKED"
+                  ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                  : "bg-rose-600 text-white hover:bg-rose-700"
+              }`}
+            >
+              {user.status ===
+              "BLOCKED" ? (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+
+                  Unblock Account
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4" />
+
+                  Block Account
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-          <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 space-y-1">
-            <p className="text-slate-400 font-medium text-xs">User ID</p>
-            <p className="font-mono text-slate-700 break-all">{user._id || user.id}</p>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 space-y-1">
-            <p className="text-slate-400 font-medium text-xs">Email Verified</p>
-            <p className="font-medium text-slate-700">{user.emailVerified ? "Yes" : "No"}</p>
-          </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Info
+            label="Role"
+            value={
+              user.role
+            }
+            icon={
+              <Shield className="h-4 w-4" />
+            }
+          />
 
-          <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 space-y-1">
-            <p className="text-slate-400 font-medium text-xs">Created At</p>
-            <p className="font-medium text-slate-700 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-slate-400" />
-              {user.createdAt ? new Date(user.createdAt).toLocaleString() : "N/A"}
-            </p>
-          </div>
+          <Info
+            label="Status"
+            value={
+              user.status
+            }
+            icon={
+              user.status ===
+              "BLOCKED" ? (
+                <Ban className="h-4 w-4" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )
+            }
+          />
 
-          <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 space-y-1">
-            <p className="text-slate-400 font-medium text-xs">Last Updated</p>
-            <p className="font-medium text-slate-700 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-slate-400" />
-              {user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "N/A"}
-            </p>
-          </div>
+          <Info
+            label="Phone"
+            value={
+              user.phone ||
+              "Not provided"
+            }
+            icon={
+              <Phone className="h-4 w-4" />
+            }
+          />
+
+          <Info
+            label="Email Verified"
+            value={
+              user.emailVerified
+                ? "Yes"
+                : "No"
+            }
+          />
+
+          <Info
+            label="Created"
+            value={
+              user.createdAt
+                ? new Date(
+                    user.createdAt
+                  ).toLocaleString()
+                : "N/A"
+            }
+            icon={
+              <Calendar className="h-4 w-4" />
+            }
+          />
+
+          <Info
+            label="Last Updated"
+            value={
+              user.updatedAt
+                ? new Date(
+                    user.updatedAt
+                  ).toLocaleString()
+                : "N/A"
+            }
+            icon={
+              <Calendar className="h-4 w-4" />
+            }
+          />
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            User ID
+          </p>
+
+          <p className="mt-1 break-all font-mono text-sm text-slate-700">
+            {user._id ||
+              user.id}
+          </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Info({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+        {icon}
+
+        {label}
+      </p>
+
+      <p className="mt-2 font-semibold text-slate-800">
+        {value}
+      </p>
     </div>
   );
 }

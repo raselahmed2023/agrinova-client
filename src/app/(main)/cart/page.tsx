@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import MarketplaceBackground from "@/components/marketplace/MarketplaceBackground";
@@ -14,8 +13,9 @@ import {
 } from "lucide-react";
 
 import { useCart } from "@/context/CartContext";
+import { OrderService } from "@/services/order.service";
 
-const DELIVERY_FEE = 120;
+const FALLBACK_DELIVERY_FEE = 120;
 
 export default function CartPage() {
   const {
@@ -27,18 +27,30 @@ export default function CartPage() {
     loading,
   } = useCart();
 
+  const [deliveryFee, setDeliveryFee] =
+    useState(FALLBACK_DELIVERY_FEE);
+
+  useEffect(() => {
+    OrderService.getCheckoutConfig()
+      .then((config) => {
+        if (
+          Number.isFinite(config.deliveryFee) &&
+          config.deliveryFee >= 0
+        ) {
+          setDeliveryFee(config.deliveryFee);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     if (!loading) {
       refreshCart().catch(() => undefined);
     }
-    // Refresh once when the persisted cart becomes available.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    
   }, [loading]);
 
-  /*
-   * Loading state:
-   * spinner only — no text, no favicon, no logo.
-   */
   if (loading) {
     return (
       <MarketplaceBackground>
@@ -54,9 +66,6 @@ export default function CartPage() {
     );
   }
 
-  /*
-   * Empty cart
-   */
   if (!items.length) {
     return (
       <MarketplaceBackground>
@@ -70,8 +79,8 @@ export default function CartPage() {
               </h1>
 
               <p className="mt-3 text-sm font-medium leading-6 text-black">
-                Browse the AgriNova Marketplace and
-                add products to your cart.
+                Browse the AgriNova Marketplace and add products to
+                your cart.
               </p>
 
               <Link
@@ -87,40 +96,28 @@ export default function CartPage() {
     );
   }
 
-  const total =
-    subtotal + DELIVERY_FEE;
+  const total = subtotal + deliveryFee;
 
   return (
     <MarketplaceBackground>
       <main className="min-h-screen px-3 py-6 sm:px-5 sm:py-8 lg:px-6">
         <div className="mx-auto w-full max-w-[1400px]">
-
-          {/* Header */}
           <div className="inline-block rounded-2xl bg-white/55 px-4 py-3 shadow-sm backdrop-blur-[2px]">
-          <h1 className="text-3xl font-bold text-black drop-shadow-sm">
-            My Cart
-          </h1>
+            <h1 className="text-3xl font-bold text-black drop-shadow-sm">
+              My Cart
+            </h1>
 
-          <p className="mt-1 text-sm font-medium text-black drop-shadow-sm">
-            Review your selected marketplace products
-            before checkout.
-          </p>
-        </div>
+            <p className="mt-1 text-sm font-medium text-black drop-shadow-sm">
+              Review your selected marketplace products before
+              checkout.
+            </p>
+          </div>
 
-        {/* Cart + Summary */}
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
-
-          {/* Cart Products */}
-          <section className="space-y-3">
-            {items.map(
-              ({
-                product,
-                quantity,
-              }) => {
+          <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
+            <section className="space-y-3">
+              {items.map(({ product, quantity }) => {
                 const lineTotal =
-                  Number(
-                    product.price || 0
-                  ) * quantity;
+                  Number(product.price || 0) * quantity;
 
                 return (
                   <article
@@ -128,17 +125,11 @@ export default function CartPage() {
                     className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm backdrop-blur-sm sm:p-5"
                   >
                     <div className="flex gap-4">
-
-                      {/* Product Image */}
                       <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-28 sm:w-28">
                         {product.images?.[0] ? (
                           <img
-                            src={
-                              product.images[0]
-                            }
-                            alt={
-                              product.title
-                            }
+                            src={product.images[0]}
+                            alt={product.title}
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -148,9 +139,7 @@ export default function CartPage() {
                         )}
                       </div>
 
-                      {/* Product Information */}
                       <div className="min-w-0 flex-1">
-
                         <Link
                           href={`/marketplace/${product._id}`}
                           className="block font-bold text-black transition hover:text-emerald-700"
@@ -159,31 +148,26 @@ export default function CartPage() {
                         </Link>
 
                         <p className="mt-1 text-sm font-medium text-black">
-                          {product.transactionType ===
-                            "free"
+                          {product.transactionType === "free"
                             ? "FREE"
                             : `৳${Number(
-                              product.price
-                            ).toLocaleString(
-                              "en-BD"
-                            )}${product.unit
-                              ? ` / ${product.unit}`
-                              : ""
-                            }`}
+                                product.price
+                              ).toLocaleString("en-BD")}${
+                                product.unit
+                                  ? ` / ${product.unit}`
+                                  : ""
+                              }`}
                         </p>
 
                         <p className="mt-1 text-xs font-semibold text-emerald-700">
-                          {product.quantity} {product.unit || "unit"} remaining
+                          {product.quantity}{" "}
+                          {product.unit || "unit"} remaining
                         </p>
 
-                        {/* Quantity Controls */}
                         <div className="mt-4 flex items-center gap-3">
-
                           <button
                             type="button"
-                            disabled={
-                              quantity <= 1
-                            }
+                            disabled={quantity <= 1}
                             onClick={() =>
                               updateQuantity(
                                 product._id,
@@ -203,10 +187,7 @@ export default function CartPage() {
                           <button
                             type="button"
                             disabled={
-                              quantity >=
-                              Number(
-                                product.quantity
-                              )
+                              quantity >= Number(product.quantity)
                             }
                             onClick={() =>
                               updateQuantity(
@@ -223,128 +204,97 @@ export default function CartPage() {
                           <button
                             type="button"
                             onClick={() =>
-                              removeFromCart(
-                                product._id
-                              )
+                              removeFromCart(product._id)
                             }
                             aria-label="Remove product"
                             className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
-
                         </div>
                       </div>
 
-                      {/* Desktop Total */}
                       <div className="hidden shrink-0 text-right sm:block">
-                        {product.transactionType ===
-                          "free" ? (
+                        {product.transactionType === "free" ? (
                           <p className="font-bold text-emerald-700">
                             FREE
                           </p>
                         ) : (
                           <p className="font-bold text-black">
                             ৳
-                            {lineTotal.toLocaleString(
-                              "en-BD"
-                            )}
+                            {lineTotal.toLocaleString("en-BD")}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Mobile Total */}
                     <div className="mt-3 flex justify-end border-t border-slate-200 pt-3 sm:hidden">
-                      {product.transactionType ===
-                        "free" ? (
+                      {product.transactionType === "free" ? (
                         <p className="font-bold text-emerald-700">
                           FREE
                         </p>
                       ) : (
                         <p className="font-bold text-black">
                           ৳
-                          {lineTotal.toLocaleString(
-                            "en-BD"
-                          )}
+                          {lineTotal.toLocaleString("en-BD")}
                         </p>
                       )}
                     </div>
                   </article>
                 );
-              }
-            )}
-          </section>
+              })}
+            </section>
 
-          {/* Order Summary */}
-          <aside className="h-fit rounded-2xl border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-6 lg:sticky lg:top-6">
+            <aside className="h-fit rounded-2xl border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-6 lg:sticky lg:top-6">
+              <h2 className="text-xl font-bold text-black">
+                Order Summary
+              </h2>
 
-            <h2 className="text-xl font-bold text-black">
-              Order Summary
-            </h2>
+              <div className="mt-5 space-y-3 text-sm">
+                <div className="flex justify-between text-black">
+                  <span>Subtotal</span>
 
-            <div className="mt-5 space-y-3 text-sm">
+                  <span className="font-semibold">
+                    ৳{subtotal.toLocaleString("en-BD")}
+                  </span>
+                </div>
 
-              {/* Subtotal */}
-              <div className="flex justify-between text-black">
-                <span>Subtotal</span>
+                <div className="flex justify-between text-black">
+                  <span>Delivery Charge</span>
 
-                <span className="font-semibold">
-                  ৳
-                  {subtotal.toLocaleString(
-                    "en-BD"
-                  )}
+                  <span className="font-semibold">
+                    ৳{deliveryFee.toLocaleString("en-BD")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="my-5 border-t border-slate-300" />
+
+              <div className="flex justify-between text-lg font-bold text-black">
+                <span>Total</span>
+
+                <span className="text-emerald-700">
+                  ৳{total.toLocaleString("en-BD")}
                 </span>
               </div>
 
-              {/* Delivery */}
-              <div className="flex justify-between text-black">
-                <span>Delivery Charge</span>
+              <Link
+                href="/checkout"
+                className="mt-6 flex h-12 items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white transition hover:bg-emerald-800"
+              >
+                Proceed to Checkout
+              </Link>
 
-                <span className="font-semibold">
-                  ৳
-                  {DELIVERY_FEE.toLocaleString(
-                    "en-BD"
-                  )}
-                </span>
-              </div>
-
-            </div>
-
-            <div className="my-5 border-t border-slate-300" />
-
-            {/* Total */}
-            <div className="flex justify-between text-lg font-bold text-black">
-              <span>Total</span>
-
-              <span className="text-emerald-700">
-                ৳
-                {total.toLocaleString(
-                  "en-BD"
-                )}
-              </span>
-            </div>
-
-            {/* Checkout */}
-            <Link
-              href="/checkout"
-              className="mt-6 flex h-12 items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white transition hover:bg-emerald-800"
-            >
-              Proceed to Checkout
-            </Link>
-
-            {/* Continue Shopping */}
-            <Link
-              href="/marketplace"
-              className="mt-3 flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-black transition hover:border-emerald-300 hover:text-emerald-700"
-            >
-              Continue Shopping
-            </Link>
-
-          </aside>
+              <Link
+                href="/marketplace"
+                className="mt-3 flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-black transition hover:border-emerald-300 hover:text-emerald-700"
+              >
+                Continue Shopping
+              </Link>
+            </aside>
+          </div>
         </div>
-      </div>
-    </main>
-    </MarketplaceBackground >
+      </main>
+    </MarketplaceBackground>
   );
 }

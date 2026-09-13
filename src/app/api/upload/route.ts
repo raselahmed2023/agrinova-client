@@ -87,17 +87,12 @@ export async function POST(
       );
     }
 
-    /*
-      Server-only key.
-      DO NOT use NEXT_PUBLIC_IMGBB_API_KEY.
-    */
+    
     const apiKey =
       process.env
         .IMGBB_API_KEY;
 
-    /* ==========================================================
-       TRY IMGBB
-    ========================================================== */
+  
 
     if (apiKey) {
       try {
@@ -176,9 +171,7 @@ export async function POST(
       }
     }
 
-    /* ==========================================================
-       LOCAL FALLBACK
-    ========================================================== */
+   
 
     const bytes =
       await file.arrayBuffer();

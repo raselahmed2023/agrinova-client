@@ -4,8 +4,14 @@ import { auth } from "@/lib/auth";
 
 type UserRole = "FARMER" | "EXPERT" | "ADMIN";
 
+type AccountStatus =
+  | "APPROVED"
+  | "ACTIVE"
+  | "PENDING"
+  | "REJECTED"
+  | "BLOCKED";
 
-function getDashboardPath(role: UserRole): string {
+function getDashboardPath(role: UserRole) {
   switch (role) {
     case "ADMIN":
       return "/dashboard/admin";
@@ -19,194 +25,298 @@ function getDashboardPath(role: UserRole): string {
   }
 }
 
-
-
-function getRequiredRole(pathname: string, searchParams: URLSearchParams): UserRole | null {
-  // Admin dashboard
-  if (
+function isAdminPortal(pathname: string) {
+  return (
     pathname === "/dashboard/admin" ||
     pathname.startsWith("/dashboard/admin/")
-  ) {
-    return "ADMIN";
-  }
+  );
+}
 
-  // Expert dashboard
-  if (
+function isExpertPortal(pathname: string) {
+  return (
     pathname === "/dashboard/expert" ||
     pathname.startsWith("/dashboard/expert/")
-  ) {
-    return "EXPERT";
-  }
+  );
+}
 
-  // Farmer dashboard
-  if (
+function isFarmerPortal(pathname: string) {
+  return (
     pathname === "/dashboard/farmer" ||
     pathname.startsWith("/dashboard/farmer/")
-  ) {
-    return "FARMER";
-  }
+  );
+}
 
- 
-  if (pathname === "/dashboard") {
-    return null;
-  }
 
+function isFarmerOnlyRoute(
+  pathname: string,
+  searchParams: URLSearchParams
+) {
+  if (isFarmerPortal(pathname)) {
+    return true;
+  }
 
   if (
     pathname === "/checkout" ||
     pathname.startsWith("/checkout/")
   ) {
-    return "FARMER";
+    return true;
   }
 
- 
   if (
     pathname === "/orders" ||
     pathname.startsWith("/orders/")
   ) {
-    return "FARMER";
+    return true;
   }
 
- 
   if (
     pathname === "/seller-orders" ||
     pathname.startsWith("/seller-orders/")
   ) {
-    return "FARMER";
+    return true;
   }
 
-  
   if (
     pathname === "/marketplace/sell" ||
     pathname.startsWith("/marketplace/sell/")
   ) {
-    return "FARMER";
+    return true;
   }
 
-  
   if (
     pathname === "/marketplace/listings" ||
     pathname.startsWith("/marketplace/listings/")
   ) {
-    return "FARMER";
+    return true;
   }
 
-
-  
   if (
     /^\/marketplace\/[^/]+$/.test(pathname) &&
     searchParams.get("edit") === "1"
   ) {
-    return "FARMER";
+    return true;
   }
 
- 
-  if (/^\/investment\/[^/]+\/invest(?:\/|$)/.test(pathname)) {
-    return "FARMER";
+  
+  if (
+    /^\/investment\/[^/]+\/invest(?:\/|$)/.test(pathname)
+  ) {
+    return true;
   }
 
+  return false;
+}
+
+function isProtectedRoute(
+  pathname: string,
+  searchParams: URLSearchParams
+) {
+  if (pathname === "/dashboard") {
+    return true;
+  }
 
   if (
-    pathname === "/community/profile" ||
-    pathname.startsWith("/community/profile/")
+    isAdminPortal(pathname) ||
+    isExpertPortal(pathname) ||
+    isFarmerOnlyRoute(pathname, searchParams)
   ) {
-    return "FARMER";
+    return true;
   }
 
-  return null;
+  return false;
 }
 
 
+function isAccountRecoveryRoute(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password"
+  );
+}
+
+function isLoginOrRegisterRoute(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/register/expert"
+  );
+}
+
 export async function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const {
+    pathname,
+    search,
+    searchParams,
+  } = request.nextUrl;
 
- 
-  const isGenericDashboard = pathname === "/dashboard";
-
-  const requiredRole = getRequiredRole(pathname, request.nextUrl.searchParams);
-
-  
-  if (requiredRole === null && !isGenericDashboard) {
-    return NextResponse.next();
-  }
+  const protectedRoute = isProtectedRoute(
+    pathname,
+    searchParams
+  );
 
   try {
-   
     const session = await auth.api.getSession({
       headers: request.headers,
     });
 
-    
+
+
     if (!session?.user) {
-      const loginUrl = new URL("/login", request.url);
+      if (!protectedRoute) {
+        return NextResponse.next();
+      }
 
-      const redirectPath = `${pathname}${search}`;
+      const loginUrl = new URL(
+        "/login",
+        request.url
+      );
 
-      loginUrl.searchParams.set("redirect", redirectPath);
+      loginUrl.searchParams.set(
+        "redirect",
+        `${pathname}${search}`
+      );
 
       return NextResponse.redirect(loginUrl);
     }
 
-    
+
     const rawRole = String(
-      session.user.role ?? ""
+      session.user.role || ""
     ).toUpperCase();
 
-    
     if (
       rawRole !== "FARMER" &&
       rawRole !== "EXPERT" &&
       rawRole !== "ADMIN"
     ) {
-      console.error(
-        "Invalid user role:",
-        session.user.role
+      const loginUrl = new URL(
+        "/login",
+        request.url
       );
 
-      return NextResponse.redirect(
-        new URL("/login", request.url)
-      );
+      return NextResponse.redirect(loginUrl);
     }
 
     const role = rawRole as UserRole;
 
-    
-    if (isGenericDashboard) {
+  
+
+
+    const accountStatus = String(
+      session.user.status || "APPROVED"
+    ).toUpperCase() as AccountStatus;
+
+    const accountIsActive =
+      accountStatus === "APPROVED" ||
+      accountStatus === "ACTIVE";
+
+    if (!accountIsActive) {
+     
+      if (isAccountRecoveryRoute(pathname)) {
+        return NextResponse.next();
+      }
+
+      const loginUrl = new URL(
+        "/login",
+        request.url
+      );
+
+      loginUrl.searchParams.set(
+        "accountStatus",
+        accountStatus
+      );
+
+      return NextResponse.redirect(loginUrl);
+    }
+
+ 
+
+    if (role === "ADMIN") {
+     
+      if (isAdminPortal(pathname)) {
+        return NextResponse.next();
+      }
+
       return NextResponse.redirect(
         new URL(
-          getDashboardPath(role),
+          "/dashboard/admin",
           request.url
         )
       );
     }
 
-    
-    if (
-      requiredRole !== null &&
-      role !== requiredRole
-    ) {
+
+
+    if (role === "EXPERT") {
+     
+      if (isExpertPortal(pathname)) {
+        return NextResponse.next();
+      }
+
       return NextResponse.redirect(
         new URL(
-          getDashboardPath(role),
+          "/dashboard/expert",
+          request.url
+        )
+      );
+    }
+
+  
+
+    if (pathname === "/dashboard") {
+      return NextResponse.redirect(
+        new URL(
+          "/dashboard/farmer",
           request.url
         )
       );
     }
 
     /*
-     * Authentication and role are valid.
+     * Farmer cannot enter Admin portal.
      */
+    if (isAdminPortal(pathname)) {
+      return NextResponse.redirect(
+        new URL(
+          "/dashboard/farmer",
+          request.url
+        )
+      );
+    }
+
+    
+    if (isExpertPortal(pathname)) {
+      return NextResponse.redirect(
+        new URL(
+          "/dashboard/farmer",
+          request.url
+        )
+      );
+    }
+
+   
+    if (isLoginOrRegisterRoute(pathname)) {
+      return NextResponse.redirect(
+        new URL(
+          "/dashboard/farmer",
+          request.url
+        )
+      );
+    }
+
     return NextResponse.next();
   } catch (error) {
     console.error(
-      "Route protection error:",
+      "Portal route protection failed:",
       error
     );
 
-    /*
-     * If authentication itself fails,
-     * send the user to login.
-     */
+    
+    if (!protectedRoute) {
+      return NextResponse.next();
+    }
+
     const loginUrl = new URL(
       "/login",
       request.url
@@ -224,31 +334,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-
-    "/checkout",
-    "/checkout/:path*",
-
-    "/orders",
-    "/orders/:path*",
-
-    "/seller-orders",
-    "/seller-orders/:path*",
-
-    "/marketplace/sell",
-    "/marketplace/sell/:path*",
-
-    "/marketplace/listings",
-    "/marketplace/listings/:path*",
-
-    
-    "/marketplace/:path*",
-
-   
-    "/investment/:path*",
-
-   
-    "/community/:path*",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

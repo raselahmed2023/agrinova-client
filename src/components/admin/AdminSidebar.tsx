@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "@/lib/auth-client";
+
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
+
+import {
+  signOut,
+  useSession,
+} from "@/lib/auth-client";
 
 import {
   BarChart3,
+  BookOpen,
   LayoutDashboard,
   Leaf,
   LogOut,
@@ -31,46 +40,61 @@ const sidebarItems = [
     href: "/dashboard/admin",
     icon: LayoutDashboard,
   },
+
   {
     label: "Users",
     href: "/dashboard/admin/users",
     icon: Users,
   },
+
   {
     label: "Expert Approval",
     href: "/dashboard/admin/expert-approval",
     icon: ShieldCheck,
   },
+
   {
     label: "Farms",
     href: "/dashboard/admin/farms",
     icon: Leaf,
   },
+
   {
     label: "Marketplace",
     href: "/dashboard/admin/marketplace",
     icon: ShoppingBag,
   },
+
   {
     label: "Investment Projects",
     href: "/dashboard/admin/investments",
     icon: HandCoins,
   },
+
   {
     label: "Supply Chain",
     href: "/dashboard/admin/supply-chain",
     icon: Warehouse,
   },
+
   {
     label: "Consultations",
     href: "/dashboard/admin/consultations",
     icon: MessageSquareText,
   },
+
+  {
+    label: "Blog Moderation",
+    href: "/dashboard/admin/blogs",
+    icon: BookOpen,
+  },
+
   {
     label: "Analytics",
     href: "/dashboard/admin/analytics",
     icon: BarChart3,
   },
+
   {
     label: "Settings",
     href: "/dashboard/admin/settings",
@@ -82,28 +106,55 @@ export default function AdminSidebar({
   isOpen = false,
   onClose,
 }: AdminSidebarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { data: session, isPending } = useSession();
-  const user = session?.user;
+  const router =
+    useRouter();
 
-  const handleLogout = async () => {
-    await signOut();
-    if (onClose) onClose();
-    router.push("/");
-    router.refresh();
-  };
+  const pathname =
+    usePathname();
 
-  const getInitials = (name?: string) => {
-    if (!name) return "A";
+  const {
+    data: session,
+    isPending,
+  } =
+    useSession();
 
-    return name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-  };
+  const user =
+    session?.user;
+
+  const handleLogout =
+    async () => {
+      await signOut();
+
+      if (onClose) {
+        onClose();
+      }
+
+      router.push("/");
+
+      router.refresh();
+    };
+
+  const getInitials =
+    (
+      name?:
+        string
+    ) => {
+      if (!name) {
+        return "A";
+      }
+
+      return name
+        .split(" ")
+        .map(
+          (
+            part
+          ) =>
+            part[0]
+        )
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+    };
 
   return (
     <aside
@@ -127,13 +178,12 @@ export default function AdminSidebar({
         }
       `}
     >
-      {/* Header */}
       <div className="mb-8 flex items-start justify-between px-3">
         <Link
-          href="/"
+          href="/dashboard/admin"
           onClick={onClose}
           className="flex items-center gap-2.5 transition hover:opacity-90"
-          title="AgriNova Home"
+          title="Admin Dashboard"
         >
           <Image
             src="/AgriNova-Logo.png"
@@ -143,15 +193,17 @@ export default function AdminSidebar({
             priority
             className="h-9 w-auto object-contain"
           />
+
           <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
             Admin
           </span>
         </Link>
 
-        {/* Mobile Close */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={
+            onClose
+          }
           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 lg:hidden"
           aria-label="Close sidebar"
         >
@@ -159,69 +211,96 @@ export default function AdminSidebar({
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto">
-        {sidebarItems.map((item) => {
-          const Icon = item.icon;
+        {sidebarItems.map(
+          (
+            item
+          ) => {
+            const Icon =
+              item.icon;
 
-          const isActive =
-            item.href === "/dashboard/admin"
-              ? pathname === item.href
-              : pathname.startsWith(
+            const isActive =
+              item.href ===
+                "/dashboard/admin"
+                ? pathname ===
                 item.href
-              );
+                : pathname.startsWith(
+                  item.href
+                );
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive
-                ? "bg-emerald-950 text-white shadow-sm"
-                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-950"
-                }`}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
+            return (
+              <Link
+                key={
+                  item.href
+                }
+                href={
+                  item.href
+                }
+                onClick={
+                  onClose
+                }
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive
+                    ? "bg-emerald-950 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-950"
+                  }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
 
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+                <span>
+                  {
+                    item.label
+                  }
+                </span>
+              </Link>
+            );
+          }
+        )}
       </nav>
 
-      {/* Bottom User Profile & Logout */}
-      <div className="mt-auto border-t border-slate-200/80 bg-slate-50/70 p-3 rounded-xl">
+      <div className="mt-auto rounded-xl border-t border-slate-200/80 bg-slate-50/70 p-3">
         {isPending ? (
-          <div className="flex items-center gap-3 animate-pulse">
-            <div className="h-9 w-9 rounded-full bg-slate-200 shrink-0" />
-            <div className="flex-1 space-y-1.5 min-w-0">
-              <div className="h-3.5 w-20 bg-slate-200 rounded" />
-              <div className="h-2.5 w-28 bg-slate-200 rounded" />
+          <div className="flex animate-pulse items-center gap-3">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-slate-200" />
+
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="h-3.5 w-20 rounded bg-slate-200" />
+
+              <div className="h-2.5 w-28 rounded bg-slate-200" />
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B] shadow-xs">
-                {getInitials(user?.name)}
+                {getInitials(
+                  user?.name
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-slate-900 leading-tight">
-                  {user?.name || "Admin Account"}
+                <p className="truncate text-xs font-bold leading-tight text-slate-900">
+                  {user?.name ||
+                    "Admin Account"}
                 </p>
+
                 <p
-                  className="truncate text-[11px] text-slate-500 leading-tight mt-0.5"
-                  title={user?.email || "Signed In"}
+                  className="mt-0.5 truncate text-[11px] leading-tight text-slate-500"
+                  title={
+                    user?.email ||
+                    "Signed In"
+                  }
                 >
-                  {user?.email || "admin@agrinova.io"}
+                  {user?.email ||
+                    "admin@agrinova.io"}
                 </p>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={
+                handleLogout
+              }
               title="Logout from AgriNova"
               aria-label="Logout"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-95"

@@ -10,9 +10,17 @@ import {
   Check,
 } from "lucide-react";
 
-import type { IProduct } from "@/types/marketplace";
+import type {
+  IProduct,
+} from "@/types/marketplace";
 
-import { useCart } from "@/context/CartContext";
+import {
+  useCart,
+} from "@/context/CartContext";
+
+import {
+  useSession,
+} from "@/lib/auth-client";
 
 export default function ProductCard({
   product,
@@ -23,6 +31,10 @@ export default function ProductCard({
     addToCart,
     getItemQuantity,
   } = useCart();
+
+  const {
+    data: session,
+  } = useSession();
 
   const image =
     product.images?.[0];
@@ -36,6 +48,38 @@ export default function ProductCard({
     product.status ===
       "available" &&
     product.quantity > 0;
+
+  const currentUserId =
+    session?.user?.id;
+
+  const currentUserEmail =
+    session?.user?.email
+      ?.trim()
+      .toLowerCase();
+
+  const sellerEmail =
+    product.sellerEmail
+      ?.trim()
+      .toLowerCase();
+
+  const isOwnListing =
+    Boolean(
+      (
+        currentUserId &&
+        product.sellerId ===
+          currentUserId
+      ) ||
+        (
+          currentUserEmail &&
+          sellerEmail &&
+          currentUserEmail ===
+            sellerEmail
+        )
+    );
+
+  const canPurchase =
+    isAvailable &&
+    !isOwnListing;
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -128,8 +172,12 @@ export default function ProductCard({
                     product.district,
                     product.division,
                   ]
-                    .filter(Boolean)
-                    .join(", ")}
+                    .filter(
+                      Boolean
+                    )
+                    .join(
+                      ", "
+                    )}
               </span>
             </div>
           )}
@@ -139,7 +187,9 @@ export default function ProductCard({
               <Store className="h-4 w-4 shrink-0 text-emerald-500" />
 
               <span className="truncate">
-                {product.sellerName}
+                {
+                  product.sellerName
+                }
               </span>
             </div>
           )}
@@ -147,9 +197,9 @@ export default function ProductCard({
 
         <button
           type="button"
-          disabled={!isAvailable}
+          disabled={!canPurchase}
           onClick={() => {
-            if (isAvailable) {
+            if (canPurchase) {
               addToCart(
                 product,
                 1
@@ -157,14 +207,19 @@ export default function ProductCard({
             }
           }}
           className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${
-            !isAvailable
+            !canPurchase
               ? "cursor-not-allowed bg-slate-300 text-white"
               : inCart > 0
                 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
                 : "bg-emerald-700 text-white hover:bg-emerald-800"
           }`}
         >
-          {!isAvailable ? (
+          {isOwnListing ? (
+            <>
+              <Store className="h-4 w-4" />
+              Your Listing
+            </>
+          ) : !isAvailable ? (
             <>
               <ShoppingCart className="h-4 w-4" />
               Out of Stock

@@ -58,7 +58,9 @@ export default function LoginPage() {
           role?: string;
         };
 
-        if (user?.status === "PENDING") {
+        const accountStatus = String(user?.status || "APPROVED").toUpperCase();
+
+        if (accountStatus === "PENDING") {
           await authClient.signOut();
           setAuthError(
             "Your expert account is currently under review by an admin. Please wait for approval."
@@ -66,7 +68,40 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/");
+        if (accountStatus === "REJECTED") {
+          await authClient.signOut();
+          setAuthError(
+            "Your expert application was not approved. Please contact AgriNova support if you need more information."
+          );
+          return;
+        }
+
+        if (accountStatus === "BLOCKED") {
+          await authClient.signOut();
+          setAuthError(
+            "This account has been blocked by an administrator. Please contact AgriNova support."
+          );
+          return;
+        }
+
+        const role = String(
+          user?.role || "FARMER"
+        ).toUpperCase();
+
+        if (role === "ADMIN") {
+          router.replace(
+            "/dashboard/admin"
+          );
+        } else if (role === "EXPERT") {
+          router.replace(
+            "/dashboard/expert"
+          );
+        } else {
+          router.replace(
+            "/dashboard/farmer"
+          );
+        }
+
         router.refresh();
       }
     } catch {
@@ -252,11 +287,10 @@ export default function LoginPage() {
                   autoComplete="email"
                   placeholder="you@example.com"
                   {...register("email")}
-                  className={`block h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 transition focus:bg-white focus:outline-none ${
-                    errors.email
+                  className={`block h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 transition focus:bg-white focus:outline-none ${errors.email
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-[#0B513D] focus:ring-4 focus:ring-[#0B513D]/10 hover:border-slate-300"
-                  }`}
+                    }`}
                 />
               </div>
               {errors.email && (
@@ -294,11 +328,10 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   placeholder="Enter your password"
                   {...register("password")}
-                  className={`block h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-11 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 transition focus:bg-white focus:outline-none ${
-                    errors.password
+                  className={`block h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-11 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 transition focus:bg-white focus:outline-none ${errors.password
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-[#0B513D] focus:ring-4 focus:ring-[#0B513D]/10 hover:border-slate-300"
-                  }`}
+                    }`}
                 />
                 <button
                   type="button"

@@ -12,7 +12,6 @@ import type {
 
 export interface AdminProductQuery {
   page?: number;
-
   limit?: number;
 
   status?:
@@ -28,9 +27,7 @@ export interface AdminProductQuery {
 
 export interface AdminMarketplaceCounts {
   live: number;
-
   outOfStock: number;
-
   hidden: number;
 }
 
@@ -39,13 +36,9 @@ export interface AdminProductListResult {
 
   meta: {
     page: number;
-
     limit: number;
-
     total: number;
-
     totalPages: number;
-
     counts: AdminMarketplaceCounts;
   };
 }
@@ -59,13 +52,10 @@ function buildQuery(
   const searchParams =
     new URLSearchParams();
 
-  Object.entries(
-    params
-  ).forEach(
+  Object.entries(params).forEach(
     ([key, value]) => {
       if (
-        value !==
-          undefined &&
+        value !== undefined &&
         value !== null &&
         value !== ""
       ) {
@@ -80,50 +70,36 @@ function buildQuery(
   return searchParams.toString();
 }
 
-
-
 async function getAdminProducts(
-  params:
-    AdminProductQuery = {}
+  params: AdminProductQuery = {}
 ): Promise<AdminProductListResult> {
   const response =
     await apiRequestWithMeta<
       IProduct[]
     >(
       "/admin/marketplace/products",
-
       "GET",
-
       undefined,
-
       buildQuery({
-        page:
-          params.page,
-
-        limit:
-          params.limit,
+        page: params.page,
+        limit: params.limit,
 
         status:
-          params.status ===
-          "all"
+          params.status === "all"
             ? undefined
             : params.status,
 
         category:
-          params.category ===
-          "all"
+          params.category === "all"
             ? undefined
             : params.category,
 
-        search:
-          params.search,
+        search: params.search,
       })
     );
 
   const data =
-    Array.isArray(
-      response.data
-    )
+    Array.isArray(response.data)
       ? response.data
       : [];
 
@@ -131,18 +107,13 @@ async function getAdminProducts(
     response.meta as
       | {
           page?: number;
-
           limit?: number;
-
           total?: number;
-
           totalPages?: number;
 
           counts?: {
             live?: number;
-
             outOfStock?: number;
-
             hidden?: number;
           };
         }
@@ -155,53 +126,46 @@ async function getAdminProducts(
     data,
 
     meta: {
-      page:
+      page: Number(
+        rawMeta?.page ||
+          params.page ||
+          1
+      ),
+
+      limit: Number(
+        rawMeta?.limit ||
+          params.limit ||
+          12
+      ),
+
+      total: Number(
+        rawMeta?.total ??
+          data.length
+      ),
+
+      totalPages: Math.max(
         Number(
-          rawMeta?.page ||
-            params.page ||
+          rawMeta?.totalPages ||
             1
         ),
-
-      limit:
-        Number(
-          rawMeta?.limit ||
-            params.limit ||
-            12
-        ),
-
-      total:
-        Number(
-          rawMeta?.total ??
-            data.length
-        ),
-
-      totalPages:
-        Math.max(
-          Number(
-            rawMeta?.totalPages ||
-              1
-          ),
-          1
-        ),
+        1
+      ),
 
       counts: {
-        live:
-          Number(
-            rawCounts?.live ||
-              0
-          ),
+        live: Number(
+          rawCounts?.live ||
+            0
+        ),
 
-        outOfStock:
-          Number(
-            rawCounts?.outOfStock ||
-              0
-          ),
+        outOfStock: Number(
+          rawCounts?.outOfStock ||
+            0
+        ),
 
-        hidden:
-          Number(
-            rawCounts?.hidden ||
-              0
-          ),
+        hidden: Number(
+          rawCounts?.hidden ||
+            0
+        ),
       },
     },
   };
@@ -216,20 +180,15 @@ const getAdminProductById = (
     )}`
   );
 
-
-
 const moderateProduct = (
   productId: string,
-
   reason: string
 ) =>
   apiRequest<IProduct>(
     `/admin/marketplace/products/${encodeURIComponent(
       productId
     )}/moderate`,
-
     "PATCH",
-
     {
       reason,
     }
@@ -242,86 +201,117 @@ const restoreProduct = (
     `/admin/marketplace/products/${encodeURIComponent(
       productId
     )}/restore`,
-
     "PATCH"
   );
 
 const removeProduct = (
   productId: string,
-
   reason: string
 ) =>
   apiRequest<IProduct>(
     `/admin/marketplace/products/${encodeURIComponent(
       productId
     )}`,
-
     "DELETE",
-
     {
       reason,
     }
   );
 
+const getAdminOrders = async (
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
 
-
-const getAdminOrders =
-  () =>
-    apiRequest<IOrder[]>(
-      "/orders/admin/all"
+    fulfillmentStatus?:
+      "active";
+  } = {}
+) => {
+  const response =
+    await apiRequestWithMeta<
+      IOrder[]
+    >(
+      "/orders/admin/all",
+      "GET",
+      undefined,
+      buildQuery(params)
     );
 
+  const data =
+    Array.isArray(response.data)
+      ? response.data
+      : [];
 
+  return {
+    data,
 
-const updateAdminFulfillment =
-  (
-    orderId: string,
+    meta: {
+      page: Number(
+        response.meta?.page ||
+          params.page ||
+          1
+      ),
 
-    sellerId: string,
+      limit: Number(
+        response.meta?.limit ||
+          params.limit ||
+          20
+      ),
 
-    status:
-      | "picked_up"
-      | "out_for_delivery"
-      | "delivered",
+      total: Number(
+        response.meta?.total ??
+          data.length
+      ),
 
-    deliveryPartner?: {
-      name?: string;
+      totalPages: Math.max(
+        Number(
+          response.meta
+            ?.totalPages ||
+            1
+        ),
+        1
+      ),
+    },
+  };
+};
 
-      phone?: string;
+const updateAdminFulfillment = (
+  orderId: string,
+  sellerId: string,
+
+  status:
+    | "picked_up"
+    | "out_for_delivery"
+    | "delivered",
+
+  deliveryPartner?: {
+    name?: string;
+    phone?: string;
+  }
+) =>
+  apiRequest<IOrder>(
+    `/orders/admin/${encodeURIComponent(
+      orderId
+    )}/fulfillment/${encodeURIComponent(
+      sellerId
+    )}`,
+    "PATCH",
+    {
+      status,
+      deliveryPartner,
     }
-  ) =>
-    apiRequest<IOrder>(
-      `/orders/admin/${encodeURIComponent(
-        orderId
-      )}/fulfillment/${encodeURIComponent(
-        sellerId
-      )}`,
-
-      "PATCH",
-
-      {
-        status,
-
-        deliveryPartner,
-      }
-    );
+  );
 
 export const marketplaceService = {
   getAdminProducts,
-
   getAdminProductById,
-
   moderateProduct,
-
   restoreProduct,
-
   removeProduct,
-
   getAdminOrders,
-
   updateAdminFulfillment,
 };
-
 
 export const MarketplaceService =
   marketplaceService;

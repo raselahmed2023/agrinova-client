@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   usePathname,
   useRouter,
@@ -22,9 +23,10 @@ import {
   LogOut,
   MessageSquareText,
   Package,
+  PlusCircle,
+  ShoppingBag,
   TrendingUp,
   WalletCards,
-  UsersRound,
   X,
 } from "lucide-react";
 
@@ -70,12 +72,21 @@ const aiItems = [
 ];
 
 const marketplaceItems = [
- {
+  {
     label: "Manage Products",
     href: "/marketplace/listings",
     icon: Package,
   },
-
+  {
+    label: "Sell Product",
+    href: "/marketplace/sell",
+    icon: PlusCircle,
+  },
+  {
+    label: "Seller Orders",
+    href: "/seller-orders",
+    icon: ShoppingBag,
+  },
 ];
 
 const otherItems = [
@@ -124,7 +135,9 @@ export default function FarmerSidebar({
     router.refresh();
   };
 
-  const getInitials = (name?: string) => {
+  const getInitials = (
+    name?: string
+  ) => {
     if (!name) {
       return "U";
     }
@@ -137,14 +150,21 @@ export default function FarmerSidebar({
       .toUpperCase();
   };
 
-  const isActive = (href: string) => {
-    if (href === "/dashboard/farmer") {
+  const isActive = (
+    href: string
+  ) => {
+    if (
+      href ===
+      "/dashboard/farmer"
+    ) {
       return pathname === href;
     }
 
     return (
       pathname === href ||
-      pathname.startsWith(`${href}/`)
+      pathname.startsWith(
+        `${href}/`
+      )
     );
   };
 
@@ -154,7 +174,9 @@ export default function FarmerSidebar({
     icon: React.ElementType;
   }) => {
     const Icon = item.icon;
-    const active = isActive(item.href);
+
+    const active =
+      isActive(item.href);
 
     return (
       <Link
@@ -200,7 +222,7 @@ export default function FarmerSidebar({
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <Link
-            href="/dashboard/farmer"
+            href="/"
             onClick={onClose}
             className="flex items-center gap-2.5"
           >
@@ -249,7 +271,9 @@ export default function FarmerSidebar({
             </p>
 
             <div className="space-y-1">
-              {marketplaceItems.map(renderItem)}
+              {marketplaceItems.map(
+                renderItem
+              )}
             </div>
           </div>
 
@@ -266,6 +290,7 @@ export default function FarmerSidebar({
 
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="h-3.5 w-20 rounded bg-slate-200" />
+
                   <div className="h-2.5 w-28 rounded bg-slate-200" />
                 </div>
               </div>
@@ -273,19 +298,26 @@ export default function FarmerSidebar({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D8E9DA] text-xs font-bold text-[#063B2B]">
-                    {getInitials(user?.name)}
+                    {getInitials(
+                      user?.name
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold leading-tight text-slate-900">
-                      {user?.name || "Farmer Account"}
+                      {user?.name ||
+                        "Farmer Account"}
                     </p>
 
                     <p
                       className="mt-0.5 truncate text-[11px] leading-tight text-slate-500"
-                      title={user?.email || "Signed In"}
+                      title={
+                        user?.email ||
+                        "Signed In"
+                      }
                     >
-                      {user?.email || "farmer@agrinova.io"}
+                      {user?.email ||
+                        "farmer@agrinova.io"}
                     </p>
                   </div>
                 </div>
