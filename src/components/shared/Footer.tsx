@@ -1,290 +1,376 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import {
+  ArrowRight,
   ArrowUp,
+  BookOpen,
+  BriefcaseBusiness,
+  Headphones,
+  Home,
+  Leaf,
+  LogIn,
   Mail,
-  Phone,
   MapPin,
-  Clock,
+  Phone,
+  ShoppingBag,
+  Sprout,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import {
+  FaFacebookF,
   FaLinkedinIn,
   FaXTwitter,
-  FaFacebookF,
 } from "react-icons/fa6";
 
-const platformLinks = [
-  { label: "Crop Disease Detection", href: "/dashboard/farmer/ai/disease-detection", badge: "AI" },
-  { label: "AI Farming Assistant", href: "/dashboard/farmer/ai/assistant" },
-  { label: "Hyper-local Weather", href: "/dashboard/farmer/weather" },
-  { label: "Farm Management", href: "/dashboard/farmer/farms" },
+const exploreLinks = [
+  {
+    label: "Home",
+    href: "/",
+    icon: Home,
+  },
+  {
+    label: "Marketplace",
+    href: "/marketplace",
+    icon: ShoppingBag,
+  },
+  {
+    label: "Investment",
+    href: "/investment",
+    icon: BriefcaseBusiness,
+  },
+  {
+    label: "Expert Consultation",
+    href: "/consultant",
+    icon: Users,
+  },
 ];
 
-const marketplaceLinks = [
-  { label: "Browse Marketplace", href: "/dashboard/farmer/marketplace" },
-  { label: "Sell Harvest & Equipment", href: "/dashboard/farmer/marketplace/sell" },
-  { label: "My Active Listings", href: "/dashboard/farmer/marketplace/listings" },
-  { label: "Purchase Inquiries", href: "/dashboard/farmer/marketplace/requests" },
-  { label: "Farm Cost Tracking", href: "/dashboard/farmer/finance" },
+const resourceLinks = [
+  {
+    label: "Farming Guides & Blog",
+    href: "/blog",
+    icon: BookOpen,
+  },
+  {
+    label: "Support Center",
+    href: "/support",
+    icon: Headphones,
+  },
+  {
+    label: "Become an Expert",
+    href: "/register/expert",
+    icon: Sprout,
+  },
 ];
 
-const advisoryLinks = [
-  { label: "Expert Consultation", href: "/consultant" },
-  { label: "My Consultations", href: "/dashboard/farmer/consultation" },
-  { label: "Join as Verified Expert", href: "/register/expert", badge: "Hiring" },
-  { label: "Farming Guides & Blog", href: "/blog" },
-  { label: "Contact & Support", href: "/contact" },
+const accountLinks = [
+  {
+    label: "Create Account",
+    href: "/register",
+    icon: UserPlus,
+  },
+  {
+    label: "Sign In",
+    href: "/login",
+    icon: LogIn,
+  },
 ];
 
 const socialLinks = [
-  { label: "LinkedIn", href: "https://linkedin.com", icon: FaLinkedinIn },
-  { label: "X / Twitter", href: "https://twitter.com", icon: FaXTwitter },
-  { label: "Facebook", href: "https://facebook.com", icon: FaFacebookF },
+  {
+    label: "LinkedIn",
+    href: "https://linkedin.com",
+    icon: FaLinkedinIn,
+  },
+  {
+    label: "X / Twitter",
+    href: "https://twitter.com",
+    icon: FaXTwitter,
+  },
+  {
+    label: "Facebook",
+    href: "https://facebook.com",
+    icon: FaFacebookF,
+  },
 ];
 
 export default function Footer() {
   const scrollToTop = () => {
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   return (
-    <footer className="relative w-full overflow-hidden bg-[#041a13] text-slate-300">
-      {/* Decorative ambient background glows */}
-      <div className="pointer-events-none absolute -top-48 left-1/4 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-48 right-1/4 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
+    <footer className="relative overflow-hidden bg-[#031912] text-white">
+      {/* background decoration */}
+      <div className="pointer-events-none absolute -left-40 -top-40 h-[420px] w-[420px] rounded-full bg-emerald-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-44 right-0 h-[420px] w-[420px] rounded-full bg-teal-400/10 blur-[130px]" />
 
+      <div className="relative mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
+        {/* top CTA */}
+        <div className="relative overflow-hidden rounded-[28px] border border-emerald-400/15 bg-gradient-to-br from-[#0a3729] via-[#092d23] to-[#061f18] px-6 py-8 shadow-2xl shadow-black/10 sm:px-8 lg:px-10 lg:py-9">
+          <div className="absolute -right-12 -top-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
 
-      {/* Main Footer Body */}
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
-          {/* Brand & Overview Column */}
-          <div className="lg:col-span-4">
-            <Link href="/" className="inline-flex items-center rounded-xl bg-white px-3.5 py-1.5 shadow-sm transition hover:opacity-90">
+          <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                <Leaf className="h-3.5 w-3.5" />
+                Digital Agriculture Ecosystem
+              </div>
+
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Grow smarter with AgriNova.
+              </h2>
+
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+                Discover smarter farming solutions, connect with agricultural
+                experts and explore opportunities across the AgriNova
+                ecosystem.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/marketplace"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 text-sm font-bold text-[#042016] transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-300"
+              >
+                Explore Marketplace
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/consultant"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white transition duration-200 hover:border-white/25 hover:bg-white/10"
+              >
+                Find an Expert
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* main footer */}
+        <div className="grid gap-12 py-14 lg:grid-cols-[1.3fr_2fr] lg:gap-20">
+          {/* brand */}
+          <div>
+            <Link
+              href="/"
+              className="inline-flex rounded-2xl bg-white px-4 py-2 shadow-lg shadow-black/10"
+            >
               <Image
                 src="/AgriNova-Logo.png"
                 alt="AgriNova"
-                width={135}
-                height={40}
-                className="h-8 w-auto object-contain"
+                width={150}
+                height={44}
+                className="h-9 w-auto object-contain"
               />
             </Link>
 
-            <p className="mt-5 text-sm leading-relaxed text-slate-300">
-              AgriNova is an end-to-end digital agriculture ecosystem uniting precision AI crop diagnostics, weather intelligence, agronomist consultation, and local marketplace commerce.
+            <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
+              AgriNova connects farmers, agricultural experts, technology,
+              investment opportunities and local commerce through one modern
+              digital agriculture platform.
             </p>
 
-            {/* Live Operational Status */}
-            <div className="mt-6 inline-flex items-center gap-2.5 rounded-full border border-emerald-800/60 bg-[#06261d] px-3.5 py-1.5 text-xs font-medium text-emerald-300">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span>All AI & Platform Services Operational</span>
-            </div>
+            <div className="mt-7 flex items-center gap-3">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
 
-            {/* Social Links */}
-            <div className="mt-7">
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                Connect With Us
-              </p>
-              <div className="mt-3 flex items-center gap-2.5">
-                {socialLinks.map((social) => {
-                  const Icon = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/60 bg-[#072a20] text-slate-300 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500/50 hover:bg-emerald-600 hover:text-white hover:shadow-md hover:shadow-emerald-900/50"
-                    >
-                      <Icon className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition duration-200 hover:-translate-y-1 hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-300"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
-          {/* Links Grid */}
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 lg:col-span-8">
-            {/* Column 1: AI & Tools */}
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                AI & Tools
-              </h4>
-              <ul className="mt-4 space-y-3">
-                {platformLinks.map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="group inline-flex items-center gap-1.5 text-sm text-slate-300 transition-colors hover:text-white"
-                    >
-                      <span className="transition-transform group-hover:translate-x-0.5">
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* public navigation */}
+          <div className="grid gap-10 sm:grid-cols-3">
+            <FooterColumn title="Explore" links={exploreLinks} />
 
-            {/* Column 2: Marketplace */}
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Marketplace
-              </h4>
-              <ul className="mt-4 space-y-3">
-                {marketplaceLinks.map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="group inline-flex items-center text-sm text-slate-300 transition-colors hover:text-white"
-                    >
-                      <span className="transition-transform group-hover:translate-x-0.5">
-                        {item.label}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <FooterColumn title="Resources" links={resourceLinks} />
 
-            {/* Column 3: Advisory */}
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Advisory
-              </h4>
-              <ul className="mt-4 space-y-3">
-                {advisoryLinks.map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="group inline-flex items-center gap-1.5 text-sm text-slate-300 transition-colors hover:text-white"
-                    >
-                      <span className="transition-transform group-hover:translate-x-0.5">
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <FooterColumn title="Account" links={accountLinks} />
           </div>
         </div>
 
-        {/* Contact & Help Ribbon */}
-        <div className="mt-12 rounded-2xl border border-emerald-900/50 bg-[#06241b] p-6 sm:p-7">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-900/40 text-emerald-400">
-                <Mail className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-emerald-300/70">Official Email</p>
-                <a
-                  href="mailto:support@agrinova.io"
-                  className="text-sm font-semibold text-white transition hover:text-emerald-300"
-                >
-                  support@agrinova.io
-                </a>
-              </div>
-            </div>
+        {/* contact information */}
+        <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] sm:grid-cols-3">
+          <ContactItem
+            icon={Mail}
+            label="Email"
+            value="support@agrinova.io"
+            href="mailto:support@agrinova.io"
+          />
 
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-900/40 text-emerald-400">
-                <Phone className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-emerald-300/70">Farmer Support Hotline</p>
-                <a
-                  href="tel:+8808002474668"
-                  className="text-sm font-semibold text-white transition hover:text-emerald-300"
-                >
-                  +880 1785-473355
-                </a>
-              </div>
-            </div>
+          <ContactItem
+            icon={Phone}
+            label="Support"
+            value="+880 1785-473355"
+            href="tel:+8801785473355"
+          />
 
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-900/40 text-emerald-400">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-emerald-300/70">Central Office</p>
-                <p className="text-sm font-semibold text-white">
-                  Dhaka, Bangladesh
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-900/40 text-emerald-400">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-emerald-300/70">Operating Hours</p>
-                <p className="text-sm font-semibold text-white">
-                  Mon – Sat: 8 AM – 8 PM BST
-                </p>
-              </div>
-            </div>
-          </div>
+          <ContactItem
+            icon={MapPin}
+            label="Location"
+            value="Dhaka, Bangladesh"
+            last
+          />
         </div>
 
-        {/* Bottom Legal & Copyright Bar */}
-        <div className="mt-10 flex flex-col items-center justify-between gap-6 border-t border-emerald-900/40 pt-8 sm:flex-row">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-slate-400">
-            <p>© {new Date().getFullYear()} AgriNova Technologies Ltd. All rights reserved.</p>
-            <span className="hidden sm:inline text-emerald-800">•</span>
-            <span className="text-slate-400">
-              Sustainable Agriculture & Digital Farming Infrastructure
+        {/* bottom */}
+        <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-7 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs leading-6 text-slate-500">
+            © {new Date().getFullYear()} AgriNova Technologies Ltd.
+            <span className="hidden sm:inline"> · </span>
+            <span className="block sm:inline">
+              Smarter technology for modern agriculture.
             </span>
           </div>
 
-          <div className="flex items-center gap-6 text-xs font-medium">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link
               href="/privacy"
-              className="text-slate-400 transition hover:text-white"
+              className="text-xs font-medium text-slate-400 transition hover:text-emerald-300"
             >
               Privacy Policy
             </Link>
 
             <Link
               href="/terms"
-              className="text-slate-400 transition hover:text-white"
+              className="text-xs font-medium text-slate-400 transition hover:text-emerald-300"
             >
               Terms of Service
             </Link>
 
+            <Link
+              href="/support"
+              className="text-xs font-medium text-slate-400 transition hover:text-emerald-300"
+            >
+              Support
+            </Link>
 
-            {/* Back to Top button */}
             <button
               type="button"
               onClick={scrollToTop}
               aria-label="Back to top"
-              className="group flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-800/60 bg-[#06241b] text-emerald-400 transition hover:bg-emerald-600 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300 transition duration-200 hover:-translate-y-1 hover:bg-emerald-400 hover:text-[#031912]"
             >
-              <ArrowUp className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
+              <ArrowUp className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+type FooterLink = {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
+};
+
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string;
+  links: FooterLink[];
+}) {
+  return (
+    <div>
+      <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-400">
+        {title}
+      </h3>
+
+      <ul className="mt-5 space-y-1">
+        {links.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="group flex items-center gap-2.5 rounded-lg py-2 text-sm text-slate-400 transition hover:text-white"
+              >
+                <Icon className="h-4 w-4 text-slate-600 transition group-hover:text-emerald-400" />
+
+                <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                  {item.label}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function ContactItem({
+  icon: Icon,
+  label,
+  value,
+  href,
+  last = false,
+}: {
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
+  label: string;
+  value: string;
+  href?: string;
+  last?: boolean;
+}) {
+  const content = (
+    <>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400">
+        <Icon className="h-5 w-5" />
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          {label}
+        </p>
+
+        <p className="mt-1 truncate text-sm font-semibold text-slate-200">
+          {value}
+        </p>
+      </div>
+    </>
+  );
+
+  return (
+    <div
+      className={`flex items-center gap-4 px-5 py-5 sm:px-6 ${
+        !last ? "border-b border-white/10 sm:border-b-0 sm:border-r" : ""
+      }`}
+    >
+      {href ? (
+        <a
+          href={href}
+          className="flex min-w-0 items-center gap-4 transition hover:opacity-80"
+        >
+          {content}
+        </a>
+      ) : (
+        content
+      )}
+    </div>
   );
 }
