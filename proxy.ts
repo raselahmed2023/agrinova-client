@@ -25,54 +25,34 @@ function getDashboardPath(role: UserRole) {
   }
 }
 
-function isAdminPortal(pathname: string) {
+
+function isAdminRoute(pathname: string) {
   return (
     pathname === "/dashboard/admin" ||
     pathname.startsWith("/dashboard/admin/")
   );
 }
 
-function isExpertPortal(pathname: string) {
+function isExpertRoute(pathname: string) {
   return (
     pathname === "/dashboard/expert" ||
     pathname.startsWith("/dashboard/expert/")
   );
 }
 
-function isFarmerPortal(pathname: string) {
+function isFarmerDashboardRoute(pathname: string) {
   return (
     pathname === "/dashboard/farmer" ||
     pathname.startsWith("/dashboard/farmer/")
   );
 }
 
-
 function isFarmerOnlyRoute(
   pathname: string,
   searchParams: URLSearchParams
 ) {
-  if (isFarmerPortal(pathname)) {
-    return true;
-  }
 
-  if (
-    pathname === "/checkout" ||
-    pathname.startsWith("/checkout/")
-  ) {
-    return true;
-  }
-
-  if (
-    pathname === "/orders" ||
-    pathname.startsWith("/orders/")
-  ) {
-    return true;
-  }
-
-  if (
-    pathname === "/seller-orders" ||
-    pathname.startsWith("/seller-orders/")
-  ) {
+  if (isFarmerDashboardRoute(pathname)) {
     return true;
   }
 
@@ -83,12 +63,14 @@ function isFarmerOnlyRoute(
     return true;
   }
 
+
   if (
     pathname === "/marketplace/listings" ||
     pathname.startsWith("/marketplace/listings/")
   ) {
     return true;
   }
+
 
   if (
     /^\/marketplace\/[^/]+$/.test(pathname) &&
@@ -97,9 +79,39 @@ function isFarmerOnlyRoute(
     return true;
   }
 
-  
+
+  if (
+    pathname === "/checkout" ||
+    pathname.startsWith("/checkout/")
+  ) {
+    return true;
+  }
+
+
+  if (
+    pathname === "/orders" ||
+    pathname.startsWith("/orders/")
+  ) {
+    return true;
+  }
+
+
+  if (
+    pathname === "/seller-orders" ||
+    pathname.startsWith("/seller-orders/")
+  ) {
+    return true;
+  }
+
+
   if (
     /^\/investment\/[^/]+\/invest(?:\/|$)/.test(pathname)
+  ) {
+    return true;
+  }
+
+  if (
+    pathname.startsWith("/community/profile/")
   ) {
     return true;
   }
@@ -115,10 +127,19 @@ function isProtectedRoute(
     return true;
   }
 
+  if (isAdminRoute(pathname)) {
+    return true;
+  }
+
+  if (isExpertRoute(pathname)) {
+    return true;
+  }
+
   if (
-    isAdminPortal(pathname) ||
-    isExpertPortal(pathname) ||
-    isFarmerOnlyRoute(pathname, searchParams)
+    isFarmerOnlyRoute(
+      pathname,
+      searchParams
+    )
   ) {
     return true;
   }
@@ -126,8 +147,9 @@ function isProtectedRoute(
   return false;
 }
 
-
-function isAccountRecoveryRoute(pathname: string) {
+function isAccountRecoveryRoute(
+  pathname: string
+) {
   return (
     pathname === "/login" ||
     pathname === "/forgot-password" ||
@@ -135,7 +157,7 @@ function isAccountRecoveryRoute(pathname: string) {
   );
 }
 
-function isLoginOrRegisterRoute(pathname: string) {
+function isAuthRoute(pathname: string) {
   return (
     pathname === "/login" ||
     pathname === "/register" ||
@@ -143,77 +165,89 @@ function isLoginOrRegisterRoute(pathname: string) {
   );
 }
 
-export async function proxy(request: NextRequest) {
+
+export async function proxy(
+  request: NextRequest
+) {
   const {
     pathname,
     search,
     searchParams,
   } = request.nextUrl;
 
-  const protectedRoute = isProtectedRoute(
-    pathname,
-    searchParams
-  );
+  const protectedRoute =
+    isProtectedRoute(
+      pathname,
+      searchParams
+    );
 
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
 
     if (!session?.user) {
+      /**
+       * Public pages are allowed.
+       */
       if (!protectedRoute) {
         return NextResponse.next();
       }
 
+  
       const loginUrl = new URL(
         "/login",
         request.url
       );
 
+  
       loginUrl.searchParams.set(
         "redirect",
         `${pathname}${search}`
       );
 
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(
+        loginUrl
+      );
     }
 
-
     const rawRole = String(
-      session.user.role || ""
+      session.user.role ?? ""
     ).toUpperCase();
-
     if (
       rawRole !== "FARMER" &&
       rawRole !== "EXPERT" &&
       rawRole !== "ADMIN"
     ) {
-      const loginUrl = new URL(
-        "/login",
-        request.url
+      return NextResponse.redirect(
+        new URL(
+          "/login",
+          request.url
+        )
       );
-
-      return NextResponse.redirect(loginUrl);
     }
 
-    const role = rawRole as UserRole;
-
-  
-
+    const role =
+      rawRole as UserRole;
 
     const accountStatus = String(
-      session.user.status || "APPROVED"
+      session.user.status ??
+        "APPROVED"
     ).toUpperCase() as AccountStatus;
 
     const accountIsActive =
       accountStatus === "APPROVED" ||
       accountStatus === "ACTIVE";
 
+
     if (!accountIsActive) {
-     
-      if (isAccountRecoveryRoute(pathname)) {
+
+      if (
+        isAccountRecoveryRoute(
+          pathname
+        )
+      ) {
         return NextResponse.next();
       }
 
@@ -227,43 +261,47 @@ export async function proxy(request: NextRequest) {
         accountStatus
       );
 
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(
+        loginUrl
+      );
+    }
+
+    if (role === "ADMIN") {
+      /**
+       * Already inside admin portal.
+       */
+      if (isAdminRoute(pathname)) {
+        return NextResponse.next();
+      }
+
+ 
+      return NextResponse.redirect(
+        new URL(
+          getDashboardPath(role),
+          request.url
+        )
+      );
     }
 
  
-
-    if (role === "ADMIN") {
-     
-      if (isAdminPortal(pathname)) {
-        return NextResponse.next();
-      }
-
-      return NextResponse.redirect(
-        new URL(
-          "/dashboard/admin",
-          request.url
-        )
-      );
-    }
-
-
-
     if (role === "EXPERT") {
-     
-      if (isExpertPortal(pathname)) {
+      /**
+       * Already inside expert portal.
+       */
+      if (isExpertRoute(pathname)) {
         return NextResponse.next();
       }
 
+     
       return NextResponse.redirect(
         new URL(
-          "/dashboard/expert",
+          getDashboardPath(role),
           request.url
         )
       );
     }
 
-  
-
+   
     if (pathname === "/dashboard") {
       return NextResponse.redirect(
         new URL(
@@ -273,10 +311,8 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    /*
-     * Farmer cannot enter Admin portal.
-     */
-    if (isAdminPortal(pathname)) {
+ 
+    if (isAdminRoute(pathname)) {
       return NextResponse.redirect(
         new URL(
           "/dashboard/farmer",
@@ -286,7 +322,7 @@ export async function proxy(request: NextRequest) {
     }
 
     
-    if (isExpertPortal(pathname)) {
+    if (isExpertRoute(pathname)) {
       return NextResponse.redirect(
         new URL(
           "/dashboard/farmer",
@@ -295,8 +331,7 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-   
-    if (isLoginOrRegisterRoute(pathname)) {
+    if (isAuthRoute(pathname)) {
       return NextResponse.redirect(
         new URL(
           "/dashboard/farmer",
@@ -308,7 +343,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     console.error(
-      "Portal route protection failed:",
+      "AgriNova route protection failed:",
       error
     );
 
@@ -317,6 +352,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
+   
     const loginUrl = new URL(
       "/login",
       request.url
@@ -327,7 +363,9 @@ export async function proxy(request: NextRequest) {
       `${pathname}${search}`
     );
 
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(
+      loginUrl
+    );
   }
 }
 

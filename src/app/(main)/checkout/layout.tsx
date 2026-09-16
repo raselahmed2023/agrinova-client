@@ -1,14 +1,37 @@
+import type {
+  Metadata,
+} from "next";
 
+import {
+  requireRole,
+} from "@/lib/require-role";
 
-import type { Metadata } from "next";
+export const dynamic =
+  "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Checkout",
-  description: "Complete your AgriNova marketplace order.",
-  robots: { index: false, follow: false },
-};
+export const metadata:
+  Metadata = {
+    title:
+      "Checkout",
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+    description:
+      "Complete your AgriNova marketplace order.",
+
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+
+export default async function Layout({
+  children,
+}: {
+  children:
+    React.ReactNode;
+}) {
+  await requireRole(
+    "FARMER"
+  );
+
   return children;
 }
-
