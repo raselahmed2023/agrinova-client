@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
 import {
   NextRequest,
@@ -9,10 +11,11 @@ import { auth } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 8 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
+  "image/jpg",
   "image/png",
   "image/webp",
 ]);
@@ -20,6 +23,10 @@ const ALLOWED_TYPES = new Set([
 const PUBLIC_PURPOSES = new Set([
   "expert-registration",
   "supply-chain",
+  "community",
+  "farm",
+  "marketplace",
+  "general",
 ]);
 
 type RateEntry = {
@@ -203,7 +210,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Image must be 5 MB or smaller.",
+          message: "Image must be 8 MB or smaller.",
         },
         {
           status: 400,
@@ -211,74 +218,108 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.IMGBB_API_KEY;
+    const apiKey =
+      process.env.IMGBB_API_KEY ||
+      process.env.NEXT_PUBLIC_IMGBB_API_KEY;
 
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Image upload service is not configured.",
-        },
-        {
-          status: 503,
+    if (apiKey) {
+      try {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const base64 = buffer.toString("base64");
+
+        const body = new URLSearchParams();
+        body.set("image", base64);
+        body.set(
+          "name",
+          `agrinova-${Date.now()}-${crypto
+            .randomBytes(4)
+            .toString("hex")}`
+        );
+
+        const response = await fetch(
+          `https://api.imgbb.com/1/upload?key=${encodeURIComponent(
+            apiKey
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/x-www-form-urlencoded",
+            },
+            body: body.toString(),
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json().catch(() => null);
+        const url =
+          result?.data?.display_url ||
+          result?.data?.url;
+
+        if (response.ok && url) {
+          return NextResponse.json({
+            success: true,
+            url: String(url),
+          });
         }
-      );
-    }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const base64 = buffer.toString("base64");
-
-    const body = new URLSearchParams();
-
-    body.set("image", base64);
-
-    body.set(
-      "name",
-      `agrinova-${Date.now()}-${crypto
-        .randomBytes(4)
-        .toString("hex")}`
-    );
-
-    const response = await fetch(
-      `https://api.imgbb.com/1/upload?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/x-www-form-urlencoded",
-        },
-        body: body.toString(),
-        cache: "no-store",
+        console.warn("ImgBB upload failed, falling back to local storage:", result);
+      } catch (imgbbError) {
+        console.warn("ImgBB request error, falling back to local storage:", imgbbError);
       }
-    );
+    }
 
-    const result = await response.json().catch(() => null);
+    // Local storage fallback
+    try {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
 
-    const url =
-      result?.data?.display_url ||
-      result?.data?.url;
+      const originalExt = path.extname(file.name).toLowerCase();
+      const allowed = [".jpg", ".jpeg", ".png", ".webp"];
+      const extension = allowed.includes(originalExt)
+        ? originalExt
+        : file.type === "image/webp"
+          ? ".webp"
+          : file.type === "image/png"
+            ? ".png"
+            : ".jpg";
 
-    if (!response.ok || !url) {
-      console.error("ImgBB upload failed:", result);
+      const uploadDirectory = path.join(
+        process.cwd(),
+        "public",
+        "uploads"
+      );
+
+      await mkdir(uploadDirectory, {
+        recursive: true,
+      });
+
+      const fileName = `agrinova-${Date.now()}-${crypto
+        .randomBytes(5)
+        .toString("hex")}${extension}`;
+
+      await writeFile(
+        path.join(uploadDirectory, fileName),
+        buffer
+      );
+
+      return NextResponse.json({
+        success: true,
+        url: `/uploads/${fileName}`,
+      });
+    } catch (storageError) {
+      console.error("Local storage upload fallback failed:", storageError);
 
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Image storage service rejected the upload.",
+          message: "Failed to store image.",
         },
         {
-          status: 502,
+          status: 500,
         }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      url: String(url),
-    });
   } catch (error) {
     console.error("Upload error:", error);
 

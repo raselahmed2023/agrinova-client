@@ -232,20 +232,29 @@ export async function uploadCommunityImage(
     file
   );
 
+  body.append(
+    "purpose",
+    "community"
+  );
+
   const response =
     await fetch(
       "/api/upload",
-
       {
         method:
           "POST",
-
         body,
+        credentials:
+          "include",
       }
     );
 
   const result =
-    await response.json();
+    await response
+      .json()
+      .catch(
+        () => null
+      );
 
   if (
     !response.ok ||

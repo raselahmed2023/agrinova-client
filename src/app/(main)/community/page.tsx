@@ -249,7 +249,8 @@ export default function CommunityPage() {
       if (
         !isFarmer ||
         !content.trim() ||
-        posting
+        posting ||
+        uploading
       ) {
         return;
       }
