@@ -218,13 +218,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
     const apiKey =
       process.env.IMGBB_API_KEY ||
       process.env.NEXT_PUBLIC_IMGBB_API_KEY;
 
     if (apiKey) {
       try {
-        const buffer = Buffer.from(await file.arrayBuffer());
         const base64 = buffer.toString("base64");
 
         const body = new URLSearchParams();
@@ -269,12 +271,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Local storage fallback
+    // Local storage fallback using the already-read buffer
     try {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const originalExt = path.extname(file.name).toLowerCase();
+      const originalExt =
+        typeof file.name === "string"
+          ? path.extname(file.name).toLowerCase()
+          : "";
       const allowed = [".jpg", ".jpeg", ".png", ".webp"];
       const extension = allowed.includes(originalExt)
         ? originalExt
@@ -313,7 +315,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to store image.",
+          message:
+            storageError instanceof Error
+              ? storageError.message
+              : "Failed to store image.",
         },
         {
           status: 500,
