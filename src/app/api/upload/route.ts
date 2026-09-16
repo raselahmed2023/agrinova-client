@@ -271,60 +271,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Local storage fallback using the already-read buffer
-    try {
-      const originalExt =
-        typeof file.name === "string"
-          ? path.extname(file.name).toLowerCase()
-          : "";
-      const allowed = [".jpg", ".jpeg", ".png", ".webp"];
-      const extension = allowed.includes(originalExt)
-        ? originalExt
-        : file.type === "image/webp"
-          ? ".webp"
-          : file.type === "image/png"
-            ? ".png"
-            : ".jpg";
+    // Local storage fallback (for non-serverless environments with writable disk)
+    if (!process.env.VERCEL) {
+      try {
+        const originalExt =
+          typeof file.name === "string"
+            ? path.extname(file.name).toLowerCase()
+            : "";
+        const allowed = [".jpg", ".jpeg", ".png", ".webp"];
+        const extension = allowed.includes(originalExt)
+          ? originalExt
+          : file.type === "image/webp"
+            ? ".webp"
+            : file.type === "image/png"
+              ? ".png"
+              : ".jpg";
 
-      const uploadDirectory = path.join(
-        process.cwd(),
-        "public",
-        "uploads"
-      );
+        const uploadDirectory = path.join(
+          process.cwd(),
+          "public",
+          "uploads"
+        );
 
-      await mkdir(uploadDirectory, {
-        recursive: true,
-      });
+        await mkdir(uploadDirectory, {
+          recursive: true,
+        });
 
-      const fileName = `agrinova-${Date.now()}-${crypto
-        .randomBytes(5)
-        .toString("hex")}${extension}`;
+        const fileName = `agrinova-${Date.now()}-${crypto
+          .randomBytes(5)
+          .toString("hex")}${extension}`;
 
-      await writeFile(
-        path.join(uploadDirectory, fileName),
-        buffer
-      );
+        await writeFile(
+          path.join(uploadDirectory, fileName),
+          buffer
+        );
 
-      return NextResponse.json({
-        success: true,
-        url: `/uploads/${fileName}`,
-      });
-    } catch (storageError) {
-      console.error("Local storage upload fallback failed:", storageError);
-
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            storageError instanceof Error
-              ? storageError.message
-              : "Failed to store image.",
-        },
-        {
-          status: 500,
-        }
-      );
+        return NextResponse.json({
+          success: true,
+          url: `/uploads/${fileName}`,
+        });
+      } catch (storageError) {
+        console.warn(
+          "Filesystem write failed, falling back to data URL:",
+          storageError
+        );
+      }
     }
+
+    // Universal fallback: Base64 Data URL (always works on Vercel / read-only serverless environments)
+    const mimeType = file.type || "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+    return NextResponse.json({
+      success: true,
+      url: dataUrl,
+    });
   } catch (error) {
     console.error("Upload error:", error);
 
