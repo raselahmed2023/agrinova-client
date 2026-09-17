@@ -53,7 +53,7 @@ export default function ExpertDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fallback for expert name when dynamic profile data is not available
-  const expertName = session?.user?.name || profile?.name || "Expert";
+  const expertName = profile?.name || session?.user?.name || "Expert";
 
   // Scheduling modal state
   const [schedulingConsultation, setSchedulingConsultation] =
@@ -73,7 +73,7 @@ export default function ExpertDashboardPage() {
     try {
       const [statsData, listData, availData, profData] = await Promise.all([
         getExpertStats(),
-        getConsultations(),
+        getConsultations({ isExpert: true }),
         getExpertAvailability(),
         getExpertProfile(),
       ]);

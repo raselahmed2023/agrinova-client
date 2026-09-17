@@ -1,422 +1,99 @@
-import { authClient } from "@/lib/auth-client";
+import { apiRequest } from "@/services/api.client";
 import type {
   Consultation,
-  ConsultationResponse,
-  ConsultationsResponse,
   ConsultationStatus,
   ConsultationStats,
   ConsultationUrgency,
+  CreateConsultationRequestPayload,
   CreateRecommendationPayload,
   ScheduleConsultationPayload,
-  CreateConsultationRequestPayload,
 } from "@/types/consultation";
 
-const getApiUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-};
-
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const { data, error } = await authClient.token();
-    if (error || !data?.token) {
-      return null;
-    }
-    return data.token;
-  } catch {
-    return null;
-  }
-};
-
-// Initial mock data matching user requirements & examples
-let mockConsultations: Consultation[] = [
-  {
-    _id: "cons-101",
-    farmerId: "farm-001",
-    farmName: "Rahim Green Valley",
-    district: "Bogra",
-    farmer: {
-      name: "Rahim",
-      email: "rahim.farmer@example.com",
-      phone: "+880 1711-234567",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-      location: "Bogra, Rajshahi",
-      district: "Bogra",
-      farmName: "Rahim Green Valley",
-      farmType: "Paddy & Vegetable Farm",
-      farmSize: "3.5 Acres",
-    },
-    cropType: "Rice",
-    problemTitle: "Rice leaf disease",
-    problemDescription:
-      "Yellowish brown spots appearing on the leaves of aman rice seedlings. The tips are turning dry and brittle over the past 4 days. Need urgent advice on pesticide or fungicide.",
-    images: [
-      "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?w=600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=600&auto=format&fit=crop&q=80",
-    ],
-    status: "PENDING",
-    urgency: "HIGH",
-    preferredDate: "2026-09-01",
-    preferredTime: "10:00 AM",
-    createdAt: "2026-08-31T09:15:00Z",
-  },
-  {
-    _id: "cons-102",
-    farmerId: "farm-002",
-    farmName: "Karim Agro Complex",
-    district: "Jessore",
-    farmer: {
-      name: "Karim",
-      email: "karim.uddin@example.com",
-      phone: "+880 1819-876543",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-      location: "Jessore, Khulna",
-      district: "Jessore",
-      farmName: "Karim Agro Complex",
-      farmType: "Horticulture & Vegetables",
-      farmSize: "2.0 Acres",
-    },
-    cropType: "Tomato & Eggplant",
-    problemTitle: "Irrigation issue",
-    problemDescription:
-      "Drip irrigation emitters clogged with mineral deposits causing uneven moisture distribution in block B. Plants showing early signs of water stress and blossom end rot.",
-    images: [
-      "https://images.unsplash.com/photo-1592417817098-8f3d6ef23996?w=600&auto=format&fit=crop&q=80",
-    ],
-    status: "SCHEDULED",
-    urgency: "MEDIUM",
-    scheduledDate: "31 Aug 2026",
-    scheduledTime: "07:30 PM",
-    meetingLink: "https://meet.agrinova.io/room/cons-102",
-    notes: "Review water filtration setup and recommend mild acid flushing.",
-    createdAt: "2026-08-30T14:20:00Z",
-  },
-  {
-    _id: "cons-103",
-    farmerId: "farm-003",
-    farmName: "Hasan Corn Agro",
-    district: "Mymensingh",
-    farmer: {
-      name: "Hasan",
-      email: "hasan.ali@example.com",
-      phone: "+880 1912-345678",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-      location: "Mymensingh",
-      district: "Mymensingh",
-      farmName: "Hasan Corn Agro",
-      farmType: "Cereal Crops",
-      farmSize: "5.0 Acres",
-    },
-    cropType: "Maize / Corn",
-    problemTitle: "Pest attack",
-    problemDescription:
-      "Fall armyworm caterpillar infestation discovered in the central whorl of maize crops. Leaves showing typical window-pane damage and ragged holes.",
-    images: [
-      "https://images.unsplash.com/photo-1536147116438-62679a5e01f2?w=600&auto=format&fit=crop&q=80",
-    ],
-    status: "ONGOING",
-    urgency: "EMERGENCY",
-    scheduledDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    scheduledTime: new Date(Date.now() - 5 * 60 * 1000).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    startedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    meetingLink: "https://meet.agrinova.io/room/cons-103",
-    notes: "Live consultation currently in session. Examining leaf underside specimens.",
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: "cons-104",
-    farmerId: "farm-004",
-    farmName: "Mazid Seed & Potato Farm",
-    district: "Rangpur",
-    farmer: {
-      name: "Abdul Mazid",
-      email: "mazid.farm@example.com",
-      phone: "+880 1611-998877",
-      avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
-      location: "Rangpur",
-      district: "Rangpur",
-      farmName: "Mazid Seed & Potato Farm",
-      farmType: "Potato Farm",
-      farmSize: "8.0 Acres",
-    },
-    cropType: "Potato",
-    problemTitle: "Late blight prevention",
-    problemDescription:
-      "Foggy weather expected over next week. Seeking preventive fungicide schedule and dosage for late blight control.",
-    status: "ACCEPTED",
-    urgency: "HIGH",
-    preferredDate: "2026-09-01",
-    preferredTime: "03:00 PM",
-    notes: "Accepted by expert. Awaiting schedule confirmation.",
-    createdAt: "2026-08-31T11:45:00Z",
-  },
-  {
-    _id: "cons-105",
-    farmerId: "farm-005",
-    farmName: "Tariqul Fruit Plantation",
-    district: "Comilla",
-    farmer: {
-      name: "Tariqul Islam",
-      email: "tariqul.islam@example.com",
-      phone: "+880 1515-443322",
-      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
-      location: "Comilla",
-      district: "Comilla",
-      farmName: "Tariqul Fruit Plantation",
-      farmType: "Fruit Orchard",
-      farmSize: "4.2 Acres",
-    },
-    cropType: "Guava & Mango",
-    problemTitle: "Fruit fly management in orchard",
-    problemDescription:
-      "Guava fruits getting stung by oriental fruit flies before ripening, leading to premature drop and rotting.",
-    images: [
-      "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80",
-    ],
-    status: "COMPLETED",
-    urgency: "LOW",
-    scheduledDate: "30 Aug 2026",
-    scheduledTime: "11:00 AM",
-    meetingLink: "https://meet.agrinova.io/room/cons-105",
-    recommendations: {
-      diagnosis: "Bactrocera dorsalis (Oriental fruit fly) oviposition damage.",
-      prescriptions: [
-        "Pheromone lure traps (Methyl Eugenol) @ 5 traps per bigha",
-        "Protein bait spray (Spinosad 0.024% CB) on orchard borders weekly",
-        "Biodegradable fruit bagging 25 days before expected harvest",
-      ],
-      treatmentSteps: [
-        "1. Install traps at canopy height away from direct sunlight.",
-        "2. Collect and bury all fallen infested fruits at least 2 feet deep.",
-        "3. Apply bait spray spot applications in early mornings.",
-      ],
-      followUpDate: "2026-09-15",
-      additionalNotes: "Avoid broad-spectrum chemical sprays to protect native beneficial pollinators.",
-      createdAt: "2026-08-30T12:00:00Z",
-    },
-    createdAt: "2026-08-29T10:00:00Z",
-  },
-  {
-    _id: "cons-106",
-    farmerId: "farm-006",
-    farmName: "Nazrul Agro Estates",
-    district: "Dinajpur",
-    farmer: {
-      name: "Nazrul Islam",
-      email: "nazrul.farm@example.com",
-      phone: "+880 1712-887766",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      location: "Dinajpur",
-      district: "Dinajpur",
-      farmName: "Nazrul Agro Estates",
-      farmType: "Litchi & Wheat",
-      farmSize: "6.0 Acres",
-    },
-    cropType: "Litchi",
-    problemTitle: "Nutrient deficiency symptoms",
-    problemDescription:
-      "Interveinal chlorosis on new foliage. Soil test pH is 7.4. Need advice on micronutrient foliar blend.",
-    status: "PENDING",
-    urgency: "MEDIUM",
-    createdAt: "2026-08-31T12:30:00Z",
-  },
-];
-
-export const getExpertStats = async (): Promise<ConsultationStats> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(`${API_URL}/consultations/expert/stats`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to local calculation
-  }
-
-  return {
-    newRequests: mockConsultations.filter((c) => c.status === "PENDING").length,
-    accepted: mockConsultations.filter((c) => c.status === "ACCEPTED").length,
-    scheduled: mockConsultations.filter((c) => c.status === "SCHEDULED").length,
-    ongoing: mockConsultations.filter((c) => c.status === "ONGOING").length,
-    completed: mockConsultations.filter((c) => c.status === "COMPLETED").length,
-    cancelled: mockConsultations.filter((c) => c.status === "CANCELLED").length,
-    total: mockConsultations.length,
-  };
-};
-
-export const getConsultations = async (params?: {
+export interface GetConsultationsParams {
   status?: ConsultationStatus | "ALL";
   search?: string;
+  cropType?: string;
   limit?: number;
+  page?: number;
   isExpert?: boolean;
-}): Promise<Consultation[]> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    const query = new URLSearchParams();
-    if (params?.status && params.status !== "ALL") query.set("status", params.status);
-    if (params?.search) query.set("search", params.search);
-    if (params?.limit) query.set("limit", String(params.limit));
+}
 
-    if (token) {
-      const endpoint = params?.isExpert ? "/consultations/expert" : "/consultations";
-      const response = await fetch(`${API_URL}${endpoint}?${query.toString()}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const result: ConsultationsResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to mock
-  }
+function buildQuery(params?: GetConsultationsParams): string {
+  const query = new URLSearchParams();
 
-  let list = [...mockConsultations];
   if (params?.status && params.status !== "ALL") {
-    list = list.filter((c) => c.status === params.status);
+    query.set("status", params.status);
   }
-  if (params?.search) {
-    const s = params.search.toLowerCase();
-    list = list.filter(
-      (c) =>
-        (c.farmer?.name || c.farmerName || "").toLowerCase().includes(s) ||
-        (c.problemTitle || "").toLowerCase().includes(s) ||
-        (c.cropType || "").toLowerCase().includes(s)
-    );
+
+  if (params?.search?.trim()) {
+    query.set("search", params.search.trim());
   }
+
+  if (params?.cropType?.trim()) {
+    query.set("cropType", params.cropType.trim());
+  }
+
   if (params?.limit) {
-    list = list.slice(0, params.limit);
+    query.set("limit", String(params.limit));
   }
-  return list;
+
+  if (params?.page) {
+    query.set("page", String(params.page));
+  }
+
+  return query.toString();
+}
+
+export const getExpertStats = async (): Promise<ConsultationStats> => {
+  return apiRequest<ConsultationStats>("/consultations/expert/stats");
+};
+
+export const getConsultations = async (
+  params?: GetConsultationsParams
+): Promise<Consultation[]> => {
+  const endpoint = params?.isExpert
+    ? "/consultations/expert"
+    : "/consultations";
+
+  return apiRequest<Consultation[]>(
+    endpoint,
+    "GET",
+    undefined,
+    buildQuery(params)
+  );
 };
 
 export const getConsultationById = async (
   consultationId: string
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(`${API_URL}/consultations/${consultationId}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to mock
+  if (!consultationId?.trim()) {
+    throw new Error("Consultation id is required.");
   }
 
-  const found = mockConsultations.find(
-    (c) => c._id === consultationId || c.id === consultationId
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}`
   );
-  if (!found) {
-    // Return first mock with replaced id if not found, to ensure demo flow never breaks
-    return {
-      ...mockConsultations[0],
-      _id: consultationId,
-    };
-  }
-  return found;
 };
 
 export const acceptConsultationRequest = async (
   consultationId: string
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${consultationId}/accept`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to mock update
-  }
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === consultationId || c.id === consultationId
-      ? { ...c, status: "ACCEPTED" as ConsultationStatus, updatedAt: new Date().toISOString() }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/accept`,
+    "PATCH",
+    {}
   );
-  return getConsultationById(consultationId);
 };
 
 export const rejectConsultationRequest = async (
   consultationId: string,
   reason?: string
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${consultationId}/reject`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ reason }),
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to mock update
-  }
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === consultationId || c.id === consultationId
-      ? {
-          ...c,
-          status: "REJECTED" as ConsultationStatus,
-          rejectionReason: reason || "Unavailable at this time",
-          updatedAt: new Date().toISOString(),
-        }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/reject`,
+    "PATCH",
+    { reason }
   );
-  return getConsultationById(consultationId);
 };
 
 export const acceptConsultation = acceptConsultationRequest;
@@ -425,384 +102,106 @@ export const rejectConsultation = rejectConsultationRequest;
 export const scheduleConsultation = async (
   payload: ScheduleConsultationPayload
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${payload.consultationId}/schedule`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (errJson?.message) {
-          throw new Error(errJson.message);
-        }
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
+  const { consultationId, ...body } = payload;
+
+  if (!consultationId?.trim()) {
+    throw new Error("Consultation id is required.");
   }
 
-  const generatedLink =
-    payload.meetingLink ||
-    `https://meet.jit.si/agrinova-consultation-${payload.consultationId}`;
-
-  const isStartNow = payload.scheduledAt
-    ? new Date(payload.scheduledAt).getTime() <= Date.now() + 60000
-    : false;
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === payload.consultationId || c.id === payload.consultationId
-      ? {
-          ...c,
-          status: (isStartNow ? "ONGOING" : "SCHEDULED") as ConsultationStatus,
-          scheduledDate: payload.scheduledDate,
-          scheduledTime: payload.scheduledTime,
-          scheduledAt: payload.scheduledAt,
-          startedAt: isStartNow ? new Date().toISOString() : undefined,
-          videoRoomId: `agrinova-consultation-${payload.consultationId}`,
-          meetingLink: generatedLink,
-          notes: payload.notes || c.notes,
-          updatedAt: new Date().toISOString(),
-        }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/schedule`,
+    "PATCH",
+    body
   );
-  return getConsultationById(payload.consultationId);
 };
 
 export const startVideoConsultation = async (
   consultationId: string
-): Promise<{ status: ConsultationStatus; videoRoomId: string; meetingLink: string }> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${consultationId}/start`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (errJson?.message) {
-          throw new Error(errJson.message);
-        }
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
-  }
-
-  const roomId = `agrinova-consultation-${consultationId}`;
-  const link = `https://meet.jit.si/${roomId}`;
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === consultationId || c.id === consultationId
-      ? {
-          ...c,
-          status: "ONGOING" as ConsultationStatus,
-          videoRoomId: roomId,
-          meetingLink: link,
-          startedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      : c
+): Promise<{
+  status: ConsultationStatus;
+  videoRoomId: string;
+  meetingLink: string;
+}> => {
+  return apiRequest<{
+    status: ConsultationStatus;
+    videoRoomId: string;
+    meetingLink: string;
+  }>(
+    `/consultations/${encodeURIComponent(consultationId)}/start`,
+    "PATCH",
+    {}
   );
-
-  return {
-    status: "ONGOING",
-    videoRoomId: roomId,
-    meetingLink: link,
-  };
 };
 
 export const updateConsultationStatus = async (
   consultationId: string,
-  status: ConsultationStatus
+  status: ConsultationStatus,
+  reason?: string
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${consultationId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      }
-    }
-  } catch {
-    // Fall back to mock update
-  }
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === consultationId || c.id === consultationId
-      ? { ...c, status, updatedAt: new Date().toISOString() }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/status`,
+    "PATCH",
+    { status, reason }
   );
-  return getConsultationById(consultationId);
 };
 
 export const completeConsultation = async (
   consultationId: string
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${consultationId}/complete`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (errJson?.message) {
-          throw new Error(errJson.message);
-        }
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
-  }
-
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === consultationId || c.id === consultationId
-      ? {
-          ...c,
-          status: "COMPLETED" as ConsultationStatus,
-          completedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/complete`,
+    "PATCH",
+    {}
   );
-  return getConsultationById(consultationId);
 };
 
 export const submitRecommendation = async (
   payload: CreateRecommendationPayload
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(
-        `${API_URL}/consultations/${payload.consultationId}/recommendation`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (errJson) {
-          const detail =
-            errJson.errorSources?.map((s: any) => s.message).filter(Boolean).join(", ") ||
-            errJson.message;
-          if (detail) {
-            throw new Error(detail);
-          }
-        }
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
+  const { consultationId, ...body } = payload;
+
+  if (!consultationId?.trim()) {
+    throw new Error("Consultation id is required.");
   }
 
-  mockConsultations = mockConsultations.map((c) =>
-    c._id === payload.consultationId || c.id === payload.consultationId
-      ? {
-          ...c,
-          status: "COMPLETED" as any,
-          completedAt: new Date().toISOString(),
-          recommendations: {
-            diagnosis: payload.diagnosis || payload.recommendation || "Follow prescribed treatment",
-            prescriptions: payload.prescriptions || [],
-            treatmentSteps: payload.treatmentSteps || [],
-            followUpDate: payload.followUpDate,
-            additionalNotes: payload.additionalNotes,
-            createdAt: new Date().toISOString(),
-          },
-          recommendation: payload.recommendation || payload.diagnosis,
-          updatedAt: new Date().toISOString(),
-        }
-      : c
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/recommendation`,
+    "PATCH",
+    body
   );
-  return getConsultationById(payload.consultationId);
 };
 
-export const getExpertConsultations = async (params?: {
-  status?: ConsultationStatus | "ALL";
-  search?: string;
-  limit?: number;
-}): Promise<Consultation[]> => {
-  return getConsultations({ ...params, isExpert: true });
+export const getExpertConsultations = async (
+  params?: Omit<GetConsultationsParams, "isExpert">
+): Promise<Consultation[]> => {
+  return getConsultations({
+    ...params,
+    isExpert: true,
+  });
 };
 
-export const getExpertRequests = async (params?: {
-  limit?: number;
-  page?: number;
-  search?: string;
-}): Promise<Consultation[]> => {
-  return getConsultations({ ...params, status: "PENDING", isExpert: true });
+export const getExpertRequests = async (
+  params?: {
+    limit?: number;
+    page?: number;
+    search?: string;
+  }
+): Promise<Consultation[]> => {
+  return getConsultations({
+    ...params,
+    status: "PENDING",
+    isExpert: true,
+  });
 };
 
 export const createConsultation = async (
   payload: CreateConsultationRequestPayload
 ): Promise<Consultation> => {
-  const cleanId = `cons-${Date.now()}`;
-  const videoRoomId = `agrinova-consultation-${cleanId}`;
-  const meetingLink = payload.meetingLink || `https://meet.jit.si/${videoRoomId}`;
-
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(`${API_URL}/consultations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...payload,
-          meetingLink,
-        }),
-      });
-
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          // Prepend to local mock list without duplicate
-          mockConsultations = [
-            result.data,
-            ...mockConsultations.filter(
-              (c) => c._id !== result.data._id && c.id !== result.data._id
-            ),
-          ];
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        throw new Error(
-          errJson?.message ||
-            `Failed to book consultation with specialist (Status ${response.status}).`
-        );
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
-    console.warn("Backend consultation creation error:", err);
-  }
-
-  // Fallback consultation record
-  const newConsultation: Consultation = {
-    _id: cleanId,
-    id: cleanId,
-    farmerId: "current-farmer",
-    farmerName: payload.farmerName || "AgriNova Farmer",
-    farmerEmail: payload.farmerEmail || "farmer@agrinova.io",
-    farmer: {
-      name: payload.farmerName || "AgriNova Farmer",
-      email: payload.farmerEmail || "farmer@agrinova.io",
-      phone: payload.farmerPhone || "+880 1700-000000",
-      farmName: payload.farmName || "Greenfield Farm",
-      district: payload.district || "Bogra",
-      location: payload.district || "Bogra, Bangladesh",
-    },
-    expertId: payload.expertId || "exp-001",
-    expertName: payload.expertName || "Dr. Rafiqul Islam",
-    expertEmail: payload.expertEmail || "dr.rafiqul@agrinova.io",
-    expert: {
-      id: payload.expertId || "exp-001",
-      name: payload.expertName || "Dr. Rafiqul Islam",
-      email: payload.expertEmail || "dr.rafiqul@agrinova.io",
-      title: "Senior Agronomist & Plant Pathologist",
-    },
-    farmName: payload.farmName || "Greenfield Farm",
-    district: payload.district || "Bogra",
-    cropType: payload.cropType,
-    cropName: payload.cropName || payload.cropType,
-    problemTitle: payload.problemTitle,
-    problemDescription: payload.problemDescription,
-    images: payload.images || [],
-    status: payload.scheduledDate ? "SCHEDULED" : "PENDING",
-    urgency: payload.urgency || "MEDIUM",
-    scheduledDate: payload.scheduledDate,
-    scheduledTime: payload.scheduledTime,
-    preferredDate: payload.preferredDate || payload.scheduledDate,
-    preferredTime: payload.preferredTime || payload.scheduledTime,
-    videoRoomId,
-    meetingLink,
-    notes: payload.notes,
-    createdAt: new Date().toISOString(),
-  };
-
-  mockConsultations = [newConsultation, ...mockConsultations];
-  return newConsultation;
+  return apiRequest<Consultation>(
+    "/consultations",
+    "POST",
+    payload
+  );
 };
 
 export const startConsultation = startVideoConsultation;
@@ -820,70 +219,16 @@ export const updateConsultationDetails = async (
     district?: string;
     scheduledDate?: string;
     scheduledTime?: string;
+    scheduledAt?: string | Date;
+    meetingLink?: string;
     notes?: string;
   }
 ): Promise<Consultation> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(`${API_URL}/consultations/${consultationId}/details`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const result: ConsultationResponse = await response.json();
-        if (result.success && result.data) {
-          mockConsultations = mockConsultations.map((c) =>
-            (c._id === consultationId || c.id === consultationId || c._id === result.data._id || c.id === result.data._id)
-              ? result.data
-              : c
-          );
-          return result.data;
-        }
-      } else {
-        const errJson = await response.json().catch(() => null);
-        throw new Error(
-          errJson?.message || `Failed to update consultation details (Status ${response.status})`
-        );
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
-    console.warn("Failed to update consultation via API:", err);
-  }
-
-  // Fallback update in mockConsultations
-  mockConsultations = mockConsultations.map((c) => {
-    if (c._id === consultationId || c.id === consultationId) {
-      const isReschedule = Boolean(payload.scheduledDate && payload.scheduledTime);
-      return {
-        ...c,
-        ...payload,
-        status: isReschedule ? ("SCHEDULED" as ConsultationStatus) : c.status,
-        startedAt: isReschedule ? undefined : c.startedAt,
-        farmName: payload.farmName || c.farmName,
-        district: payload.district || c.district,
-        farmer: {
-          ...(c.farmer || {}),
-          name: c.farmer?.name || c.farmerName || "Farmer",
-          farmName: payload.farmName || c.farmer?.farmName || c.farmName,
-          district: payload.district || c.farmer?.district || c.district,
-        },
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    return c;
-  });
-
-  return getConsultationById(consultationId);
+  return apiRequest<Consultation>(
+    `/consultations/${encodeURIComponent(consultationId)}/details`,
+    "PATCH",
+    payload
+  );
 };
 
 export const rescheduleConsultation = async (
@@ -901,39 +246,20 @@ export const rescheduleConsultation = async (
 
 export const deleteConsultation = async (
   consultationId: string
-): Promise<{ success: boolean; message: string }> => {
-  try {
-    const API_URL = getApiUrl();
-    const token = await getAuthToken();
-    if (token) {
-      const response = await fetch(`${API_URL}/consultations/${consultationId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        mockConsultations = mockConsultations.filter(
-          (c) => c._id !== consultationId && c.id !== consultationId
-        );
-        return { success: true, message: "Consultation deleted successfully" };
-      } else {
-        const errJson = await response.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to delete consultation");
-      }
-    }
-  } catch (err: any) {
-    if (err?.message && !err.message.includes("fetch")) {
-      throw err;
-    }
-    console.warn("API delete failed, fallback to local:", err);
-  }
-
-  mockConsultations = mockConsultations.filter(
-    (c) => c._id !== consultationId && c.id !== consultationId
+): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const result = await apiRequest<{
+    id?: string;
+    message?: string;
+  }>(
+    `/consultations/${encodeURIComponent(consultationId)}`,
+    "DELETE"
   );
-  return { success: true, message: "Consultation deleted successfully" };
+
+  return {
+    success: true,
+    message: result?.message || "Consultation deleted successfully",
+  };
 };
-
-

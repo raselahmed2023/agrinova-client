@@ -21,7 +21,7 @@ import VideoCallButton, { VideoCallModal } from "@/components/expert/VideoCallBu
 import RecommendationForm from "@/components/expert/RecommendationForm";
 import {
   getConsultationById,
-  updateConsultationStatus,
+  completeConsultation,
   submitRecommendation,
   scheduleConsultation,
   acceptConsultation,
@@ -120,7 +120,7 @@ export default function ConsultationDetailPage({
     setIsProcessing(true);
     setActionError(null);
     try {
-      await updateConsultationStatus(consultationId, "COMPLETED");
+      await completeConsultation(consultationId);
       await loadData();
     } catch (err: any) {
       setActionError(err?.message || "Failed to complete consultation");

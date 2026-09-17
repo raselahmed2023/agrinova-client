@@ -26,7 +26,7 @@ import {
   scheduleConsultation,
   deleteConsultation,
   startVideoConsultation,
-  updateConsultationStatus,
+  completeConsultation,
 } from "@/services/consultation.service";
 import type {
   Consultation,
@@ -111,7 +111,7 @@ function ExpertConsultationsContent() {
 
   const handleMarkComplete = async (consultationId: string) => {
     try {
-      await updateConsultationStatus(consultationId, "COMPLETED");
+      await completeConsultation(consultationId);
       await loadData();
     } catch (err: any) {
       console.error("Failed to mark complete:", err);

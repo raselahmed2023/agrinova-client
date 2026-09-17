@@ -153,6 +153,44 @@ export function addCommunityReply(
 }
 
 
+
+export function deleteCommunityComment(
+  postId: string,
+  commentId: string
+) {
+  return apiRequest<{
+    deleted: boolean;
+    commentId: string;
+  }>(
+    `/community/posts/${encodeURIComponent(
+      postId
+    )}/comments/${encodeURIComponent(
+      commentId
+    )}`,
+    "DELETE"
+  );
+}
+
+export function deleteCommunityReply(
+  postId: string,
+  commentId: string,
+  replyId: string
+) {
+  return apiRequest<{
+    deleted: boolean;
+    replyId: string;
+  }>(
+    `/community/posts/${encodeURIComponent(
+      postId
+    )}/comments/${encodeURIComponent(
+      commentId
+    )}/replies/${encodeURIComponent(
+      replyId
+    )}`,
+    "DELETE"
+  );
+}
+
 export function getCommunityFarmerProfile(
   farmerId: string,
   page = 1,
@@ -232,20 +270,29 @@ export async function uploadCommunityImage(
     file
   );
 
+  body.append(
+    "purpose",
+    "community"
+  );
+
   const response =
     await fetch(
       "/api/upload",
-
       {
         method:
           "POST",
-
         body,
+        credentials:
+          "include",
       }
     );
 
   const result =
-    await response.json();
+    await response
+      .json()
+      .catch(
+        () => null
+      );
 
   if (
     !response.ok ||

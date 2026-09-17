@@ -166,12 +166,14 @@ const FarmCoverImageField =
     ]);
 
     /**
-     * Restore pending image after refresh.
+     * Remove any legacy browser-only fallback image.
+     *
+     * Farm images must now be uploaded remotely before
+     * the Farm can be saved. This prevents a misleading
+     * LOCAL image from appearing successful.
      */
     useEffect(() => {
-      if (
-        !userId
-      ) {
+      if (!userId) {
         return;
       }
 
@@ -180,46 +182,18 @@ const FarmCoverImageField =
           storagePurpose
         );
 
-      if (
-        saved.length ===
-        0
-      ) {
-        setLocalImage(
-          null
+      for (const item of saved) {
+        removeStoredLocalImage(
+          item.localKey
         );
-
-        return;
-      }
-
-      /**
-       * Only one Farm cover is needed.
-       * Keep newest fallback.
-       */
-      const newest =
-        saved[
-          saved.length -
-            1
-        ];
-
-      for (
-        const item of saved
-      ) {
-        if (
-          item.localKey !==
-          newest.localKey
-        ) {
-          removeStoredLocalImage(
-            item.localKey
-          );
-        }
       }
 
       setLocalImage(
-        newest
+        null
       );
 
       setNotice(
-        "This Farm photo is saved locally and is waiting to upload."
+        ""
       );
     }, [
       storagePurpose,
@@ -300,7 +274,7 @@ const FarmCoverImageField =
                   storagePurpose,
 
                 allowLocalFallback:
-                  true,
+                  false,
               }
             );
 

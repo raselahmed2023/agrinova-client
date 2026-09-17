@@ -50,6 +50,10 @@ import type {
   InvestmentApplication,
 } from "@/types/investment";
 
+import {
+  uploadImageRemote,
+} from "@/lib/image-storage";
+
 /* ============================================================
    BANK CONFIG
 ============================================================ */
@@ -238,143 +242,11 @@ const getApplicationStatus =
 
 const uploadProof =
   async (
-    file:
-      File
+    file: File
   ): Promise<string> => {
-    if (
-      ![
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ].includes(
-        file.type
-      )
-    ) {
-      throw new Error(
-        "Only JPG, PNG and WEBP payment proofs are allowed."
-      );
-    }
-
-    if (
-      file.size >
-      8 *
-        1024 *
-        1024
-    ) {
-      throw new Error(
-        "Payment proof must be 8MB or smaller."
-      );
-    }
-
-    /* ========================================================
-       PRIMARY: NEXT.JS UPLOAD ROUTE
-    ======================================================== */
-
-    try {
-      const body =
-        new FormData();
-
-      body.append(
-        "image",
-        file
-      );
-
-      const response =
-        await fetch(
-          "/api/upload",
-          {
-            method:
-              "POST",
-
-            body,
-          }
-        );
-
-      const data =
-        await response
-          .json()
-          .catch(
-            () =>
-              null
-          );
-
-      if (
-        response.ok &&
-        data?.success &&
-        data?.url
-      ) {
-        return String(
-          data.url
-        );
-      }
-    } catch (
-      error
-    ) {
-      console.warn(
-        "Primary payment proof upload failed:",
-        error
-      );
-    }
-
-    /* ========================================================
-       FALLBACK: DIRECT IMGBB
-    ======================================================== */
-
-    const apiKey =
-      process.env
-        .NEXT_PUBLIC_IMGBB_API_KEY;
-
-    if (
-      !apiKey
-    ) {
-      throw new Error(
-        "Payment proof upload failed. ImgBB fallback is not configured."
-      );
-    }
-
-    const fallbackBody =
-      new FormData();
-
-    fallbackBody.append(
-      "image",
-      file
-    );
-
-    const response =
-      await fetch(
-        `https://api.imgbb.com/1/upload?key=${encodeURIComponent(
-          apiKey
-        )}`,
-        {
-          method:
-            "POST",
-
-          body:
-            fallbackBody,
-        }
-      );
-
-    const data =
-      await response
-        .json()
-        .catch(
-          () =>
-            null
-        );
-
-    if (
-      !response.ok ||
-      !data?.success ||
-      !data?.data?.url
-    ) {
-      throw new Error(
-        data?.error?.message ||
-          "Payment proof upload failed."
-      );
-    }
-
-    return String(
-      data.data.url
+    return uploadImageRemote(
+      file,
+      "investment-proof"
     );
   };
 
