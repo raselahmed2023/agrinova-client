@@ -10,12 +10,14 @@ import {
 import Link from "next/link";
 
 import {
+  CloudOff,
   CloudSun,
   HandCoins,
   Headphones,
   Home,
   ImagePlus,
   Loader2,
+  RefreshCw,
   Send,
   Sprout,
   Store,
@@ -33,12 +35,22 @@ import CommunityPostCard from "@/components/community/CommunityPostCard";
 import {
   createCommunityPost,
   getCommunityFeed,
-  uploadCommunityImage,
 } from "@/services/community.service";
+
+import {
+  getStoredLocalImage,
+  listStoredLocalImages,
+  removeStoredLocalImage,
+  retryStoredImage,
+  uploadImageWithFallback,
+  type StoredLocalImage,
+} from "@/lib/image-storage";
 
 import type {
   CommunityPost,
 } from "@/types/community";
+
+const MAX_POST_IMAGES = 4;
 
 function initials(
   name?: string | null
@@ -54,9 +66,7 @@ function initials(
 
   return parts
     .map(
-      (
-        part
-      ) =>
+      (part) =>
         part[0]
     )
     .join("")
@@ -93,6 +103,14 @@ export default function CommunityPage() {
     >([]);
 
   const [
+    localImages,
+    setLocalImages,
+  ] =
+    useState<
+      StoredLocalImage[]
+    >([]);
+
+  const [
     loading,
     setLoading,
   ] =
@@ -111,8 +129,22 @@ export default function CommunityPage() {
     useState(false);
 
   const [
+    retryingKey,
+    setRetryingKey,
+  ] =
+    useState<
+      string | null
+    >(null);
+
+  const [
     error,
     setError,
+  ] =
+    useState("");
+
+  const [
+    notice,
+    setNotice,
   ] =
     useState("");
 
@@ -134,6 +166,15 @@ export default function CommunityPage() {
   const currentUserId =
     user?.id;
 
+  const imagePurpose =
+    useMemo(
+      () =>
+        currentUserId
+          ? `community-post-${currentUserId}`
+          : "community-post-guest",
+      [currentUserId]
+    );
+
   const avatarText =
     useMemo(
       () =>
@@ -142,6 +183,11 @@ export default function CommunityPage() {
         ),
       [displayName]
     );
+
+  const totalImages =
+    images.length +
+    localImages.length;
+
 
   const load =
     useCallback(
@@ -185,6 +231,37 @@ export default function CommunityPage() {
     void load();
   }, [load]);
 
+
+  useEffect(() => {
+    if (
+      !isFarmer ||
+      !currentUserId
+    ) {
+      setLocalImages(
+        []
+      );
+
+      return;
+    }
+
+    const saved =
+      listStoredLocalImages(
+        imagePurpose
+      );
+
+    setLocalImages(
+      saved.slice(
+        0,
+        MAX_POST_IMAGES
+      )
+    );
+  }, [
+    currentUserId,
+    imagePurpose,
+    isFarmer,
+  ]);
+
+
   const uploadImage =
     async (
       file?: File
@@ -192,9 +269,19 @@ export default function CommunityPage() {
       if (
         !file ||
         uploading ||
-        images.length >=
-          4
+        !isFarmer
       ) {
+        return;
+      }
+
+      if (
+        totalImages >=
+        MAX_POST_IMAGES
+      ) {
+        setError(
+          `You can attach up to ${MAX_POST_IMAGES} images.`
+        );
+
         return;
       }
 
@@ -207,26 +294,91 @@ export default function CommunityPage() {
           ""
         );
 
-        const url =
-          await uploadCommunityImage(
-            file
+        setNotice(
+          ""
+        );
+
+        const result =
+          await uploadImageWithFallback(
+            file,
+            {
+              purpose:
+                imagePurpose,
+
+              allowLocalFallback:
+                true,
+            }
           );
 
-        setImages(
-          (
-            current
-          ) =>
-            [
+        if (
+          result.source ===
+          "remote"
+        ) {
+          setImages(
+            (current) =>
+              [
+                ...current,
+                result.url,
+              ].slice(
+                0,
+                MAX_POST_IMAGES
+              )
+          );
+
+          setNotice(
+            "Photo uploaded successfully."
+          );
+
+          return;
+        }
+
+        const stored =
+          getStoredLocalImage(
+            result.localKey
+          );
+
+        if (!stored) {
+          throw new Error(
+            "The image was saved locally but could not be restored."
+          );
+        }
+
+        setLocalImages(
+          (current) => {
+            const alreadyExists =
+              current.some(
+                (item) =>
+                  item.localKey ===
+                  stored.localKey
+              );
+
+            if (
+              alreadyExists
+            ) {
+              return current;
+            }
+
+            return [
               ...current,
-              url,
+              stored,
             ].slice(
               0,
-              4
-            )
+              MAX_POST_IMAGES
+            );
+          }
+        );
+
+        setNotice(
+          "Image server is unavailable. Your photo was saved safely in this browser. It will be retried before publishing."
         );
       } catch (
         err
       ) {
+        console.error(
+          "Community image processing failed:",
+          err
+        );
+
         setError(
           err instanceof Error
             ? err.message
@@ -238,6 +390,207 @@ export default function CommunityPage() {
         );
       }
     };
+
+  const removeRemoteImage =
+    (
+      index: number
+    ) => {
+      setImages(
+        (current) =>
+          current.filter(
+            (
+              _,
+              imageIndex
+            ) =>
+              imageIndex !==
+              index
+          )
+      );
+    };
+
+
+  const removeLocalImage =
+    (
+      localKey: string
+    ) => {
+      removeStoredLocalImage(
+        localKey
+      );
+
+      setLocalImages(
+        (current) =>
+          current.filter(
+            (item) =>
+              item.localKey !==
+              localKey
+          )
+      );
+
+      setNotice(
+        ""
+      );
+    };
+
+
+  const retryLocalImage =
+    async (
+      image:
+        StoredLocalImage
+    ) => {
+      if (
+        uploading ||
+        posting ||
+        retryingKey
+      ) {
+        return;
+      }
+
+      try {
+        setRetryingKey(
+          image.localKey
+        );
+
+        setError(
+          ""
+        );
+
+        setNotice(
+          ""
+        );
+
+        const remoteUrl =
+          await retryStoredImage(
+            image.localKey
+          );
+
+        setImages(
+          (current) =>
+            [
+              ...current,
+              remoteUrl,
+            ].slice(
+              0,
+              MAX_POST_IMAGES
+            )
+        );
+
+        setLocalImages(
+          (current) =>
+            current.filter(
+              (item) =>
+                item.localKey !==
+                image.localKey
+            )
+        );
+
+        setNotice(
+          "Photo uploaded successfully."
+        );
+      } catch (
+        err
+      ) {
+        console.error(
+          "Community local image retry failed:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Image service is still unavailable."
+        );
+      } finally {
+        setRetryingKey(
+          null
+        );
+      }
+    };
+  const uploadPendingLocalImages =
+    async () => {
+      if (
+        localImages.length ===
+        0
+      ) {
+        return [];
+      }
+
+      const uploadedUrls:
+        string[] =
+        [];
+
+      const successfulKeys:
+        string[] =
+        [];
+
+      try {
+        for (
+          const localImage of localImages
+        ) {
+          setRetryingKey(
+            localImage.localKey
+          );
+
+          const url =
+            await retryStoredImage(
+              localImage.localKey
+            );
+
+          uploadedUrls.push(
+            url
+          );
+
+          successfulKeys.push(
+            localImage.localKey
+          );
+        }
+
+        setLocalImages(
+          []
+        );
+
+        return uploadedUrls;
+      } catch (
+        err
+      ) {
+
+        if (
+          uploadedUrls.length >
+          0
+        ) {
+          setImages(
+            (current) => [
+              ...current,
+              ...uploadedUrls,
+            ].slice(
+              0,
+              MAX_POST_IMAGES
+            )
+          );
+        }
+
+        if (
+          successfulKeys.length >
+          0
+        ) {
+          setLocalImages(
+            (current) =>
+              current.filter(
+                (item) =>
+                  !successfulKeys.includes(
+                    item.localKey
+                  )
+              )
+          );
+        }
+
+        throw err;
+      } finally {
+        setRetryingKey(
+          null
+        );
+      }
+    };
+
 
   const publish =
     async (
@@ -264,20 +617,61 @@ export default function CommunityPage() {
           ""
         );
 
+        setNotice(
+          ""
+        );
+
+        let retriedUrls:
+          string[] =
+          [];
+
+        if (
+          localImages.length >
+          0
+        ) {
+          setNotice(
+            "Uploading saved photos before publishing..."
+          );
+
+          try {
+            retriedUrls =
+              await uploadPendingLocalImages();
+          } catch (
+            retryError
+          ) {
+            console.error(
+              "Unable to upload pending Community images:",
+              retryError
+            );
+
+            throw new Error(
+              "Your photo is still saved safely in this browser, but the image service is unavailable. Please retry the photo before publishing."
+            );
+          }
+        }
+
+        const finalImages =
+          [
+            ...images,
+            ...retriedUrls,
+          ].slice(
+            0,
+            MAX_POST_IMAGES
+          );
+
         const created =
           await createCommunityPost(
             {
               content:
                 content.trim(),
 
-              images,
+              images:
+                finalImages,
             }
           );
 
         setPosts(
-          (
-            current
-          ) => [
+          (current) => [
             created,
             ...current,
           ]
@@ -289,6 +683,14 @@ export default function CommunityPage() {
 
         setImages(
           []
+        );
+
+        setLocalImages(
+          []
+        );
+
+        setNotice(
+          ""
         );
       } catch (
         err
@@ -302,6 +704,10 @@ export default function CommunityPage() {
         setPosting(
           false
         );
+
+        setRetryingKey(
+          null
+        );
       }
     };
 
@@ -311,13 +717,9 @@ export default function CommunityPage() {
         string
     ) => {
       setPosts(
-        (
-          current
-        ) =>
+        (current) =>
           current.filter(
-            (
-              post
-            ) =>
+            (post) =>
               post._id !==
               postId
           )
@@ -333,10 +735,6 @@ export default function CommunityPage() {
       }}
     >
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-5 px-3 py-6 sm:px-5 lg:px-8 xl:grid-cols-[260px_minmax(0,680px)_300px] xl:justify-center">
-
-        {/* ====================================================
-            LEFT SIDEBAR
-        ===================================================== */}
 
         <aside className="hidden xl:block">
           <div className="sticky top-[90px] space-y-2">
@@ -427,9 +825,7 @@ export default function CommunityPage() {
           </div>
         </aside>
 
-        {/* ====================================================
-            CENTER FEED
-        ===================================================== */}
+
 
         <section className="min-w-0">
 
@@ -498,6 +894,7 @@ export default function CommunityPage() {
                 />
               </div>
 
+
               {images.length >
                 0 && (
                 <div
@@ -525,21 +922,15 @@ export default function CommunityPage() {
                           className="h-56 w-full object-cover"
                         />
 
+                        <div className="absolute left-2 top-2 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                          Uploaded
+                        </div>
+
                         <button
                           type="button"
                           onClick={() =>
-                            setImages(
-                              (
-                                current
-                              ) =>
-                                current.filter(
-                                  (
-                                    _,
-                                    imageIndex
-                                  ) =>
-                                    imageIndex !==
-                                    index
-                                )
+                            removeRemoteImage(
+                              index
                             )
                           }
                           aria-label="Remove image"
@@ -553,17 +944,140 @@ export default function CommunityPage() {
                 </div>
               )}
 
+
+
+              {localImages.length >
+                0 && (
+                <div className="mt-4 grid gap-2 overflow-hidden rounded-xl sm:grid-cols-2">
+                  {localImages.map(
+                    (
+                      localImage
+                    ) => {
+                      const retrying =
+                        retryingKey ===
+                        localImage.localKey;
+
+                      return (
+                        <div
+                          key={
+                            localImage.localKey
+                          }
+                          className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50"
+                        >
+                          <div className="relative">
+                            <img
+                              src={
+                                localImage.dataUrl
+                              }
+                              alt="Locally saved post upload"
+                              className="h-56 w-full object-cover"
+                            />
+
+                            <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                              <CloudOff className="h-3 w-3" />
+
+                              Local
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={
+                                retrying
+                              }
+                              onClick={() =>
+                                removeLocalImage(
+                                  localImage.localKey
+                                )
+                              }
+                              aria-label="Remove locally saved image"
+                              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/75 text-white disabled:opacity-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <div className="p-2">
+                            <button
+                              type="button"
+                              disabled={
+                                retrying ||
+                                uploading ||
+                                posting
+                              }
+                              onClick={() =>
+                                void retryLocalImage(
+                                  localImage
+                                )
+                              }
+                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {retrying ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+
+                              {retrying
+                                ? "Retrying..."
+                                : "Retry upload"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              )}
+
+
+
+              {localImages.length >
+                0 && (
+                <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-900">
+                  <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
+
+                  <span>
+                    {
+                      localImages.length
+                    }
+                    {" "}
+                    photo
+                    {localImages.length >
+                    1
+                      ? "s are"
+                      : " is"}
+                    {" "}
+                    currently saved only in this browser. AgriNova will retry uploading
+                    {localImages.length >
+                    1
+                      ? " them"
+                      : " it"}
+                    {" "}
+                    automatically when you press Post.
+                  </span>
+                </div>
+              )}
+
               <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
 
-                <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+                <label
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition ${
+                    uploading ||
+                    totalImages >=
+                      MAX_POST_IMAGES
+                      ? "cursor-not-allowed text-slate-400"
+                      : "cursor-pointer text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     className="hidden"
                     disabled={
                       uploading ||
-                      images.length >=
-                        4
+                      totalImages >=
+                        MAX_POST_IMAGES ||
+                      posting
                     }
                     onChange={(
                       event
@@ -588,6 +1102,15 @@ export default function CommunityPage() {
                   )}
 
                   Photo
+
+                  {totalImages >
+                    0 && (
+                    <span className="text-xs text-slate-400">
+                      {totalImages}
+                      /
+                      {MAX_POST_IMAGES}
+                    </span>
+                  )}
                 </label>
 
                 <div className="mx-2 h-6 w-px bg-slate-100" />
@@ -602,7 +1125,14 @@ export default function CommunityPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-black text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {posting ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+
+                      {localImages.length >
+                      0
+                        ? "Uploading & Posting..."
+                        : "Posting..."}
+                    </>
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
@@ -636,6 +1166,16 @@ export default function CommunityPage() {
             </Link>
           ) : null}
 
+
+
+          {notice && (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+              {
+                notice
+              }
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
               {
@@ -643,6 +1183,7 @@ export default function CommunityPage() {
               }
             </div>
           )}
+
 
           {loading ? (
             <div className="flex min-h-[300px] items-center justify-center rounded-xl bg-white shadow-sm">
@@ -697,9 +1238,7 @@ export default function CommunityPage() {
           )}
         </section>
 
-        {/* ====================================================
-            RIGHT SIDEBAR
-        ===================================================== */}
+
 
         <aside className="hidden xl:block">
           <div className="sticky top-[90px] space-y-4">
@@ -783,8 +1322,12 @@ function SidebarLink({
   hidden,
 }: {
   href: string;
-  icon: React.ReactNode;
+
+  icon:
+    React.ReactNode;
+
   label: string;
+
   hidden?: boolean;
 }) {
   if (
@@ -817,8 +1360,11 @@ function Topic({
   icon,
   text,
 }: {
-  icon: React.ReactNode;
-  text: string;
+  icon:
+    React.ReactNode;
+
+  text:
+    string;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-semibold text-slate-600">

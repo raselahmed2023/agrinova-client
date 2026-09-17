@@ -316,8 +316,6 @@ export default function CommunityPostCard({
           0,
       })
     );
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentUserId,
   ]);
@@ -390,9 +388,7 @@ export default function CommunityPostCard({
       );
     };
 
-  /* ============================================================
-     LIKE — OPTIMISTIC + PERSISTENT
-  ============================================================ */
+
 
   const toggleLike =
     async () => {

@@ -1,26 +1,32 @@
 "use client";
 
 import {
-  FormEvent,
+  useEffect,
   useState,
+  type FormEvent,
 } from "react";
 
 import Image from "next/image";
+
 import Link from "next/link";
 
 import {
-  AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  Clock3,
   Loader2,
   Mail,
-  Send,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 
 import {
   authClient,
 } from "@/lib/auth-client";
+
+/* ============================================================
+   PAGE
+============================================================ */
 
 export default function ForgotPasswordPage() {
   const [
@@ -30,14 +36,14 @@ export default function ForgotPasswordPage() {
     useState("");
 
   const [
-    submitting,
-    setSubmitting,
+    submitted,
+    setSubmitted,
   ] =
     useState(false);
 
   const [
-    sent,
-    setSent,
+    loading,
+    setLoading,
   ] =
     useState(false);
 
@@ -47,6 +53,157 @@ export default function ForgotPasswordPage() {
   ] =
     useState("");
 
+  const [
+    cooldown,
+    setCooldown,
+  ] =
+    useState(0);
+
+  /* ==========================================================
+     RESEND COUNTDOWN
+  ========================================================== */
+
+  useEffect(() => {
+    if (
+      cooldown <=
+      0
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setInterval(
+        () => {
+          setCooldown(
+            (
+              current
+            ) =>
+              Math.max(
+                current -
+                  1,
+                0
+              )
+          );
+        },
+        1000
+      );
+
+    return () =>
+      window.clearInterval(
+        timer
+      );
+  }, [
+    cooldown,
+  ]);
+
+  /* ==========================================================
+     SEND RESET LINK
+  ========================================================== */
+
+  const sendResetLink =
+    async () => {
+      const normalizedEmail =
+        email
+          .trim()
+          .toLowerCase();
+
+      if (
+        !normalizedEmail
+      ) {
+        setError(
+          "Enter your email address."
+        );
+
+        return false;
+      }
+
+      const validEmail =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          normalizedEmail
+        );
+
+      if (
+        !validEmail
+      ) {
+        setError(
+          "Enter a valid email address."
+        );
+
+        return false;
+      }
+
+      try {
+        setLoading(
+          true
+        );
+
+        setError(
+          ""
+        );
+
+        const {
+          error:
+            authError,
+        } =
+          await authClient
+            .requestPasswordReset(
+              {
+                email:
+                  normalizedEmail,
+
+                redirectTo:
+                  `${window.location.origin}/reset-password`,
+              }
+            );
+
+        if (
+          authError
+        ) {
+          console.error(
+            "Password reset request error:",
+            authError
+          );
+
+          setError(
+            "We could not process the request right now. Please try again."
+          );
+
+          return false;
+        }
+
+        setSubmitted(
+          true
+        );
+
+        setCooldown(
+          60
+        );
+
+        return true;
+      } catch (
+        requestError
+      ) {
+        console.error(
+          "Password reset request failed:",
+          requestError
+        );
+
+        setError(
+          "We could not process the request right now. Please try again."
+        );
+
+        return false;
+      } finally {
+        setLoading(
+          false
+        );
+      }
+    };
+
+  /* ==========================================================
+     SUBMIT
+  ========================================================== */
+
   const handleSubmit =
     async (
       event:
@@ -54,328 +211,316 @@ export default function ForgotPasswordPage() {
     ) => {
       event.preventDefault();
 
-      const cleanEmail =
-        email
-          .trim()
-          .toLowerCase();
-
-      setError("");
-
       if (
-        !cleanEmail ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-          cleanEmail
-        )
+        loading
       ) {
-        setError(
-          "Please enter a valid email address."
-        );
-
         return;
       }
 
-      try {
-        setSubmitting(
-          true
-        );
-
-        const redirectTo =
-          `${window.location.origin}/reset-password`;
-
-        const {
-          error:
-            requestError,
-        } =
-          await authClient.requestPasswordReset(
-            {
-              email:
-                cleanEmail,
-
-              redirectTo,
-            }
-          );
-
-        if (
-          requestError
-        ) {
-          
-          console.error(
-            "Password reset request failed:",
-            requestError
-          );
-
-          setError(
-            "We could not process the password reset request right now. Please try again."
-          );
-
-          return;
-        }
-
-        
-        setSent(
-          true
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "Forgot password error:",
-          err
-        );
-
-        setError(
-          "We could not process the password reset request right now. Please try again."
-        );
-      } finally {
-        setSubmitting(
-          false
-        );
-      }
+      await sendResetLink();
     };
 
-  if (sent) {
+  /* ==========================================================
+     RESEND
+  ========================================================== */
+
+  const handleResend =
+    async () => {
+      if (
+        loading ||
+        cooldown >
+          0
+      ) {
+        return;
+      }
+
+      await sendResetLink();
+    };
+
+  /* ==========================================================
+     SUCCESS VIEW
+  ========================================================== */
+
+  if (
+    submitted
+  ) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f8f6] px-4 py-8">
+
+        <div className="w-full max-w-[470px] rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] sm:p-8">
+
           <Link
             href="/"
-            className="mb-8 inline-flex"
+            className="mx-auto flex w-fit items-center justify-center rounded-xl border border-slate-100 bg-white px-3 py-1.5 shadow-sm"
           >
             <Image
               src="/AgriNova-Logo.png"
               alt="AgriNova"
-              width={145}
-              height={42}
-              priority
-              className="h-9 w-auto object-contain"
-            />
-          </Link>
-
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <CheckCircle2 className="h-7 w-7" />
-          </div>
-
-          <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
-            Check your email
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            If an AgriNova account
-            exists for{" "}
-            <span className="font-semibold text-slate-900">
-              {email.trim()}
-            </span>
-            , a password reset link
-            has been sent.
-          </p>
-
-          <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-            <p className="text-xs leading-5 text-emerald-800">
-              The link expires after
-              60 minutes. Check your
-              spam or junk folder if
-              you do not see the
-              message.
-            </p>
-          </div>
-
-          <div className="mt-7 space-y-3">
-            <Link
-              href="/login"
-              className="flex h-11 w-full items-center justify-center rounded-xl bg-[#063B2B] text-sm font-semibold text-white transition hover:bg-[#0B513D]"
-            >
-              Return to Login
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSent(
-                  false
-                );
-
-                setError(
-                  ""
-                );
-              }}
-              className="h-11 w-full rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Try another email
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen w-full bg-white">
-      <div className="relative hidden w-1/2 overflow-hidden bg-[#03231a] lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,#0b6045_0%,#03231a_55%,#021811_100%)]" />
-
-        <div className="absolute -left-24 top-24 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
-
-        <div className="relative flex h-full flex-col justify-between p-12">
-          <Link
-            href="/"
-            className="inline-flex w-fit rounded-xl bg-white px-3 py-2"
-          >
-            <Image
-              src="/AgriNova-Logo.png"
-              alt="AgriNova"
-              width={140}
-              height={42}
+              width={
+                135
+              }
+              height={
+                40
+              }
               priority
               className="h-8 w-auto object-contain"
             />
           </Link>
 
-          <div className="max-w-lg">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
+          <div className="mx-auto mt-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
 
-            <h2 className="mt-6 text-4xl font-extrabold leading-tight text-white">
-              Securely recover
-              your account.
-            </h2>
-
-            <p className="mt-4 text-sm leading-7 text-emerald-100/75">
-              Enter the email
-              address associated
-              with your AgriNova
-              account. We will send
-              a secure, time-limited
-              password reset link.
-            </p>
+            <CheckCircle2 className="h-7 w-7" />
           </div>
 
-          <p className="text-xs text-emerald-100/50">
-            AgriNova Account
-            Security
-          </p>
-        </div>
-      </div>
+          <div className="mt-5 text-center">
 
-      <div className="flex w-full items-center justify-center px-4 py-10 sm:px-8 lg:w-1/2">
-        <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <Link
-              href="/"
-            >
-              <Image
-                src="/AgriNova-Logo.png"
-                alt="AgriNova"
-                width={140}
-                height={42}
-                priority
-                className="h-9 w-auto object-contain"
-              />
-            </Link>
-          </div>
-
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#0B513D]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-
-            Back to login
-          </Link>
-
-          <div className="mt-7">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Forgot password?
+            <h1 className="text-2xl font-black tracking-tight text-slate-950">
+              Check your email
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Enter your account
-              email and we will send
-              you a password reset
-              link.
+              If an AgriNova account exists
+              for
+            </p>
+
+            <p className="mt-1 break-all text-sm font-black text-[#07583f]">
+              {email
+                .trim()
+                .toLowerCase()}
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              you will receive a password
+              reset link shortly.
+            </p>
+          </div>
+
+          <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+
+            <p className="text-xs leading-5 text-amber-800">
+              The reset link expires after
+              60 minutes. Also check your
+              spam or junk folder.
             </p>
           </div>
 
           {error && (
-            <div className="mt-6 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-
-              <span>
-                {error}
-              </span>
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+              {error}
             </div>
           )}
 
-          <form
-            onSubmit={
-              handleSubmit
+          <button
+            type="button"
+            disabled={
+              loading ||
+              cooldown >
+                0
             }
-            className="mt-7 space-y-5"
+            onClick={() =>
+              void handleResend()
+            }
+            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-700"
-              >
-                Email Address
-              </label>
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
 
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                Sending...
+              </>
+            ) : cooldown >
+              0 ? (
+              <>
+                <Clock3 className="h-4 w-4" />
 
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={
-                    email
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setEmail(
-                      event.target
-                        .value
-                    )
-                  }
-                  placeholder="you@example.com"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0B513D] focus:bg-white focus:ring-4 focus:ring-[#0B513D]/10"
-                />
-              </div>
-            </div>
+                Resend in{" "}
+                {cooldown}s
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
 
-            <button
-              type="submit"
-              disabled={
-                submitting
-              }
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#063B2B] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0B513D] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                Resend reset link
+              </>
+            )}
+          </button>
 
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(
+                false
+              );
 
-                  Send Reset Link
-                </>
-              )}
-            </button>
-          </form>
+              setCooldown(
+                0
+              );
 
-          <p className="mt-8 text-center text-xs leading-5 text-slate-400">
-            For your security,
-            AgriNova will not reveal
-            whether an email address
-            is registered.
+              setError(
+                ""
+              );
+            }}
+            className="mt-3 w-full text-center text-xs font-black text-emerald-700 hover:underline"
+          >
+            Use a different email
+          </button>
+
+          <Link
+            href="/login"
+            className="mt-5 flex items-center justify-center gap-2 text-xs font-black text-slate-500 hover:text-emerald-700"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+
+            Back to sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  /* ==========================================================
+     FORM
+  ========================================================== */
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#f5f8f6] px-4 py-8">
+
+      <div className="w-full max-w-[470px] rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] sm:p-8">
+
+        <Link
+          href="/"
+          className="flex w-fit items-center rounded-xl border border-slate-100 bg-white px-3 py-1.5 shadow-sm"
+        >
+          <Image
+            src="/AgriNova-Logo.png"
+            alt="AgriNova"
+            width={
+              135
+            }
+            height={
+              40
+            }
+            priority
+            className="h-8 w-auto object-contain"
+          />
+        </Link>
+
+        <div className="mt-7">
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+
+            <Mail className="h-5 w-5" />
+          </div>
+
+          <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-950">
+            Forgot your password?
+          </h1>
+
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Enter the email associated
+            with your AgriNova account.
+            We&apos;ll send you a secure
+            password reset link.
           </p>
         </div>
+
+        <form
+          onSubmit={
+            handleSubmit
+          }
+          className="mt-6"
+        >
+
+          <label
+            htmlFor="email"
+            className="text-xs font-black text-slate-700"
+          >
+            Email Address
+          </label>
+
+          <div className="relative mt-2">
+
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={
+                email
+              }
+              onChange={(
+                event
+              ) => {
+                setEmail(
+                  event.target.value
+                );
+
+                if (
+                  error
+                ) {
+                  setError(
+                    ""
+                  );
+                }
+              }}
+              placeholder="you@example.com"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-[#07583f] focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+            />
+          </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={
+              loading
+            }
+            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#063b2b] px-4 text-sm font-black text-white transition hover:bg-[#0b513d] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+
+                Sending...
+              </>
+            ) : (
+              <>
+                Send Reset Link
+
+                <Mail className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-5 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-3">
+
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+
+          <p className="text-[10px] leading-5 text-slate-500">
+            For security, the same response
+            is shown whether or not an
+            account exists for the email.
+          </p>
+        </div>
+
+        <Link
+          href="/login"
+          className="mt-5 flex items-center justify-center gap-2 text-xs font-black text-slate-500 hover:text-emerald-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+
+          Back to sign in
+        </Link>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,34 +1,25 @@
 import {
   apiRequest,
-  apiRequestWithMeta,
 } from "./api.client";
 
-import type {
-  AdminListMeta,
-} from "./admin.user.service";
-
-export interface AdminExpertItem {
+export interface AdminExpert {
   _id: string;
-
-  id?: string;
 
   name: string;
 
   email: string;
 
-  role: string;
+  role?: string;
 
   status: string;
 
-  specialization?:
-    | string
-    | string[];
+  phone?: string;
+
+  specialization?: string;
 
   qualification?: string;
 
   experienceYears?: number;
-
-  phone?: string;
 
   avatar?: string;
 
@@ -41,114 +32,66 @@ export interface AdminExpertItem {
   updatedAt?: string;
 }
 
-
-export type AdminExpert =
-  AdminExpertItem;
-
-export const adminExpertService = {
-  async getPendingExperts(
-    queryString?: string
-  ): Promise<{
-    data:
-      AdminExpertItem[];
-
-    meta:
-      AdminListMeta;
-  }> {
-    const result =
-      await apiRequestWithMeta<
-        AdminExpertItem[]
+export const adminExpertService =
+  {
+    /**
+     * apiRequest already unwraps:
+     *
+     * {
+     *   success: true,
+     *   data: [...]
+     * }
+     *
+     * therefore this returns AdminExpert[]
+     * directly.
+     */
+    async getPendingExperts() {
+      return apiRequest<
+        AdminExpert[]
       >(
-        "/admin/experts/pending",
-        "GET",
-        undefined,
-        queryString
+        "/admin/experts/pending"
       );
+    },
 
-    const data =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
+    async getExpertById(
+      expertId:
+        string
+    ) {
+      return apiRequest<
+        AdminExpert
+      >(
+        `/admin/experts/${expertId}`
+      );
+    },
 
-    return {
-      data,
+    async approveExpert(
+      expertId:
+        string
+    ) {
+      return apiRequest<
+        AdminExpert
+      >(
+        `/admin/experts/${expertId}/approve`,
+        "PATCH"
+      );
+    },
 
-      meta: {
-        page:
-          Number(
-            result.meta
-              ?.page ||
-              1
-          ),
-
-        limit:
-          Number(
-            result.meta
-              ?.limit ||
-              data.length ||
-              10
-          ),
-
-        total:
-          Number(
-            result.meta
-              ?.total ??
-              data.length
-          ),
-
-        totalPages:
-          Math.max(
-            Number(
-              result.meta
-                ?.totalPages ||
-                1
-            ),
-            1
-          ),
-      },
-    };
-  },
-
-  getExpertById(
-    expertId:
-      string
-  ) {
-    return apiRequest<AdminExpertItem>(
-      `/admin/experts/${encodeURIComponent(
-        expertId
-      )}`
-    );
-  },
-
-  approveExpert(
-    expertId:
-      string
-  ) {
-    return apiRequest<AdminExpertItem>(
-      `/admin/experts/${encodeURIComponent(
-        expertId
-      )}/approve`,
-      "PATCH"
-    );
-  },
-
-  rejectExpert(
-    expertId:
-      string,
-
-    reason?:
-      string
-  ) {
-    return apiRequest<AdminExpertItem>(
-      `/admin/experts/${encodeURIComponent(
-        expertId
-      )}/reject`,
-      "PATCH",
-      {
-        reason,
-      }
-    );
-  },
-};
+    async rejectExpert(
+      expertId:
+        string,
+      reason?:
+        string
+    ) {
+      return apiRequest<
+        AdminExpert
+      >(
+        `/admin/experts/${expertId}/reject`,
+        "PATCH",
+        {
+          reason:
+            reason ||
+            "",
+        }
+      );
+    },
+  };
