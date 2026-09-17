@@ -1,167 +1,702 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
 import Link from "next/link";
-import { useParams } from "next/navigation";
+
+import {
+  useParams,
+} from "next/navigation";
+
 import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
   CalendarDays,
-  CircleDollarSign,
-  Landmark,
-  Loader2,
+  CheckCircle2,
+  HandCoins,
   MapPin,
+  Percent,
   ShieldCheck,
   Sprout,
   UserRound,
   WalletCards,
 } from "lucide-react";
 
-import { useSession } from "@/lib/auth-client";
-import { getApprovedInvestmentProject } from "@/services/investment.service";
-import type { InvestmentProject } from "@/types/investment";
+import MarketplaceBackground from "@/components/marketplace/MarketplaceBackground";
 
-const formatMoney = (value: number) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
-const categoryLabel = (value: string) => value.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+import {
+  getApprovedInvestmentProject,
+} from "@/services/investment.service";
 
-export default function InvestmentProjectDetailsPage() {
-  const params = useParams<{ projectId: string }>();
-  const { data: session, isPending: sessionLoading } = useSession();
-  const [project, setProject] = useState<InvestmentProject | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+import type {
+  InvestmentProject,
+} from "@/types/investment";
+
+/* ============================================================
+   HELPERS
+============================================================ */
+
+const money = (
+  value: number
+) =>
+  `৳${Number(
+    value || 0
+  ).toLocaleString(
+    "en-BD"
+  )}`;
+
+const categoryLabel = (
+  value: string
+) =>
+  value
+    .split("_")
+    .map(
+      (word) =>
+        word
+          .charAt(0)
+          .toUpperCase() +
+        word.slice(1)
+    )
+    .join(" ");
+
+/* ============================================================
+   PAGE
+============================================================ */
+
+export default function InvestmentDetailsPage() {
+  const params =
+    useParams<{
+      projectId:
+        string;
+    }>();
+
+  const [
+    project,
+    setProject,
+  ] =
+    useState<
+      InvestmentProject | null
+    >(null);
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(true);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
 
   useEffect(() => {
-    if (!params.projectId) return;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        setProject(await getApprovedInvestmentProject(params.projectId));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Project not found");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [params.projectId]);
+    let active =
+      true;
 
-  const metrics = useMemo(() => {
-    if (!project) return { progress: 0, remaining: 0 };
-    const goal = Math.max(1, Number(project.requiredInvestment || 1));
-    const funded = Math.max(0, Number(project.fundedAmount || 0));
-    return { progress: Math.min(100, Math.round((funded / goal) * 100)), remaining: Math.max(0, goal - funded) };
-  }, [project]);
+    const load =
+      async () => {
+        try {
+          setLoading(true);
 
-  if (loading) return <main className="flex min-h-[65vh] items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-emerald-700" /></main>;
+          const data =
+            await getApprovedInvestmentProject(
+              params.projectId
+            );
 
-  if (error || !project) {
+          if (
+            active
+          ) {
+            setProject(
+              data
+            );
+          }
+        } catch (
+          err
+        ) {
+          if (
+            active
+          ) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Project unavailable."
+            );
+          }
+        } finally {
+          if (
+            active
+          ) {
+            setLoading(false);
+          }
+        }
+      };
+
+    void load();
+
+    return () => {
+      active =
+        false;
+    };
+  }, [
+    params.projectId,
+  ]);
+
+  if (
+    loading
+  ) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-24">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
-          <p className="font-bold text-red-800">{error || "Project not found"}</p>
-          <Link href="/investment" className="mt-5 inline-flex rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white">Back to projects</Link>
+      <MarketplaceBackground>
+        <div className="flex min-h-[60vh] items-center justify-center">
+
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-emerald-700" />
         </div>
-      </main>
+      </MarketplaceBackground>
     );
   }
 
-  const role = String(session?.user?.role || "").toUpperCase();
-  const currentUserId = String(session?.user?.id || "");
-  const isOwner = Boolean(currentUserId && currentUserId === String(project.farmerId));
-  const canApply = role === "FARMER" && !isOwner && project.fundingStatus === "OPEN" && metrics.remaining > 0;
-  const investHref = `/investment/${project._id}/invest`;
+  if (
+    !project
+  ) {
+    return (
+      <MarketplaceBackground>
+        <div className="mx-auto max-w-xl px-4 py-20 text-center">
+
+          <p className="font-semibold text-red-700">
+            {error ||
+              "Project not found."}
+          </p>
+
+          <Link
+            href="/investment"
+            className="mt-5 inline-flex rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white"
+          >
+            Back
+          </Link>
+        </div>
+      </MarketplaceBackground>
+    );
+  }
+
+  const funded =
+    Number(
+      project.fundedAmount ||
+        0
+    );
+
+  const goal =
+    Number(
+      project.requiredInvestment ||
+        0
+    );
+
+  const roi =
+    Number(
+      project.expectedReturnPercent ||
+        0
+    );
+
+  const remaining =
+    Math.max(
+      goal -
+        funded,
+      0
+    );
+
+  const progress =
+    goal >
+    0
+      ? Math.min(
+          Math.round(
+            funded /
+              goal *
+              100
+          ),
+          100
+        )
+      : 0;
+
+  const exampleProfit =
+    Number(
+      (
+        project.minimumInvestment *
+        (
+          roi /
+          100
+        )
+      ).toFixed(
+        2
+      )
+    );
+
+  const exampleTotal =
+    project.minimumInvestment +
+    exampleProfit;
+
+  const location =
+    [
+      project.address,
+      project.upazila,
+      project.district,
+      project.division,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
   return (
-    <main className="min-h-screen bg-[#f6f8f6] pb-16">
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/investment" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-emerald-700"><ArrowLeft className="h-4 w-4" /> All investment projects</Link>
-        </div>
-      </section>
+    <MarketplaceBackground>
+      <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-5 lg:px-6">
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="space-y-7">
-            <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="relative h-[300px] bg-gradient-to-br from-emerald-100 via-lime-50 to-white sm:h-[430px]">
-                {project.projectImage ? <img src={project.projectImage} alt={project.projectName} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><Sprout className="h-24 w-24 text-emerald-700/25" /></div>}
-                <div className="absolute bottom-5 left-5 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/95 px-4 py-2 text-xs font-black text-emerald-800 shadow">{categoryLabel(project.category)}</span>
-                  <span className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-black text-white shadow">Admin approved</span>
+        <Link
+          href="/investment"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-xs font-black text-slate-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+
+          Investment Projects
+        </Link>
+
+        {/* =================================================
+            HERO
+        ================================================= */}
+
+        <section className="mt-3 overflow-hidden rounded-[22px] border border-white/80 bg-white/95 shadow-[0_18px_55px_-35px_rgba(15,23,42,0.45)]">
+
+          <div className="grid lg:grid-cols-[360px_1fr]">
+
+            {/* SHORT IMAGE */}
+
+            <div className="relative h-[220px] overflow-hidden bg-emerald-50 sm:h-[250px] lg:h-auto lg:min-h-[340px]">
+
+              {project.projectImage ? (
+                <img
+                  src={
+                    project.projectImage
+                  }
+                  alt={
+                    project.projectName
+                  }
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+
+                  <Sprout className="h-12 w-12 text-emerald-400" />
                 </div>
-              </div>
-              <div className="p-6 sm:p-8">
-                <p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">{project.projectCode}</p>
-                <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{project.projectName}</h1>
-                <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
-                  <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" /> {project.upazila}, {project.district}, {project.division}</span>
-                  <span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4" /> {project.farmerName || "AgriNova Farmer"}</span>
-                  <span className="inline-flex items-center gap-2"><Landmark className="h-4 w-4" /> {project.farmName || "Farm project"}</span>
-                </div>
-              </div>
-            </section>
+              )}
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-xl font-black text-slate-950">Project overview</h2>
-              <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{project.description}</p>
-              <div className="my-7 h-px bg-slate-100" />
-              <h3 className="font-black text-slate-900">How the funds will be used</h3>
-              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{project.useOfFunds}</p>
-            </section>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                [CalendarDays, "Duration", `${project.durationMonths} months`],
-                [WalletCards, "Minimum investment", formatMoney(project.minimumInvestment)],
-                [CircleDollarSign, "Funding goal", formatMoney(project.requiredInvestment)],
-                [CircleDollarSign, "Already funded", formatMoney(project.fundedAmount)],
-              ].map(([Icon, label, value]) => {
-                const MetricIcon = Icon as typeof CalendarDays;
-                return <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5"><MetricIcon className="h-5 w-5 text-emerald-700" /><p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">{String(label)}</p><p className="mt-1 text-lg font-black text-slate-900">{String(value)}</p></div>;
-              })}
-            </section>
-
-            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-950">
-              <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-black">Important investment notice</p><p className="mt-1">Admin approval verifies the submitted project and platform workflow. Agricultural and business investments still involve risk; review the project information before committing funds.</p></div></div>
-            </section>
-          </div>
-
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
-              <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-500">Funding progress</p><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{project.fundingStatus}</span></div>
-              <p className="mt-3 text-3xl font-black text-slate-950">{formatMoney(project.fundedAmount)}</p>
-              <p className="mt-1 text-sm text-slate-500">raised of {formatMoney(project.requiredInvestment)}</p>
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${metrics.progress}%` }} /></div>
-              <div className="mt-2 flex justify-between text-xs font-bold text-slate-400"><span>{metrics.progress}% funded</span><span>{formatMoney(metrics.remaining)} left</span></div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Minimum investment</p><p className="mt-1 font-black text-slate-900">{formatMoney(project.minimumInvestment)}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Duration</p><p className="mt-1 font-black text-slate-900">{project.durationMonths} months</p></div>
-              </div>
-
-              <div className="mt-6">
-                {sessionLoading ? (
-                  <div className="h-12 animate-pulse rounded-2xl bg-slate-100" />
-                ) : !session?.user ? (
-                  <Link href={`/login?redirect=${encodeURIComponent(investHref)}`} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-3.5 text-sm font-black text-white hover:bg-emerald-800">Sign in to invest <ArrowRight className="h-4 w-4" /></Link>
-                ) : isOwner ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center text-sm font-bold text-amber-800">This is your project. You cannot invest in your own farm project.</div>
-                ) : role !== "FARMER" ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-600">Investment applications are currently available to farmer accounts.</div>
-                ) : project.fundingStatus !== "OPEN" || metrics.remaining <= 0 ? (
-                  <div className="rounded-2xl bg-slate-100 p-4 text-center text-sm font-bold text-slate-600">This project is no longer accepting investments.</div>
-                ) : canApply ? (
-                  <Link href={investHref} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-3.5 text-sm font-black text-white hover:bg-emerald-800">Apply to invest <ArrowRight className="h-4 w-4" /></Link>
-                ) : null}
-              </div>
-
-              <div className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-400"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Payment is not collected during application. Admin reviews your investment request first.</div>
+              <p className="absolute bottom-4 left-4 font-mono text-[10px] text-white/90">
+                {
+                  project.projectCode
+                }
+              </p>
             </div>
+
+            {/* INFO */}
+
+            <div className="p-5 sm:p-6">
+
+              <div className="flex flex-wrap gap-2">
+
+                <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-black uppercase text-emerald-700">
+
+                  {categoryLabel(
+                    project.category
+                  )}
+                </span>
+
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1.5 text-[9px] font-black uppercase text-emerald-700">
+
+                  <BadgeCheck className="h-3 w-3" />
+
+                  Approved
+                </span>
+              </div>
+
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+
+                {
+                  project.projectName
+                }
+              </h1>
+
+              <div className="mt-2 flex items-start gap-2 text-xs text-slate-500">
+
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
+
+                {
+                  location
+                }
+              </div>
+
+              {/* TERMS */}
+
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+
+                <InfoStat
+                  label="Funding Goal"
+                  value={
+                    money(
+                      goal
+                    )
+                  }
+                />
+
+                <InfoStat
+                  label="Minimum"
+                  value={
+                    money(
+                      project.minimumInvestment
+                    )
+                  }
+                />
+
+                <InfoStat
+                  label="Term"
+                  value={`${project.durationMonths} months`}
+                />
+
+                <InfoStat
+                  label="Projected ROI"
+                  value={`${roi}%`}
+                  highlight
+                />
+              </div>
+
+              {/* ROI EXAMPLE */}
+
+              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+
+                <div className="flex items-center gap-2">
+
+                  <Percent className="h-4 w-4 text-emerald-700" />
+
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+                    Projected Return Example
+                  </p>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-3">
+
+                  <ReturnItem
+                    label="Investment"
+                    value={
+                      money(
+                        project.minimumInvestment
+                      )
+                    }
+                  />
+
+                  <ReturnItem
+                    label="Profit"
+                    value={`+${money(
+                      exampleProfit
+                    )}`}
+                    highlight
+                  />
+
+                  <ReturnItem
+                    label="Total Return"
+                    value={
+                      money(
+                        exampleTotal
+                      )
+                    }
+                  />
+                </div>
+
+                <p className="mt-3 text-[9px] leading-4 text-slate-400">
+                  Based on the projected
+                  ROI for the full investment
+                  term. Returns are projections,
+                  not guarantees.
+                </p>
+              </div>
+
+              {/* PROGRESS */}
+
+              <div className="mt-4">
+
+                <div className="flex justify-between text-[9px] font-bold text-slate-400">
+
+                  <span>
+                    {money(
+                      funded
+                    )} raised
+                  </span>
+
+                  <span>
+                    {progress}%
+                  </span>
+                </div>
+
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+
+                  <div
+                    className="h-full rounded-full bg-emerald-600"
+                    style={{
+                      width:
+                        `${progress}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="mt-1 text-[9px] text-slate-400">
+                  Remaining{" "}
+                  {money(
+                    remaining
+                  )}
+                </p>
+              </div>
+
+              {/* CTA */}
+
+              <Link
+                href={`/investment/${project._id}/invest`}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#07583f] px-5 py-3 text-sm font-black text-white hover:bg-[#064733]"
+              >
+                Invest Now
+
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* =================================================
+            LOWER CONTENT
+        ================================================= */}
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_300px]">
+
+          <section className="rounded-[22px] border border-white/80 bg-white/95 p-5 sm:p-6">
+
+            <h2 className="text-lg font-black text-slate-950">
+              About This Project
+            </h2>
+
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
+              {
+                project.description
+              }
+            </p>
+
+            <div className="mt-6 border-t border-slate-100 pt-5">
+
+              <h3 className="font-black text-slate-950">
+                Use of Investment
+              </h3>
+
+              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-600">
+                {
+                  project.useOfFunds
+                }
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+
+              <div>
+
+                <p className="text-xs font-black text-emerald-900">
+                  Admin reviewed project
+                </p>
+
+                <p className="mt-1 text-[10px] leading-5 text-emerald-700">
+                  This project was reviewed
+                  before being listed publicly.
+                  Projected ROI is not a
+                  guaranteed return.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <aside className="h-fit rounded-[22px] border border-white/80 bg-white/95 p-4">
+
+            <h3 className="text-sm font-black text-slate-900">
+              Project Summary
+            </h3>
+
+            <div className="mt-3 divide-y divide-slate-100">
+
+              <SummaryRow
+                label="Farmer"
+                value={
+                  project.farmerName ||
+                  "AgriNova Farmer"
+                }
+              />
+
+              <SummaryRow
+                label="Category"
+                value={
+                  categoryLabel(
+                    project.category
+                  )
+                }
+              />
+
+              <SummaryRow
+                label="Funding Goal"
+                value={
+                  money(
+                    goal
+                  )
+                }
+              />
+
+              <SummaryRow
+                label="Funded"
+                value={
+                  money(
+                    funded
+                  )
+                }
+              />
+
+              <SummaryRow
+                label="Minimum"
+                value={
+                  money(
+                    project.minimumInvestment
+                  )
+                }
+              />
+
+              <SummaryRow
+                label="Term"
+                value={`${project.durationMonths} months`}
+              />
+
+              <SummaryRow
+                label="Projected ROI"
+                value={`${roi}%`}
+              />
+            </div>
+
+            <Link
+              href={`/investment/${project._id}/invest`}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-xs font-black text-emerald-800"
+            >
+              Start Investment
+
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </aside>
         </div>
-      </div>
-    </main>
+      </main>
+    </MarketplaceBackground>
+  );
+}
+
+/* ============================================================
+   COMPONENTS
+============================================================ */
+
+function InfoStat({
+  label,
+  value,
+  highlight = false,
+}: {
+  label:
+    string;
+
+  value:
+    string;
+
+  highlight?:
+    boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-3 ${
+        highlight
+          ? "border-emerald-200 bg-emerald-50"
+          : "border-slate-100 bg-slate-50"
+      }`}
+    >
+
+      <p className="text-[8px] font-black uppercase text-slate-400">
+        {label}
+      </p>
+
+      <p
+        className={`mt-1 text-xs font-black ${
+          highlight
+            ? "text-emerald-800"
+            : "text-slate-900"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ReturnItem({
+  label,
+  value,
+  highlight = false,
+}: {
+  label:
+    string;
+
+  value:
+    string;
+
+  highlight?:
+    boolean;
+}) {
+  return (
+    <div>
+
+      <p className="text-[8px] font-black uppercase text-slate-400">
+        {label}
+      </p>
+
+      <p
+        className={`mt-1 text-xs font-black ${
+          highlight
+            ? "text-emerald-700"
+            : "text-slate-900"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+}: {
+  label:
+    string;
+
+  value:
+    string;
+}) {
+  return (
+    <div className="py-3 first:pt-0">
+
+      <p className="text-[8px] font-black uppercase text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xs font-black text-slate-800">
+        {value}
+      </p>
+    </div>
   );
 }

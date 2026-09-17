@@ -3,6 +3,7 @@
 import {
   use,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -16,8 +17,10 @@ import {
   ArrowLeft,
   CalendarDays,
   Camera,
+  CloudOff,
   Loader2,
   MapPin,
+  RefreshCw,
   Users,
 } from "lucide-react";
 
@@ -30,8 +33,16 @@ import CommunityPostCard from "@/components/community/CommunityPostCard";
 import {
   getCommunityFarmerProfile,
   updateMyCommunityProfile,
-  uploadCommunityImage,
 } from "@/services/community.service";
+
+import {
+  getStoredLocalImage,
+  listStoredLocalImages,
+  removeStoredLocalImage,
+  retryStoredImage,
+  uploadImageWithFallback,
+  type StoredLocalImage,
+} from "@/lib/image-storage";
 
 import type {
   CommunityPost,
@@ -39,17 +50,14 @@ import type {
 } from "@/types/community";
 
 function initials(
-  name:
-    string
+  name: string
 ) {
   return name
     .trim()
     .split(/\s+/)
     .filter(Boolean)
     .map(
-      (
-        word
-      ) =>
+      (word) =>
         word[0]
     )
     .join("")
@@ -102,10 +110,31 @@ export default function CommunityFarmerProfilePage({
     useState(false);
 
   const [
+    retrying,
+    setRetrying,
+  ] =
+    useState(false);
+
+  const [
     error,
     setError,
   ] =
     useState("");
+
+  const [
+    notice,
+    setNotice,
+  ] =
+    useState("");
+
+
+  const [
+    localAvatar,
+    setLocalAvatar,
+  ] =
+    useState<
+      StoredLocalImage | null
+    >(null);
 
   const role =
     String(
@@ -129,6 +158,18 @@ export default function CommunityFarmerProfilePage({
             farmerId
           )
     );
+
+ 
+  const imagePurpose =
+    useMemo(
+      () =>
+        userId
+          ? `community-profile-${userId}`
+          : "community-profile",
+      [userId]
+    );
+
+
 
   useEffect(() => {
     if (
@@ -163,6 +204,8 @@ export default function CommunityFarmerProfilePage({
     farmerId,
     router,
   ]);
+
+  
 
   useEffect(() => {
     if (
@@ -237,14 +280,113 @@ export default function CommunityFarmerProfilePage({
     isFarmer,
   ]);
 
+
+  useEffect(() => {
+    if (
+      !isOwnProfile ||
+      !userId
+    ) {
+      setLocalAvatar(
+        null
+      );
+
+      return;
+    }
+
+    const saved =
+      listStoredLocalImages(
+        imagePurpose
+      );
+
+    if (
+      saved.length ===
+      0
+    ) {
+      setLocalAvatar(
+        null
+      );
+
+      return;
+    }
+
+    const newest =
+      saved[
+        saved.length -
+          1
+      ];
+
+    for (
+      const item of saved
+    ) {
+      if (
+        item.localKey !==
+        newest.localKey
+      ) {
+        removeStoredLocalImage(
+          item.localKey
+        );
+      }
+    }
+
+    setLocalAvatar(
+      newest
+    );
+
+    setNotice(
+      "Your selected profile photo is saved in this browser and is waiting to be uploaded."
+    );
+  }, [
+    imagePurpose,
+    isOwnProfile,
+    userId,
+  ]);
+
+
+  const applyRemoteAvatar =
+    (
+      avatar: string
+    ) => {
+      setData(
+        (
+          current
+        ) =>
+          current
+            ? {
+                ...current,
+
+                profile: {
+                  ...current.profile,
+
+                  avatar,
+                },
+              }
+            : current
+      );
+
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "agrinova:profile-updated",
+
+          {
+            detail: {
+              avatar,
+            },
+          }
+        )
+      );
+    };
+
+
   const changePhoto =
     async (
-      file?:
-        File
+      file?: File
     ) => {
       if (
         !file ||
-        !isOwnProfile
+        !isOwnProfile ||
+        uploading ||
+        retrying
       ) {
         return;
       }
@@ -258,55 +400,119 @@ export default function CommunityFarmerProfilePage({
           ""
         );
 
-        const avatar =
-          await uploadCommunityImage(
-            file
-          );
-
-        const profile =
-          await updateMyCommunityProfile(
-            {
-              avatar,
-            }
-          );
-
-        setData(
-          (
-            current
-          ) =>
-            current
-              ? {
-                  ...current,
-
-                  profile: {
-                    ...current.profile,
-
-                    avatar:
-                      profile.avatar,
-                  },
-                }
-              : current
+        setNotice(
+          ""
         );
 
-        window.dispatchEvent(
-          new CustomEvent(
-            "agrinova:profile-updated",
-
+     
+        const result =
+          await uploadImageWithFallback(
+            file,
             {
-              detail: {
-                avatar:
-                  profile.avatar,
-              },
+              purpose:
+                imagePurpose,
+
+              allowLocalFallback:
+                true,
             }
-          )
+          );
+
+    
+
+        if (
+          result.source ===
+          "remote"
+        ) {
+          const profile =
+            await updateMyCommunityProfile(
+              {
+                avatar:
+                  result.url,
+              }
+            );
+
+        
+          const oldFallbacks =
+            listStoredLocalImages(
+              imagePurpose
+            );
+
+          for (
+            const item of oldFallbacks
+          ) {
+            removeStoredLocalImage(
+              item.localKey
+            );
+          }
+
+          setLocalAvatar(
+            null
+          );
+
+          applyRemoteAvatar(
+            profile.avatar ||
+              result.url
+          );
+
+          setNotice(
+            "Profile photo updated successfully."
+          );
+
+          return;
+        }
+
+
+
+        const stored =
+          getStoredLocalImage(
+            result.localKey
+          );
+
+        if (
+          !stored
+        ) {
+          throw new Error(
+            "The photo was saved locally but could not be restored."
+          );
+        }
+
+        const existing =
+          listStoredLocalImages(
+            imagePurpose
+          );
+
+        for (
+          const item of existing
+        ) {
+          if (
+            item.localKey !==
+            stored.localKey
+          ) {
+            removeStoredLocalImage(
+              item.localKey
+            );
+          }
+        }
+
+        setLocalAvatar(
+          stored
+        );
+
+        setNotice(
+          "Image server is temporarily unavailable. Your new profile photo is saved safely in this browser. Use Retry Upload when the image service is available."
         );
       } catch (
         err
       ) {
+        console.error(
+          "Community profile image update failed:",
+          err
+        );
+
         setError(
           err instanceof Error
             ? err.message
-            : "Could not update profile photo"
+            : "Could not update profile photo."
         );
       } finally {
         setUploading(
@@ -314,6 +520,111 @@ export default function CommunityFarmerProfilePage({
         );
       }
     };
+
+
+
+  const retryLocalAvatar =
+    async () => {
+      if (
+        !localAvatar ||
+        retrying ||
+        uploading ||
+        !isOwnProfile
+      ) {
+        return;
+      }
+
+      try {
+        setRetrying(
+          true
+        );
+
+        setError(
+          ""
+        );
+
+        setNotice(
+          "Retrying profile photo upload..."
+        );
+
+        
+        const remoteUrl =
+          await retryStoredImage(
+            localAvatar.localKey
+          );
+
+       
+        const profile =
+          await updateMyCommunityProfile(
+            {
+              avatar:
+                remoteUrl,
+            }
+          );
+
+        setLocalAvatar(
+          null
+        );
+
+        applyRemoteAvatar(
+          profile.avatar ||
+            remoteUrl
+        );
+
+        setNotice(
+          "Profile photo uploaded and saved successfully."
+        );
+      } catch (
+        err
+      ) {
+        console.error(
+          "Community avatar retry failed:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Image service is still unavailable."
+        );
+
+        setNotice(
+          ""
+        );
+      } finally {
+        setRetrying(
+          false
+        );
+      }
+    };
+
+ 
+
+  const removeLocalAvatar =
+    () => {
+      if (
+        !localAvatar
+      ) {
+        return;
+      }
+
+      removeStoredLocalImage(
+        localAvatar.localKey
+      );
+
+      setLocalAvatar(
+        null
+      );
+
+      setNotice(
+        ""
+      );
+
+      setError(
+        ""
+      );
+    };
+
 
   if (
     isPending ||
@@ -328,7 +639,11 @@ export default function CommunityFarmerProfilePage({
     );
   }
 
-  if (!data) {
+  
+
+  if (
+    !data
+  ) {
     return (
       <main className="min-h-screen bg-[#f0f2f5]">
         <div className="mx-auto max-w-3xl px-4 py-10">
@@ -351,6 +666,12 @@ export default function CommunityFarmerProfilePage({
     );
   }
 
+
+  const displayedAvatar =
+    localAvatar?.dataUrl ||
+    data.profile.avatar ||
+    "";
+
   return (
     <main
       className="min-h-screen bg-cover bg-center bg-fixed"
@@ -370,6 +691,7 @@ export default function CommunityFarmerProfilePage({
           Back to Community
         </Link>
 
+
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
             {
@@ -377,6 +699,23 @@ export default function CommunityFarmerProfilePage({
             }
           </div>
         )}
+
+
+        {notice && (
+          <div
+            className={`mb-4 rounded-xl border px-4 py-3 text-sm font-bold ${
+              localAvatar
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : "border-emerald-200 bg-emerald-50 text-emerald-800"
+            }`}
+          >
+            {
+              notice
+            }
+          </div>
+        )}
+
+
 
         <section className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
@@ -394,13 +733,17 @@ export default function CommunityFarmerProfilePage({
 
               <div className="relative">
 
-                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-emerald-100 text-2xl font-black text-emerald-800 shadow-md">
-                  {data.profile
-                    .avatar ? (
+                <div
+                  className={`flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] bg-emerald-100 text-2xl font-black text-emerald-800 shadow-md ${
+                    localAvatar
+                      ? "border-amber-400"
+                      : "border-white"
+                  }`}
+                >
+                  {displayedAvatar ? (
                     <img
                       src={
-                        data.profile
-                          .avatar
+                        displayedAvatar
                       }
                       alt={
                         data.profile
@@ -416,15 +759,34 @@ export default function CommunityFarmerProfilePage({
                   )}
                 </div>
 
-                {isOwnProfile && (
-                  <label className="absolute bottom-1 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-slate-100 text-slate-700 shadow transition hover:bg-slate-200">
+                {/* LOCAL BADGE */}
 
+                {localAvatar && (
+                  <div className="absolute -left-1 bottom-1 flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow">
+                    <CloudOff className="h-3 w-3" />
+
+                    Local
+                  </div>
+                )}
+
+                {/* CHANGE PHOTO */}
+
+                {isOwnProfile && (
+                  <label
+                    className={`absolute bottom-1 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-slate-700 shadow transition ${
+                      uploading ||
+                      retrying
+                        ? "cursor-not-allowed opacity-70"
+                        : "cursor-pointer hover:bg-slate-200"
+                    }`}
+                  >
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
                       className="hidden"
                       disabled={
-                        uploading
+                        uploading ||
+                        retrying
                       }
                       onChange={(
                         event
@@ -452,6 +814,49 @@ export default function CommunityFarmerProfilePage({
                 )}
               </div>
             </div>
+
+
+            {isOwnProfile &&
+              localAvatar && (
+                <div className="mt-4 flex flex-wrap gap-2">
+
+                  <button
+                    type="button"
+                    disabled={
+                      retrying ||
+                      uploading
+                    }
+                    onClick={() =>
+                      void retryLocalAvatar()
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {retrying ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+
+                    {retrying
+                      ? "Retrying..."
+                      : "Retry Upload"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      retrying ||
+                      uploading
+                    }
+                    onClick={
+                      removeLocalAvatar
+                    }
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cancel New Photo
+                  </button>
+                </div>
+              )}
 
             <h1 className="mt-4 text-2xl font-black text-slate-950">
               {
@@ -512,6 +917,8 @@ export default function CommunityFarmerProfilePage({
             </div>
           </div>
         </section>
+
+     
 
         <div className="space-y-4">
           {data.posts.map(

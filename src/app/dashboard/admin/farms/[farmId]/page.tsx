@@ -12,24 +12,26 @@ import {
 
 import {
   ArrowLeft,
-  Calendar,
+  CalendarDays,
   Layers,
+  Loader2,
+  Mail,
   MapPin,
+  Sprout,
   Tractor,
-  UserRound,
 } from "lucide-react";
 
 import {
-  adminFarmService,
-  type AdminFarmItem,
+  adminService,
+} from "@/services/admin.service";
+
+import type {
+  AdminFarm,
 } from "@/services/admin.farm.service";
 
 export default function AdminFarmDetailsPage() {
   const params =
-    useParams<{
-      farmId:
-        string;
-    }>();
+    useParams();
 
   const router =
     useRouter();
@@ -37,7 +39,7 @@ export default function AdminFarmDetailsPage() {
   const farmId =
     String(
       params.farmId ||
-        ""
+      ""
     );
 
   const [
@@ -45,7 +47,7 @@ export default function AdminFarmDetailsPage() {
     setFarm,
   ] =
     useState<
-      AdminFarmItem | null
+      AdminFarm | null
     >(null);
 
   const [
@@ -61,206 +63,318 @@ export default function AdminFarmDetailsPage() {
     useState("");
 
   useEffect(() => {
-    if (!farmId) {
+    if (
+      !farmId
+    ) {
       return;
     }
 
-    adminFarmService
-      .getAdminFarmById(
-        farmId
-      )
-      .then(
-        setFarm
-      )
-      .catch(
-        (
-          err:
-            unknown
-        ) =>
+    let active =
+      true;
+
+    const load =
+      async () => {
+        try {
+          setLoading(
+            true
+          );
+
           setError(
-            err instanceof
-              Error
-              ? err.message
-              : "Failed to load farm."
-          )
-      )
-      .finally(() =>
-        setLoading(
-          false
-        )
-      );
-  }, [farmId]);
+            ""
+          );
 
-  if (loading) {
-    return (
-      <div className="p-12 text-center text-sm text-slate-400">
-        Loading farm
-        details...
-      </div>
-    );
-  }
+          /**
+           * apiRequest already returns the Farm object.
+           */
+          const result =
+            await adminService
+              .getAdminFarmById(
+                farmId
+              );
 
-  if (!farm) {
-    return (
-      <div className="space-y-4 p-12 text-center">
-        <p className="text-slate-500">
-          {error ||
-            "Farm not found."}
-        </p>
-
-        <button
-          type="button"
-          onClick={() =>
-            router.back()
+          if (
+            active
+          ) {
+            setFarm(
+              result
+            );
           }
-          className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
-        >
-          Go Back
-        </button>
+        } catch (
+          err
+        ) {
+          if (
+            active
+          ) {
+            setError(
+              err instanceof
+                Error
+                ? err.message
+                : "Unable to load farm."
+            );
+
+            setFarm(
+              null
+            );
+          }
+        } finally {
+          if (
+            active
+          ) {
+            setLoading(
+              false
+            );
+          }
+        }
+      };
+
+    void load();
+
+    return () => {
+      active =
+        false;
+    };
+  }, [
+    farmId,
+  ]);
+
+  if (
+    loading
+  ) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+
+        <Loader2 className="h-7 w-7 animate-spin text-emerald-700" />
       </div>
     );
   }
 
-  const location =
-    [
-      farm.location,
-      farm.upazila,
-      farm.district,
-      farm.division,
-    ]
-      .filter(
-        Boolean
-      )
-      .join(", ");
+  if (
+    !farm
+  ) {
+    return (
+      <div className="mx-auto max-w-3xl p-8 text-center">
+
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+
+          <p className="font-bold text-red-700">
+            {error ||
+              "Farm not found."}
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              router.back()
+            }
+            className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 lg:p-8">
+    <main className="mx-auto max-w-5xl space-y-5 p-5 sm:p-6 lg:p-8">
+
       <button
         type="button"
         onClick={() =>
-          router.back()
+          router.push(
+            "/dashboard/admin/farms"
+          )
         }
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
       >
         <ArrowLeft className="h-4 w-4" />
 
         Back to Farms
       </button>
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
-      <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-        <div className="flex flex-col justify-between gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {farm.name}
+        <div className="relative h-56 bg-emerald-950">
+
+          {farm.coverImage ? (
+            <>
+              <img
+                src={
+                  farm.coverImage
+                }
+                alt={
+                  farm.name
+                }
+                className="h-full w-full object-cover"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+
+              <Tractor className="h-14 w-14 text-white/30" />
+            </div>
+          )}
+
+          <div className="absolute bottom-5 left-6">
+
+            <h1 className="text-2xl font-black text-white">
+              {
+                farm.name
+              }
             </h1>
 
-            <p className="mt-1 flex items-center gap-1 text-sm text-slate-500">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
+
               <MapPin className="h-4 w-4" />
 
-              {location ||
+              {[
+                farm.upazila,
+                farm.district,
+                farm.division,
+              ]
+                .filter(
+                  Boolean
+                )
+                .join(
+                  ", "
+                ) ||
                 "Location not specified"}
             </p>
           </div>
+        </div>
 
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <Tractor className="h-6 w-6" />
+        <div className="p-6 sm:p-8">
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+            <InfoCard
+              icon={
+                <Tractor className="h-4 w-4" />
+              }
+              label="Farm Type"
+              value={
+                farm.farmType ||
+                "N/A"
+              }
+            />
+
+            <InfoCard
+              icon={
+                <Layers className="h-4 w-4" />
+              }
+              label="Land / Water Area"
+              value={
+                farm.landArea !=
+                null
+                  ? `${farm.landArea} ${farm.unit || ""}`
+                  : "N/A"
+              }
+            />
+
+            <InfoCard
+              icon={
+                <Sprout className="h-4 w-4" />
+              }
+              label="Soil Type"
+              value={
+                farm.soilType ||
+                "N/A"
+              }
+            />
+
+            <InfoCard
+              icon={
+                <Mail className="h-4 w-4" />
+              }
+              label="Farmer"
+              value={
+                farm.farmerEmail ||
+                "N/A"
+              }
+            />
+
+            <InfoCard
+              icon={
+                <CalendarDays className="h-4 w-4" />
+              }
+              label="Registered"
+              value={
+                farm.createdAt
+                  ? new Date(
+                      farm.createdAt
+                    ).toLocaleString()
+                  : "N/A"
+              }
+            />
+
+            <InfoCard
+              icon={
+                <Tractor className="h-4 w-4" />
+              }
+              label="Status"
+              value={
+                farm.status ||
+                "Active"
+              }
+            />
           </div>
+
+          {farm.description && (
+            <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                Description
+              </p>
+
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                {
+                  farm.description
+                }
+              </p>
+            </div>
+          )}
         </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Tile
-            icon={
-              <Layers className="h-3.5 w-3.5" />
-            }
-            label="Land Area"
-            value={`${farm.landArea ?? "N/A"} ${
-              farm.unit || ""
-            }`}
-          />
-
-          <Tile
-            label="Soil Type"
-            value={
-              farm.soilType ||
-              "N/A"
-            }
-          />
-
-          <Tile
-            label="Farm Status"
-            value={
-              farm.status ||
-              "N/A"
-            }
-          />
-
-          <Tile
-            icon={
-              <UserRound className="h-3.5 w-3.5" />
-            }
-            label="Farmer"
-            value={
-              farm.farmerName ||
-              farm.farmerId ||
-              "N/A"
-            }
-          />
-
-          <Tile
-            icon={
-              <MapPin className="h-3.5 w-3.5" />
-            }
-            label="District"
-            value={
-              farm.district ||
-              "N/A"
-            }
-          />
-
-          <Tile
-            icon={
-              <Calendar className="h-3.5 w-3.5" />
-            }
-            label="Registered Date"
-            value={
-              farm.createdAt
-                ? new Date(
-                    farm.createdAt
-                  ).toLocaleString()
-                : "N/A"
-            }
-          />
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 
-function Tile({
+function InfoCard({
+  icon,
   label,
   value,
-  icon,
 }: {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
+  icon:
+    React.ReactNode;
+
+  label:
+    string;
+
+  value:
+    string;
 }) {
   return (
-    <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-4">
-      <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        {icon}
+    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
 
-        {label}
-      </span>
+      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
 
-      <p className="text-sm font-bold text-slate-800">
-        {value}
+        <span className="text-emerald-700">
+          {
+            icon
+          }
+        </span>
+
+        {
+          label
+        }
+      </div>
+
+      <p className="mt-2 break-words font-bold text-slate-800">
+        {
+          value
+        }
       </p>
     </div>
   );

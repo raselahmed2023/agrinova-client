@@ -1,20 +1,22 @@
 import {
   apiRequest,
-  apiRequestWithMeta,
 } from "./api.client";
 
-import type {
-  AdminListMeta,
-} from "./admin.user.service";
-
-export interface AdminFarmItem {
+export interface AdminFarm {
   _id: string;
-
-  name: string;
 
   farmerId?: string;
 
-  farmerName?: string;
+  farmerEmail?: string;
+
+  name: string;
+
+  farmType?:
+    | "Crop"
+    | "Orchard"
+    | "Poultry"
+    | "Livestock"
+    | "Fishery";
 
   division?: string;
 
@@ -22,100 +24,59 @@ export interface AdminFarmItem {
 
   upazila?: string;
 
-  location?: string;
-
   landArea?: number;
 
-  unit?: string;
+  unit?:
+    | "Bigha"
+    | "Acre"
+    | "Hectare"
+    | "Decimal";
 
   soilType?: string;
 
-  status?: string;
-
   coverImage?: string;
+
+  description?: string;
+
+  status?:
+    | "Active"
+    | "Inactive";
 
   createdAt?: string;
 
   updatedAt?: string;
-
-  [key: string]:
-    unknown;
 }
 
-export const adminFarmService = {
-  async getAdminFarms(
-    queryString?: string
-  ): Promise<{
-    data:
-      AdminFarmItem[];
-
-    meta:
-      AdminListMeta;
-  }> {
-    const result =
-      await apiRequestWithMeta<
-        AdminFarmItem[]
+export const adminFarmService =
+  {
+    /**
+     * apiRequest already returns result.data.
+     *
+     * Therefore this method returns AdminFarm[],
+     * NOT { success, data }.
+     */
+    async getAdminFarms(
+      queryString?:
+        string
+    ) {
+      return apiRequest<
+        AdminFarm[]
       >(
         "/admin/farms",
         "GET",
         undefined,
         queryString
       );
+    },
 
-    const data =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
-
-    return {
-      data,
-
-      meta: {
-        page:
-          Number(
-            result.meta
-              ?.page ||
-              1
-          ),
-
-        limit:
-          Number(
-            result.meta
-              ?.limit ||
-              data.length ||
-              10
-          ),
-
-        total:
-          Number(
-            result.meta
-              ?.total ??
-              data.length
-          ),
-
-        totalPages:
-          Math.max(
-            Number(
-              result.meta
-                ?.totalPages ||
-                1
-            ),
-            1
-          ),
-      },
-    };
-  },
-
-  getAdminFarmById(
-    farmId:
-      string
-  ) {
-    return apiRequest<AdminFarmItem>(
-      `/admin/farms/${encodeURIComponent(
-        farmId
-      )}`
-    );
-  },
-};
+    async getAdminFarmById(
+      farmId:
+        string
+    ) {
+      return apiRequest<
+        AdminFarm
+      >(
+        `/admin/farms/${farmId}`
+      );
+    },
+  };

@@ -11,16 +11,22 @@ import {
 import {
   Building2,
   CheckCircle2,
+  Copy,
   FileText,
   ImagePlus,
   MapPin,
   Package,
+  Phone,
   Sprout,
   Trash2,
   Upload,
   UserRound,
   X,
 } from "lucide-react";
+
+import {
+  useSession,
+} from "@/lib/auth-client";
 
 import {
   DIVISIONS,
@@ -32,7 +38,16 @@ import {
   createSupplyRequest,
 } from "@/services/supply-chain.service";
 
-interface Props {
+import {
+  getStoredLocalImage,
+  listStoredLocalImages,
+  removeStoredLocalImage,
+  retryStoredImage,
+  uploadImageWithFallback,
+  type StoredLocalImage,
+} from "@/lib/image-storage";
+
+interface ProductSubmissionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: () => void;
@@ -53,47 +68,98 @@ interface ProductFormData {
   division: string;
   district: string;
   upazila: string;
-  location: string;
 
+  location: string;
   branch: string;
+
   notes: string;
 
-  images: File[];
+  images: string[];
 }
 
-const CATEGORIES = [
-  ["vegetables", "Vegetables"],
-  ["fruits", "Fruits"],
-  ["grains_cereals", "Grains & Cereals"],
-  ["pulses_seeds", "Pulses & Seeds"],
-  ["spices", "Spices"],
-  [
-    "agricultural_by_products",
-    "Agricultural By-products",
-  ],
-  ["other", "Other"],
+interface Option {
+  value: string;
+  label: string;
+}
+
+const CATEGORIES: Option[] = [
+  {
+    value: "vegetables",
+    label: "Vegetables",
+  },
+  {
+    value: "fruits",
+    label: "Fruits",
+  },
+  {
+    value: "grains_cereals",
+    label: "Grains & Cereals",
+  },
+  {
+    value: "pulses_seeds",
+    label: "Pulses & Seeds",
+  },
+  {
+    value: "spices",
+    label: "Spices",
+  },
+  {
+    value: "agricultural_by_products",
+    label: "Agricultural By-products",
+  },
+  {
+    value: "other",
+    label: "Other",
+  },
 ];
 
-const UNITS = [
-  ["kg", "Kg"],
-  ["maund", "Maund"],
-  ["ton", "Ton"],
-  ["bag", "Bag"],
-  ["box", "Box"],
+const UNITS: Option[] = [
+  {
+    value: "kg",
+    label: "Kg",
+  },
+  {
+    value: "maund",
+    label: "Maund",
+  },
+  {
+    value: "ton",
+    label: "Ton",
+  },
+  {
+    value: "bag",
+    label: "Bag",
+  },
+  {
+    value: "box",
+    label: "Box",
+  },
 ];
 
-const BRANCHES = [
-  ["rajshahi", "AgriNova Rajshahi Branch"],
-  ["bogura", "AgriNova Bogura Branch"],
-  ["kushtia", "AgriNova Kushtia Branch"],
-  ["chattogram", "AgriNova Chattogram Branch"],
-  ["dhaka", "AgriNova Dhaka Branch"],
+const BRANCHES: Option[] = [
+  {
+    value: "dhaka",
+    label: "Dhaka Branch",
+  },
+  {
+    value: "rajshahi",
+    label: "Rajshahi Branch",
+  },
+  {
+    value: "bogura",
+    label: "Bogura Branch",
+  },
+  {
+    value: "kushtia",
+    label: "Kushtia Branch",
+  },
+  {
+    value: "chattogram",
+    label: "Chattogram Branch",
+  },
 ];
 
-const MAX_IMAGES = 5;
-const MAX_SIZE = 5 * 1024 * 1024;
-
-const initialForm: ProductFormData = {
+const initialFormData: ProductFormData = {
   farmerName: "",
   phone: "",
 
@@ -108,362 +174,791 @@ const initialForm: ProductFormData = {
   division: "",
   district: "",
   upazila: "",
-  location: "",
 
+  location: "",
   branch: "",
+
   notes: "",
 
   images: [],
 };
 
-export default function ProduceSubmissionModal({
+export default function ProductSubmissionModal({
   isOpen,
   onClose,
   onSubmitSuccess,
-}: Props) {
-  const [form, setForm] =
-    useState<ProductFormData>(
-      initialForm
-    );
+}: ProductSubmissionModalProps) {
+  const {
+    data: session,
+  } = useSession();
 
-  const [previews, setPreviews] =
-    useState<string[]>([]);
+  const [
+    formData,
+    setFormData,
+  ] = useState<ProductFormData>(
+    initialFormData
+  );
+
+  const [
+    localImages,
+    setLocalImages,
+  ] = useState<
+    StoredLocalImage[]
+  >([]);
+
+  const [
+    uploadingImages,
+    setUploadingImages,
+  ] = useState(false);
 
   const [
     isSubmitting,
     setIsSubmitting,
   ] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [
+    formError,
+    setFormError,
+  ] = useState("");
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
 
   const [
     trackingCode,
     setTrackingCode,
   ] = useState("");
 
-  const districts =
-    useMemo(
-      () =>
-        getDistrictsByDivision(
-          form.division
-        ),
-      [form.division]
-    );
+  const [
+    copied,
+    setCopied,
+  ] = useState(false);
 
-  const upazilas =
+  const userId =
+    session?.user?.id;
+
+  const imagePurpose =
     useMemo(
       () =>
-        getUpazilasByDistrict(
-          form.division,
-          form.district
-        ),
+        userId
+          ? `supply-chain-${userId}`
+          : "supply-chain-guest",
       [
-        form.division,
-        form.district,
+        userId,
       ]
     );
 
-  useEffect(() => {
-    return () => {
-      previews.forEach(
-        (preview) =>
-          URL.revokeObjectURL(
-            preview
-          )
-      );
-    };
-  }, [previews]);
+  const districts =
+    getDistrictsByDivision(
+      formData.division
+    );
 
-  if (!isOpen) return null;
+  const upazilas =
+    getUpazilasByDistrict(
+      formData.division,
+      formData.district
+    );
+
+  const totalImages =
+    formData.images.length +
+    localImages.length;
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !userId
+    ) {
+      return;
+    }
+
+    const stored =
+      listStoredLocalImages(
+        imagePurpose
+      );
+
+    setLocalImages(
+      stored.slice(
+        0,
+        5
+      )
+    );
+  }, [
+    imagePurpose,
+    isOpen,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !session?.user?.name
+    ) {
+      return;
+    }
+
+    setFormData(
+      (
+        current
+      ) => {
+        if (
+          current.farmerName
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+
+          farmerName:
+            session.user
+              .name ||
+            "",
+        };
+      }
+    );
+  }, [
+    isOpen,
+    session?.user?.name,
+  ]);
+
+  if (
+    !isOpen
+  ) {
+    return null;
+  }
 
   const inputClass =
-    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#0b5d42] focus:ring-2 focus:ring-[#0b5d42]/15 disabled:bg-gray-100";
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100";
 
-  const clearPreviews =
-    () => {
-      previews.forEach(
-        (preview) =>
-          URL.revokeObjectURL(
-            preview
-          )
+  const labelClass =
+    "mb-1.5 block text-[12px] font-bold text-slate-700";
+
+  const resetForm =
+    (
+      removePendingImages =
+        false
+    ) => {
+      if (
+        removePendingImages
+      ) {
+        localImages.forEach(
+          (
+            image
+          ) => {
+            removeStoredLocalImage(
+              image.localKey
+            );
+          }
+        );
+
+        setLocalImages(
+          []
+        );
+      }
+
+      setFormData(
+        initialFormData
+      );
+
+      setFormError(
+        ""
+      );
+
+      setSuccessMessage(
+        ""
+      );
+
+      setTrackingCode(
+        ""
+      );
+
+      setCopied(
+        false
       );
     };
 
-  const closeModal =
+  const handleClose =
     () => {
-      if (isSubmitting) {
+      if (
+        isSubmitting ||
+        uploadingImages
+      ) {
         return;
       }
 
-      clearPreviews();
-
-      setForm(initialForm);
-      setPreviews([]);
-      setError("");
-      setTrackingCode("");
+      resetForm(
+        false
+      );
 
       onClose();
     };
 
-  const handleChange = (
-    event: ChangeEvent<
-      | HTMLInputElement
-      | HTMLSelectElement
-      | HTMLTextAreaElement
-    >
-  ) => {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setError("");
-
-    if (name === "division") {
-      setForm((prev) => ({
-        ...prev,
-        division: value,
-        district: "",
-        upazila: "",
-      }));
-
-      return;
-    }
-
-    if (name === "district") {
-      setForm((prev) => ({
-        ...prev,
-        district: value,
-        upazila: "",
-      }));
-
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleImages = (
-    event: ChangeEvent<HTMLInputElement>
-  ) => {
-    const selected =
-      Array.from(
-        event.target.files ||
-          []
-      );
-
-    event.target.value = "";
-
-    const available =
-      MAX_IMAGES -
-      form.images.length;
-
-    const accepted =
-      selected
-        .filter(
-          (file) =>
-            [
-              "image/jpeg",
-              "image/png",
-              "image/webp",
-            ].includes(
-              file.type
-            ) &&
-            file.size <=
-              MAX_SIZE
-        )
-        .slice(
-          0,
-          available
-        );
-
-    if (!accepted.length) {
-      setError(
-        "Please use JPG, PNG or WEBP images under 5MB."
-      );
-
-      return;
-    }
-
-    const newPreviews =
-      accepted.map(
-        (file) =>
-          URL.createObjectURL(
-            file
-          )
-      );
-
-    setForm((prev) => ({
-      ...prev,
-      images: [
-        ...prev.images,
-        ...accepted,
-      ],
-    }));
-
-    setPreviews(
-      (prev) => [
-        ...prev,
-        ...newPreviews,
-      ]
-    );
-  };
-
-  const removeImage = (
-    index: number
-  ) => {
-    const preview =
-      previews[index];
-
-    if (preview) {
-      URL.revokeObjectURL(
-        preview
-      );
-    }
-
-    setPreviews((prev) =>
-      prev.filter(
-        (_, i) =>
-          i !== index
-      )
-    );
-
-    setForm((prev) => ({
-      ...prev,
-      images:
-        prev.images.filter(
-          (_, i) =>
-            i !== index
-        ),
-    }));
-  };
-
-  const uploadImage =
-    async (
-      file: File
+  const handleChange =
+    (
+      event:
+        ChangeEvent<
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement
+        >
     ) => {
-      const body =
-        new FormData();
+      const {
+        name,
+        value,
+      } =
+        event.target;
 
-      body.append(
-        "image",
-        file
+      setFormError(
+        ""
       );
-
-      body.append(
-        "purpose",
-        "supply-chain"
-      );
-
-      const response =
-        await fetch(
-          "/api/upload",
-          {
-            method: "POST",
-            body,
-          }
-        );
-
-      const result =
-        await response
-          .json()
-          .catch(() => null);
 
       if (
-        !response.ok ||
-        !result?.success ||
-        !result?.url
+        name ===
+        "division"
       ) {
-        throw new Error(
-          result?.message ||
-            "Unable to upload product image."
+        setFormData(
+          (
+            previous
+          ) => ({
+            ...previous,
+
+            division:
+              value,
+
+            district:
+              "",
+
+            upazila:
+              "",
+          })
         );
+
+        return;
       }
 
-      return String(
-        result.url
+      if (
+        name ===
+        "district"
+      ) {
+        setFormData(
+          (
+            previous
+          ) => ({
+            ...previous,
+
+            district:
+              value,
+
+            upazila:
+              "",
+          })
+        );
+
+        return;
+      }
+
+      setFormData(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          [name]:
+            value,
+        })
       );
     };
 
-  const validate = () => {
-    if (
-      form.farmerName
-        .trim().length < 2
-    ) {
-      return "Please enter your full name.";
-    }
+  const handleImageChange =
+    async (
+      event:
+        ChangeEvent<HTMLInputElement>
+    ) => {
+      const selectedFiles =
+        Array.from(
+          event.target
+            .files ||
+            []
+        );
 
-    if (
-      !/^01[3-9]\d{8}$/.test(
-        form.phone.trim()
-      )
-    ) {
-      return "Please enter a valid Bangladeshi phone number.";
-    }
+      event.target.value =
+        "";
 
-    if (
-      !form.productName.trim()
-    ) {
-      return "Product name is required.";
-    }
+      if (
+        selectedFiles.length ===
+          0 ||
+        uploadingImages ||
+        isSubmitting
+      ) {
+        return;
+      }
 
-    if (!form.category) {
-      return "Select a product category.";
-    }
+      const remaining =
+        5 -
+        totalImages;
 
-    if (
-      Number(
-        form.quantity
-      ) <= 0
-    ) {
-      return "Quantity must be greater than 0.";
-    }
+      if (
+        remaining <=
+        0
+      ) {
+        setFormError(
+          "Maximum 5 product photos are allowed."
+        );
 
-    if (
-      Number(
-        form.expectedPrice
-      ) < 0
-    ) {
-      return "Expected price cannot be negative.";
-    }
+        return;
+      }
 
-    if (
-      !form.division ||
-      !form.district ||
-      !form.upazila
-    ) {
-      return "Please select division, district and upazila.";
-    }
+      const validFiles =
+        selectedFiles
+          .filter(
+            (
+              file
+            ) =>
+              [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+              ].includes(
+                file.type
+              )
+          )
+          .filter(
+            (
+              file
+            ) =>
+              file.size <=
+              8 *
+                1024 *
+                1024
+          )
+          .slice(
+            0,
+            remaining
+          );
 
-    if (!form.location.trim()) {
-      return "Farm location is required.";
-    }
+      if (
+        validFiles.length ===
+        0
+      ) {
+        setFormError(
+          "Please select JPG, PNG or WEBP images under 8 MB."
+        );
 
-    if (!form.branch) {
-      return "Please select an AgriNova branch.";
-    }
+        return;
+      }
 
-    return "";
-  };
+      try {
+        setUploadingImages(
+          true
+        );
+
+        setFormError(
+          ""
+        );
+
+        const remoteUrls:
+          string[] =
+          [];
+
+        const localFallbacks:
+          StoredLocalImage[] =
+          [];
+
+        for (
+          const file of validFiles
+        ) {
+          const result =
+            await uploadImageWithFallback(
+              file,
+              {
+                purpose:
+                  imagePurpose,
+
+                allowLocalFallback:
+                  true,
+              }
+            );
+
+          if (
+            result.source ===
+            "remote"
+          ) {
+            remoteUrls.push(
+              result.url
+            );
+
+            continue;
+          }
+
+          const local =
+            getStoredLocalImage(
+              result.localKey
+            );
+
+          if (
+            local
+          ) {
+            localFallbacks.push(
+              local
+            );
+          }
+        }
+
+        if (
+          remoteUrls.length >
+          0
+        ) {
+          setFormData(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              images: [
+                ...previous.images,
+                ...remoteUrls,
+              ].slice(
+                0,
+                5
+              ),
+            })
+          );
+        }
+
+        if (
+          localFallbacks.length >
+          0
+        ) {
+          setLocalImages(
+            (
+              previous
+            ) => [
+              ...previous,
+              ...localFallbacks,
+            ].slice(
+              0,
+              5
+            )
+          );
+        }
+      } catch (
+        error
+      ) {
+        setFormError(
+          error instanceof
+            Error
+            ? error.message
+            : "Image upload failed."
+        );
+      } finally {
+        setUploadingImages(
+          false
+        );
+      }
+    };
+
+  const removeRemoteImage =
+    (
+      index:
+        number
+    ) => {
+      setFormData(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          images:
+            previous.images.filter(
+              (
+                _,
+                currentIndex
+              ) =>
+                currentIndex !==
+                index
+            ),
+        })
+      );
+    };
+
+  const removeLocalImage =
+    (
+      localKey:
+        string
+    ) => {
+      removeStoredLocalImage(
+        localKey
+      );
+
+      setLocalImages(
+        (
+          previous
+        ) =>
+          previous.filter(
+            (
+              image
+            ) =>
+              image.localKey !==
+              localKey
+          )
+      );
+    };
+
+  const retryLocalImage =
+    async (
+      image:
+        StoredLocalImage
+    ) => {
+      try {
+        setUploadingImages(
+          true
+        );
+
+        setFormError(
+          ""
+        );
+
+        const remoteUrl =
+          await retryStoredImage(
+            image.localKey
+          );
+
+        setFormData(
+          (
+            previous
+          ) => ({
+            ...previous,
+
+            images: [
+              ...previous.images,
+              remoteUrl,
+            ].slice(
+              0,
+              5
+            ),
+          })
+        );
+
+        setLocalImages(
+          (
+            previous
+          ) =>
+            previous.filter(
+              (
+                item
+              ) =>
+                item.localKey !==
+                image.localKey
+            )
+        );
+      } catch (
+        error
+      ) {
+        setFormError(
+          error instanceof
+            Error
+            ? error.message
+            : "Image service is unavailable."
+        );
+      } finally {
+        setUploadingImages(
+          false
+        );
+      }
+    };
+
+  const ensureRemoteImages =
+    async () => {
+      if (
+        localImages.length ===
+        0
+      ) {
+        return formData.images;
+      }
+
+      const uploadedUrls:
+        string[] =
+        [];
+
+      for (
+        const image of localImages
+      ) {
+        const remoteUrl =
+          await retryStoredImage(
+            image.localKey
+          );
+
+        uploadedUrls.push(
+          remoteUrl
+        );
+      }
+
+      const finalImages =
+        [
+          ...formData.images,
+          ...uploadedUrls,
+        ].slice(
+          0,
+          5
+        );
+
+      setLocalImages(
+        []
+      );
+
+      return finalImages;
+    };
+
+  const validateForm =
+    () => {
+      if (
+        !session?.user
+      ) {
+        setFormError(
+          "Please sign in as a Farmer."
+        );
+
+        return false;
+      }
+
+      if (
+        String(
+          session.user
+            .role ||
+            ""
+        ).toUpperCase() !==
+        "FARMER"
+      ) {
+        setFormError(
+          "Only Farmer accounts can submit products."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.farmerName
+          .trim()
+      ) {
+        setFormError(
+          "Farmer name is required."
+        );
+
+        return false;
+      }
+
+      if (
+        !/^01[3-9]\d{8}$/.test(
+          formData.phone
+            .trim()
+        )
+      ) {
+        setFormError(
+          "Enter a valid Bangladeshi phone number."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.productName
+          .trim()
+      ) {
+        setFormError(
+          "Product name is required."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.category
+      ) {
+        setFormError(
+          "Select a product category."
+        );
+
+        return false;
+      }
+
+      if (
+        Number(
+          formData.quantity
+        ) <=
+        0
+      ) {
+        setFormError(
+          "Quantity must be greater than 0."
+        );
+
+        return false;
+      }
+
+      if (
+        Number(
+          formData.expectedPrice
+        ) <
+        0
+      ) {
+        setFormError(
+          "Expected price cannot be negative."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.division ||
+        !formData.district ||
+        !formData.upazila
+      ) {
+        setFormError(
+          "Select division, district and upazila."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.location
+          .trim()
+      ) {
+        setFormError(
+          "Pickup location is required."
+        );
+
+        return false;
+      }
+
+      if (
+        !formData.branch
+      ) {
+        setFormError(
+          "Select an AgriNova branch."
+        );
+
+        return false;
+      }
+
+      return true;
+    };
 
   const handleSubmit =
     async (
-      event: FormEvent<HTMLFormElement>
+      event:
+        FormEvent<HTMLFormElement>
     ) => {
       event.preventDefault();
 
-      const validation =
-        validate();
+      setFormError(
+        ""
+      );
 
-      if (validation) {
-        setError(
-          validation
-        );
-
+      if (
+        !validateForm()
+      ) {
         return;
       }
 
@@ -472,68 +967,59 @@ export default function ProduceSubmissionModal({
           true
         );
 
-        setError("");
-
-        const imageUrls:
-          string[] =
-          [];
-
-        for (
-          const image of
-          form.images
-        ) {
-          imageUrls.push(
-            await uploadImage(
-              image
-            )
-          );
-        }
+        const imageUrls =
+          await ensureRemoteImages();
 
         const response =
           await createSupplyRequest(
             {
               farmerName:
-                form.farmerName.trim(),
+                formData.farmerName
+                  .trim(),
 
               phone:
-                form.phone.trim(),
+                formData.phone
+                  .trim(),
 
               productName:
-                form.productName.trim(),
+                formData.productName
+                  .trim(),
 
               category:
-                form.category,
+                formData.category,
 
               quantity:
                 Number(
-                  form.quantity
+                  formData.quantity
                 ),
 
               unit:
-                form.unit,
+                formData.unit,
 
               expectedPrice:
                 Number(
-                  form.expectedPrice
+                  formData.expectedPrice
                 ),
 
               division:
-                form.division,
+                formData.division,
 
               district:
-                form.district,
+                formData.district,
 
               upazila:
-                form.upazila,
+                formData.upazila,
 
               location:
-                form.location.trim(),
+                formData.location
+                  .trim(),
 
               branch:
-                form.branch,
+                formData.branch,
 
               notes:
-                form.notes.trim() ||
+                formData.notes
+                  .trim() ||
                 undefined,
 
               images:
@@ -541,34 +1027,31 @@ export default function ProduceSubmissionModal({
             }
           );
 
-        const code =
-          response.data
-            .trackingCode;
-
         setTrackingCode(
-          code
+          response.data
+            .trackingCode
         );
 
-        if (
-          typeof window !==
-          "undefined"
-        ) {
-          localStorage.setItem(
-            "agrinova:lastSupplyTrackingCode",
-            code
-          );
-        }
+        setSuccessMessage(
+          "Your product was submitted successfully."
+        );
 
-        clearPreviews();
+        setFormData(
+          initialFormData
+        );
 
-        setPreviews([]);
-        setForm(initialForm);
+        setLocalImages(
+          []
+        );
 
         onSubmitSuccess?.();
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
+      } catch (
+        error
+      ) {
+        setFormError(
+          error instanceof
+            Error
+            ? error.message
             : "Submission failed."
         );
       } finally {
@@ -578,61 +1061,131 @@ export default function ProduceSubmissionModal({
       }
     };
 
+  const copyTrackingCode =
+    async () => {
+      try {
+        await navigator
+          .clipboard
+          .writeText(
+            trackingCode
+          );
+
+        setCopied(
+          true
+        );
+
+        window.setTimeout(
+          () =>
+            setCopied(
+              false
+            ),
+          1500
+        );
+      } catch {
+        setCopied(
+          false
+        );
+      }
+    };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
-      <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <header className="relative bg-[#053225] px-6 py-5 text-white">
-          <button
-            type="button"
-            onClick={
-              closeModal
-            }
-            className="absolute right-4 top-4 rounded-full p-2 hover:bg-white/10"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
 
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
-              <Sprout className="h-6 w-6" />
+      <div className="flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-[26px] border border-white/20 bg-white shadow-[0_30px_90px_rgba(0,0,0,.28)]">
+
+        {/* HEADER */}
+
+        <div className="shrink-0 bg-gradient-to-r from-[#063d2e] to-[#0b644b] px-5 py-4 text-white sm:px-6">
+
+          <div className="flex items-center justify-between gap-4">
+
+            <div className="flex min-w-0 items-center gap-3">
+
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                <Sprout className="h-5 w-5 text-emerald-200" />
+              </div>
+
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-black sm:text-xl">
+                  Sell Through AgriNova
+                </h2>
+
+                <p className="mt-0.5 text-xs text-white/70 sm:text-sm">
+                  Submit your farm product for supply chain review.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <h2 className="text-xl font-bold">
-                Sell Through AgriNova
-              </h2>
-
-              <p className="mt-1 text-sm text-white/75">
-                Submit your farm product for AgriNova supply
-                chain review.
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={
+                handleClose
+              }
+              disabled={
+                isSubmitting ||
+                uploadingImages
+              }
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </header>
+        </div>
+
+        {/* SUCCESS */}
 
         {trackingCode ? (
-          <div className="overflow-y-auto p-8">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-7 text-center">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-700" />
+          <div className="flex flex-1 items-center justify-center overflow-y-auto bg-slate-50 p-6">
 
-              <h3 className="mt-4 text-xl font-bold">
-                Submission Received
+            <div className="w-full max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
+
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-8 w-8 text-emerald-700" />
+              </div>
+
+              <h3 className="mt-5 text-xl font-black text-slate-900">
+                Product Submitted
               </h3>
 
-              <p className="mt-4 text-xs font-bold uppercase text-emerald-700">
-                Tracking Code
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                {
+                  successMessage
+                }
               </p>
 
-              <div className="mx-auto mt-2 w-fit rounded-xl bg-white px-6 py-3 font-mono text-xl font-black text-[#053225]">
-                {trackingCode}
+              <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                  Tracking ID
+                </p>
+
+                <p className="mt-2 font-mono text-2xl font-black tracking-wider text-slate-950">
+                  {
+                    trackingCode
+                  }
+                </p>
+
+                <button
+                  type="button"
+                  onClick={
+                    copyTrackingCode
+                  }
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-800 shadow-sm ring-1 ring-emerald-100 transition hover:bg-emerald-50"
+                >
+                  <Copy className="h-4 w-4" />
+
+                  {copied
+                    ? "Copied"
+                    : "Copy Tracking ID"}
+                </button>
               </div>
 
               <button
                 type="button"
                 onClick={
-                  closeModal
+                  handleClose
                 }
-                className="mt-6 rounded-xl bg-[#053225] px-6 py-3 text-sm font-semibold text-white"
+                className="mt-6 w-full rounded-xl bg-[#0b5d42] py-3 text-sm font-black text-white transition hover:bg-[#084a35]"
               >
                 Done
               </button>
@@ -643,491 +1196,646 @@ export default function ProduceSubmissionModal({
             onSubmit={
               handleSubmit
             }
-            className="overflow-y-auto"
+            className="flex min-h-0 flex-1 flex-col"
           >
-            <div className="space-y-6 p-6">
-              {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
+
+            {/* BODY */}
+
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#f7f9f8] p-4 sm:p-5">
+
+              {formError && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {
+                    formError
+                  }
                 </div>
               )}
 
-              <Title
-                icon={
-                  <UserRound className="h-4 w-4" />
-                }
-                title="Farmer Information"
-              />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Farmer Name">
-                  <input
-                    required
-                    name="farmerName"
-                    value={
-                      form.farmerName
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </Field>
+                {/* LEFT */}
 
-                <Field label="Phone Number">
-                  <input
-                    required
-                    name="phone"
-                    value={
-                      form.phone
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    maxLength={11}
-                    placeholder="01XXXXXXXXX"
-                    className={
-                      inputClass
-                    }
-                  />
-                </Field>
-              </div>
+                <div className="space-y-4">
 
-              <Title
-                icon={
-                  <Package className="h-4 w-4" />
-                }
-                title="Product Information"
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Product Name">
-                  <input
-                    required
-                    name="productName"
-                    value={
-                      form.productName
+                  <FormCard
+                    icon={
+                      <UserRound className="h-4 w-4" />
                     }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </Field>
-
-                <Field label="Category">
-                  <select
-                    required
-                    name="category"
-                    value={
-                      form.category
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
+                    title="Farmer Information"
                   >
-                    <option value="">
-                      Select Category
-                    </option>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-                    {CATEGORIES.map(
-                      ([
-                        value,
-                        label,
-                      ]) => (
-                        <option
-                          key={
-                            value
-                          }
-                          value={
-                            value
-                          }
-                        >
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </Field>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Quantity">
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    name="quantity"
-                    value={
-                      form.quantity
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </Field>
-
-                <Field label="Unit">
-                  <select
-                    name="unit"
-                    value={
-                      form.unit
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  >
-                    {UNITS.map(
-                      ([
-                        value,
-                        label,
-                      ]) => (
-                        <option
-                          key={
-                            value
-                          }
-                          value={
-                            value
-                          }
-                        >
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </Field>
-
-                <Field label="Expected Price">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    name="expectedPrice"
-                    value={
-                      form.expectedPrice
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </Field>
-              </div>
-
-              <Title
-                icon={
-                  <MapPin className="h-4 w-4" />
-                }
-                title="Farm Location"
-              />
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Division">
-                  <select
-                    name="division"
-                    value={
-                      form.division
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  >
-                    <option value="">
-                      Division
-                    </option>
-
-                    {DIVISIONS.map(
-                      (
-                        division
-                      ) => (
-                        <option
-                          key={
-                            division
-                          }
-                          value={
-                            division
-                          }
-                        >
-                          {
-                            division
-                          }
-                        </option>
-                      )
-                    )}
-                  </select>
-                </Field>
-
-                <Field label="District">
-                  <select
-                    name="district"
-                    disabled={
-                      !form.division
-                    }
-                    value={
-                      form.district
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  >
-                    <option value="">
-                      District
-                    </option>
-
-                    {districts.map(
-                      (
-                        district
-                      ) => (
-                        <option
-                          key={
-                            district
-                          }
-                          value={
-                            district
-                          }
-                        >
-                          {
-                            district
-                          }
-                        </option>
-                      )
-                    )}
-                  </select>
-                </Field>
-
-                <Field label="Upazila">
-                  <select
-                    name="upazila"
-                    disabled={
-                      !form.district
-                    }
-                    value={
-                      form.upazila
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={
-                      inputClass
-                    }
-                  >
-                    <option value="">
-                      Upazila
-                    </option>
-
-                    {upazilas.map(
-                      (
-                        upazila
-                      ) => (
-                        <option
-                          key={
-                            upazila
-                          }
-                          value={
-                            upazila
-                          }
-                        >
-                          {
-                            upazila
-                          }
-                        </option>
-                      )
-                    )}
-                  </select>
-                </Field>
-              </div>
-
-              <Field label="Village / Address">
-                <input
-                  name="location"
-                  value={
-                    form.location
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className={
-                    inputClass
-                  }
-                />
-              </Field>
-
-              <Title
-                icon={
-                  <Building2 className="h-4 w-4" />
-                }
-                title="AgriNova Branch"
-              />
-
-              <Field label="Preferred Branch">
-                <select
-                  name="branch"
-                  value={
-                    form.branch
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className={
-                    inputClass
-                  }
-                >
-                  <option value="">
-                    Select Branch
-                  </option>
-
-                  {BRANCHES.map(
-                    ([
-                      value,
-                      label,
-                    ]) => (
-                      <option
-                        key={
-                          value
-                        }
-                        value={
-                          value
-                        }
+                      <Field
+                        label="Farmer Name"
+                        required
                       >
-                        {label}
-                      </option>
-                    )
-                  )}
-                </select>
-              </Field>
+                        <input
+                          name="farmerName"
+                          value={
+                            formData.farmerName
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          disabled={
+                            isSubmitting
+                          }
+                          className={
+                            inputClass
+                          }
+                        />
+                      </Field>
 
-              <Title
-                icon={
-                  <FileText className="h-4 w-4" />
-                }
-                title="Additional Details"
-              />
+                      <Field
+                        label="Phone Number"
+                        required
+                      >
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-              <textarea
-                name="notes"
-                value={
-                  form.notes
-                }
-                onChange={
-                  handleChange
-                }
-                rows={3}
-                maxLength={1000}
-                className={`${inputClass} h-auto resize-none`}
-              />
+                          <input
+                            name="phone"
+                            value={
+                              formData.phone
+                            }
+                            onChange={
+                              handleChange
+                            }
+                            maxLength={
+                              11
+                            }
+                            placeholder="01XXXXXXXXX"
+                            className={`${inputClass} pl-9`}
+                          />
+                        </div>
+                      </Field>
+                    </div>
+                  </FormCard>
 
-              <div>
-                <div className="flex items-center gap-2 text-sm font-bold">
-                  <ImagePlus className="h-4 w-4 text-[#0b5d42]" />
-                  Product Photos
+                  <FormCard
+                    icon={
+                      <Package className="h-4 w-4" />
+                    }
+                    title="Product Information"
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+
+                      <div className="col-span-2 sm:col-span-1">
+                        <Field
+                          label="Product Name"
+                          required
+                        >
+                          <input
+                            name="productName"
+                            value={
+                              formData.productName
+                            }
+                            onChange={
+                              handleChange
+                            }
+                            placeholder="e.g. Fresh Tomato"
+                            className={
+                              inputClass
+                            }
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="col-span-2 sm:col-span-1">
+                        <Field
+                          label="Category"
+                          required
+                        >
+                          <select
+                            name="category"
+                            value={
+                              formData.category
+                            }
+                            onChange={
+                              handleChange
+                            }
+                            className={
+                              inputClass
+                            }
+                          >
+                            <option value="">
+                              Select category
+                            </option>
+
+                            {CATEGORIES.map(
+                              (
+                                item
+                              ) => (
+                                <option
+                                  key={
+                                    item.value
+                                  }
+                                  value={
+                                    item.value
+                                  }
+                                >
+                                  {
+                                    item.label
+                                  }
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </Field>
+                      </div>
+
+                      <Field
+                        label="Quantity"
+                        required
+                      >
+                        <input
+                          type="number"
+                          name="quantity"
+                          min="0.01"
+                          step="0.01"
+                          value={
+                            formData.quantity
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          placeholder="0"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </Field>
+
+                      <Field
+                        label="Unit"
+                        required
+                      >
+                        <select
+                          name="unit"
+                          value={
+                            formData.unit
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          className={
+                            inputClass
+                          }
+                        >
+                          {UNITS.map(
+                            (
+                              item
+                            ) => (
+                              <option
+                                key={
+                                  item.value
+                                }
+                                value={
+                                  item.value
+                                }
+                              >
+                                {
+                                  item.label
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </Field>
+
+                      <div className="col-span-2">
+                        <Field
+                          label="Expected Price (৳)"
+                          required
+                        >
+                          <input
+                            type="number"
+                            name="expectedPrice"
+                            min="0"
+                            value={
+                              formData.expectedPrice
+                            }
+                            onChange={
+                              handleChange
+                            }
+                            placeholder="Expected total price"
+                            className={
+                              inputClass
+                            }
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  </FormCard>
+
+                  <FormCard
+                    icon={
+                      <FileText className="h-4 w-4" />
+                    }
+                    title="Additional Notes"
+                  >
+                    <textarea
+                      name="notes"
+                      rows={
+                        3
+                      }
+                      value={
+                        formData.notes
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Harvest date, quality, availability, etc."
+                      className={`${inputClass} resize-none`}
+                    />
+                  </FormCard>
                 </div>
 
-                <label className="mt-3 block cursor-pointer rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-7 text-center">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={
-                      handleImages
+                {/* RIGHT */}
+
+                <div className="space-y-4">
+
+                  <FormCard
+                    icon={
+                      <MapPin className="h-4 w-4" />
                     }
-                    className="hidden"
-                  />
+                    title="Product Location"
+                  >
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 
-                  <Upload className="mx-auto h-6 w-6 text-gray-400" />
-
-                  <p className="mt-2 text-sm font-medium">
-                    Upload Product Photos
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-400">
-                    Maximum 5 images · 5MB each
-                  </p>
-                </label>
-
-                {previews.length >
-                  0 && (
-                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
-                    {previews.map(
-                      (
-                        preview,
-                        index
-                      ) => (
-                        <div
-                          key={
-                            preview
+                      <Field
+                        label="Division"
+                        required
+                      >
+                        <select
+                          name="division"
+                          value={
+                            formData.division
                           }
-                          className="relative aspect-square overflow-hidden rounded-xl bg-gray-100"
+                          onChange={
+                            handleChange
+                          }
+                          className={
+                            inputClass
+                          }
                         >
-                          <img
-                            src={
-                              preview
-                            }
-                            alt={`Product ${index + 1}`}
-                            className="h-full w-full object-cover"
-                          />
+                          <option value="">
+                            Division
+                          </option>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeImage(
-                                index
-                              )
+                          {DIVISIONS.map(
+                            (
+                              division
+                            ) => (
+                              <option
+                                key={
+                                  division
+                                }
+                                value={
+                                  division
+                                }
+                              >
+                                {
+                                  division
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </Field>
+
+                      <Field
+                        label="District"
+                        required
+                      >
+                        <select
+                          name="district"
+                          value={
+                            formData.district
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          disabled={
+                            !formData.division
+                          }
+                          className={
+                            inputClass
+                          }
+                        >
+                          <option value="">
+                            District
+                          </option>
+
+                          {districts.map(
+                            (
+                              district
+                            ) => (
+                              <option
+                                key={
+                                  district
+                                }
+                                value={
+                                  district
+                                }
+                              >
+                                {
+                                  district
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </Field>
+
+                      <Field
+                        label="Upazila"
+                        required
+                      >
+                        <select
+                          name="upazila"
+                          value={
+                            formData.upazila
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          disabled={
+                            !formData.district
+                          }
+                          className={
+                            inputClass
+                          }
+                        >
+                          <option value="">
+                            Upazila
+                          </option>
+
+                          {upazilas.map(
+                            (
+                              upazila
+                            ) => (
+                              <option
+                                key={
+                                  upazila
+                                }
+                                value={
+                                  upazila
+                                }
+                              >
+                                {
+                                  upazila
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </Field>
+                    </div>
+
+                    <div className="mt-3">
+                      <Field
+                        label="Pickup Address"
+                        required
+                      >
+                        <input
+                          name="location"
+                          value={
+                            formData.location
+                          }
+                          onChange={
+                            handleChange
+                          }
+                          placeholder="Village, road, market or exact pickup location"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </Field>
+                    </div>
+                  </FormCard>
+
+                  <FormCard
+                    icon={
+                      <Building2 className="h-4 w-4" />
+                    }
+                    title="AgriNova Branch"
+                  >
+                    <select
+                      name="branch"
+                      value={
+                        formData.branch
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={
+                        inputClass
+                      }
+                    >
+                      <option value="">
+                        Select processing branch
+                      </option>
+
+                      {BRANCHES.map(
+                        (
+                          branch
+                        ) => (
+                          <option
+                            key={
+                              branch.value
                             }
-                            className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white"
+                            value={
+                              branch.value
+                            }
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )
+                            {
+                              branch.label
+                            }
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </FormCard>
+
+                  <FormCard
+                    icon={
+                      <ImagePlus className="h-4 w-4" />
+                    }
+                    title={`Product Photos (${totalImages}/5)`}
+                  >
+
+                    <label
+                      className={`flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-4 text-center transition ${
+                        totalImages >=
+                          5
+                          ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                          : "border-emerald-200 bg-emerald-50/30 hover:border-emerald-400 hover:bg-emerald-50"
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={
+                          handleImageChange
+                        }
+                        disabled={
+                          uploadingImages ||
+                          totalImages >=
+                            5
+                        }
+                        className="hidden"
+                      />
+
+                      <Upload className="h-5 w-5 text-emerald-700" />
+
+                      <p className="mt-1 text-xs font-bold text-slate-700">
+                        {uploadingImages
+                          ? "Uploading..."
+                          : "Add product photos"}
+                      </p>
+
+                      <p className="mt-0.5 text-[10px] text-slate-400">
+                        JPG, PNG, WEBP • max 8 MB
+                      </p>
+                    </label>
+
+                    {(formData.images.length >
+                      0 ||
+                      localImages.length >
+                        0) && (
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+
+                        {formData.images.map(
+                          (
+                            source,
+                            index
+                          ) => (
+                            <div
+                              key={`${source}-${index}`}
+                              className="relative aspect-square overflow-hidden rounded-xl bg-slate-100"
+                            >
+                              <img
+                                src={
+                                  source
+                                }
+                                alt="Product"
+                                className="h-full w-full object-cover"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeRemoteImage(
+                                    index
+                                  )
+                                }
+                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )
+                        )}
+
+                        {localImages.map(
+                          (
+                            image
+                          ) => (
+                            <div
+                              key={
+                                image.localKey
+                              }
+                              className="relative aspect-square overflow-hidden rounded-xl border-2 border-amber-300 bg-amber-50"
+                            >
+                              <img
+                                src={
+                                  image.dataUrl
+                                }
+                                alt="Local"
+                                className="h-full w-full object-cover"
+                              />
+
+                              <span className="absolute bottom-1 left-1 rounded bg-amber-500 px-1.5 py-0.5 text-[8px] font-bold text-white">
+                                LOCAL
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeLocalImage(
+                                    image.localKey
+                                  )
+                                }
+                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void retryLocalImage(
+                                    image
+                                  )
+                                }
+                                className="absolute inset-x-1 bottom-7 rounded bg-amber-500 px-1 py-1 text-[8px] font-bold text-white"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          )
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
+                  </FormCard>
+                </div>
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white p-5">
-              <button
-                type="button"
-                onClick={
-                  closeModal
-                }
-                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-600"
-              >
-                Cancel
-              </button>
+            {/* FOOTER */}
 
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting
-                }
-                className="rounded-xl bg-[#053225] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {isSubmitting
-                  ? "Submitting..."
-                  : "Submit for Review"}
-              </button>
+            <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-3">
+
+              <div className="flex items-center justify-between gap-3">
+
+                <p className="hidden text-xs text-slate-400 sm:block">
+                  Fields marked * are required
+                </p>
+
+                <div className="ml-auto flex gap-2">
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleClose
+                    }
+                    disabled={
+                      isSubmitting ||
+                      uploadingImages
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      uploadingImages
+                    }
+                    className="min-w-[145px] rounded-xl bg-[#0b5d42] px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-[#084b35] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmitting
+                      ? "Submitting..."
+                      : uploadingImages
+                        ? "Uploading..."
+                        : "Submit Product"}
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
         )}
@@ -1136,40 +1844,77 @@ export default function ProduceSubmissionModal({
   );
 }
 
-function Title({
+function FormCard({
   icon,
   title,
+  children,
 }: {
-  icon: React.ReactNode;
-  title: string;
+  icon:
+    React.ReactNode;
+
+  title:
+    string;
+
+  children:
+    React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2 border-b pb-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-[#0b5d42]">
-        {icon}
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,.04)]">
+
+      <div className="mb-3 flex items-center gap-2">
+
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+          {
+            icon
+          }
+        </span>
+
+        <h3 className="text-sm font-black text-slate-900">
+          {
+            title
+          }
+        </h3>
       </div>
 
-      <h3 className="text-sm font-bold text-gray-900">
-        {title}
-      </h3>
-    </div>
+      {
+        children
+      }
+    </section>
   );
 }
 
 function Field({
   label,
+  required,
   children,
 }: {
-  label: string;
-  children: React.ReactNode;
+  label:
+    string;
+
+  required?:
+    boolean;
+
+  children:
+    React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-gray-700">
-        {label}
+
+      <span className="mb-1.5 block text-[11px] font-bold text-slate-600">
+        {
+          label
+        }
+
+        {required && (
+          <span className="ml-1 text-red-500">
+            *
+          </span>
+        )}
       </span>
 
-      {children}
+      {
+        children
+      }
     </label>
   );
 }

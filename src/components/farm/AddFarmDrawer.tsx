@@ -2,14 +2,12 @@
 
 import React, {
   useMemo,
+  useRef,
   useState,
 } from "react";
 
-import Image from "next/image";
-
 import {
   Loader2,
-  UploadCloud,
   X,
 } from "lucide-react";
 
@@ -23,6 +21,10 @@ import {
   getUpazilasByDistrict,
 } from "@/constants/bangladeshLocations";
 
+import FarmCoverImageField, {
+  type FarmCoverImageFieldHandle,
+} from "@/components/farm/FarmCoverImageField";
+
 import type {
   FarmType,
   FarmUnit,
@@ -32,13 +34,13 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:5000/api/v1";
 
-interface Props {
+interface AddFarmDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-interface FormState {
+interface FarmFormState {
   name: string;
   farmType: FarmType | "";
 
@@ -55,7 +57,7 @@ interface FormState {
   description: string;
 }
 
-const INITIAL: FormState = {
+const initialFormData: FarmFormState = {
   name: "",
   farmType: "",
 
@@ -87,13 +89,11 @@ const FARM_TYPES: {
   },
   {
     value: "Poultry",
-    label:
-      "Poultry Farm",
+    label: "Poultry Farm",
   },
   {
     value: "Livestock",
-    label:
-      "Livestock Farm",
+    label: "Livestock Farm",
   },
   {
     value: "Fishery",
@@ -105,211 +105,327 @@ export default function AddFarmDrawer({
   isOpen,
   onClose,
   onSuccess,
-}: Props) {
-  const [form, setForm] =
-    useState<FormState>(
-      INITIAL
+}: AddFarmDrawerProps) {
+  const coverImageRef =
+    useRef<FarmCoverImageFieldHandle>(
+      null
     );
 
-  const [loading, setLoading] =
+  const [
+    formData,
+    setFormData,
+  ] =
+    useState<FarmFormState>(
+      initialFormData
+    );
+
+  const [
+    loading,
+    setLoading,
+  ] =
     useState(false);
 
   const [
-    uploading,
-    setUploading,
-  ] = useState(false);
-
-  const [error, setError] =
-    useState("");
+    uploadingImg,
+    setUploadingImg,
+  ] =
+    useState(false);
 
   const [
-    uploadError,
-    setUploadError,
-  ] = useState("");
+    errors,
+    setErrors,
+  ] =
+    useState<
+      Record<
+        string,
+        string
+      >
+    >({});
 
   const districts =
     useMemo(
       () =>
         getDistrictsByDivision(
-          form.division
+          formData.division
         ),
-      [form.division]
+      [
+        formData.division,
+      ]
     );
 
   const upazilas =
     useMemo(
       () =>
         getUpazilasByDistrict(
-          form.division,
-          form.district
+          formData.division,
+          formData.district
         ),
       [
-        form.division,
-        form.district,
+        formData.division,
+        formData.district,
       ]
     );
 
-  if (!isOpen) return null;
-
   const needsArea =
-    ["Crop", "Orchard", "Fishery"].includes(
-      form.farmType
-    );
+    formData.farmType ===
+      "Crop" ||
+    formData.farmType ===
+      "Orchard" ||
+    formData.farmType ===
+      "Fishery";
 
   const needsSoil =
-    ["Crop", "Orchard"].includes(
-      form.farmType
-    );
+    formData.farmType ===
+      "Crop" ||
+    formData.farmType ===
+      "Orchard";
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+  if (!isOpen) {
+    return null;
+  }
 
-  const uploadImage =
-    async (
-      event: React.ChangeEvent<HTMLInputElement>
+  const clearError =
+    (
+      field: string
     ) => {
-      const file =
-        event.target
-          .files?.[0];
-
-      event.target.value = "";
-
-      if (!file) return;
-
-      setUploadError("");
-
       if (
-        ![
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-        ].includes(
-          file.type
-        )
+        !errors[field]
       ) {
-        setUploadError(
-          "Only JPG, PNG or WEBP images are allowed."
-        );
-
         return;
       }
 
-      if (
-        file.size >
-        5 *
-          1024 *
-          1024
-      ) {
-        setUploadError(
-          "Image must be 5MB or smaller."
-        );
-
-        return;
-      }
-
-      try {
-        setUploading(true);
-
-        const body =
-          new FormData();
-
-        body.append(
-          "image",
-          file
-        );
-
-        body.append(
-          "purpose",
-          "farm"
-        );
-
-        const response =
-          await fetch(
-            "/api/upload",
-            {
-              method:
-                "POST",
-              body,
-            }
-          );
-
-        const result =
-          await response
-            .json()
-            .catch(
-              () =>
-                null
-            );
-
-        if (
-          !response.ok ||
-          !result?.success ||
-          !result?.url
-        ) {
-          throw new Error(
-            result?.message ||
-              "Failed to upload image."
-          );
-        }
-
-        setForm(
-          (prev) => ({
-            ...prev,
-            coverImage:
-              String(
-                result.url
-              ),
-          })
-        );
-      } catch (err) {
-        setUploadError(
-          err instanceof Error
-            ? err.message
-            : "Image upload failed."
-        );
-      } finally {
-        setUploading(false);
-      }
+      setErrors(
+        (
+          previous
+        ) => ({
+          ...previous,
+          [field]:
+            "",
+        })
+      );
     };
 
-  const validate =
+  const handleFarmTypeChange =
+    (
+      value:
+        | FarmType
+        | ""
+    ) => {
+      setFormData(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          farmType:
+            value,
+
+          landArea:
+            value ===
+              "Poultry" ||
+            value ===
+              "Livestock"
+              ? ""
+              : previous.landArea,
+
+          soilType:
+            value ===
+              "Crop" ||
+            value ===
+              "Orchard"
+              ? previous.soilType
+              : "",
+        })
+      );
+
+      setErrors(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          farmType:
+            "",
+
+          landArea:
+            "",
+
+          unit:
+            "",
+
+          soilType:
+            "",
+        })
+      );
+    };
+
+  const validateForm =
     () => {
-      if (!form.name.trim()) {
-        return "Farm name is required.";
-      }
+      const newErrors:
+        Record<
+          string,
+          string
+        > =
+        {};
 
-      if (!form.farmType) {
-        return "Please select farm type.";
+      if (
+        !formData.name.trim()
+      ) {
+        newErrors.name =
+          "Farm name is required";
       }
 
       if (
-        !form.division ||
-        !form.district ||
-        !form.upazila
+        !formData.farmType
       ) {
-        return "Please select division, district and upazila.";
+        newErrors.farmType =
+          "Select a farm type";
       }
 
       if (
-        needsArea &&
-        Number(
-          form.landArea
-        ) <= 0
+        !formData.division
       ) {
-        return "Farm area must be greater than 0.";
+        newErrors.division =
+          "Select a division";
+      }
+
+      if (
+        !formData.district
+      ) {
+        newErrors.district =
+          "Select a district";
+      }
+
+      if (
+        !formData.upazila
+      ) {
+        newErrors.upazila =
+          "Select an upazila";
+      }
+
+      if (
+        needsArea
+      ) {
+        if (
+          !formData.landArea
+        ) {
+          newErrors.landArea =
+            formData.farmType ===
+            "Fishery"
+              ? "Pond or water area is required"
+              : "Land area is required";
+        } else if (
+          Number(
+            formData.landArea
+          ) <=
+          0
+        ) {
+          newErrors.landArea =
+            "Area must be greater than 0";
+        }
       }
 
       if (
         needsSoil &&
-        !form.soilType
+        !formData.soilType
       ) {
-        return "Please select soil type.";
+        newErrors.soilType =
+          "Select a soil type";
       }
 
-      return "";
+      setErrors(
+        newErrors
+      );
+
+      return (
+        Object.keys(
+          newErrors
+        ).length ===
+        0
+      );
     };
 
-  const submit =
+  const handleDivisionChange =
+    (
+      event:
+        React.ChangeEvent<HTMLSelectElement>
+    ) => {
+      const division =
+        event.target
+          .value;
+
+      setFormData(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          division,
+
+          district:
+            "",
+
+          upazila:
+            "",
+        })
+      );
+
+      setErrors(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          division:
+            "",
+
+          district:
+            "",
+
+          upazila:
+            "",
+        })
+      );
+    };
+
+  const handleDistrictChange =
+    (
+      event:
+        React.ChangeEvent<HTMLSelectElement>
+    ) => {
+      const district =
+        event.target
+          .value;
+
+      setFormData(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          district,
+
+          upazila:
+            "",
+        })
+      );
+
+      setErrors(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          district:
+            "",
+
+          upazila:
+            "",
+        })
+      );
+    };
+
+  const handleSubmit =
     async (
       event:
         | React.FormEvent<HTMLFormElement>
@@ -317,23 +433,44 @@ export default function AddFarmDrawer({
     ) => {
       event.preventDefault();
 
-      const validation =
-        validate();
+      if (
+        loading ||
+        uploadingImg
+      ) {
+        return;
+      }
 
-      if (validation) {
-        setError(
-          validation
-        );
-
+      if (
+        !validateForm()
+      ) {
         return;
       }
 
       try {
-        setLoading(true);
-        setError("");
+        setLoading(
+          true
+        );
+
+        setErrors(
+          (
+            previous
+          ) => ({
+            ...previous,
+
+            form:
+              "",
+          })
+        );
+
+  
+        const ensuredCoverImage =
+          await coverImageRef.current
+            ?.ensureRemoteUrl();
 
         const {
-          data: tokenData,
+          data:
+            tokenData,
+
           error:
             tokenError,
         } =
@@ -344,51 +481,52 @@ export default function AddFarmDrawer({
           !tokenData?.token
         ) {
           throw new Error(
-            "Authentication required."
+            "Authentication required"
           );
         }
 
         const payload = {
           name:
-            form.name.trim(),
+            formData.name.trim(),
 
           farmType:
-            form.farmType,
+            formData.farmType,
 
           division:
-            form.division,
+            formData.division,
 
           district:
-            form.district,
+            formData.district,
 
           upazila:
-            form.upazila,
+            formData.upazila,
 
           ...(needsArea
             ? {
                 landArea:
                   Number(
-                    form.landArea
+                    formData.landArea
                   ),
 
                 unit:
-                  form.unit,
+                  formData.unit,
               }
             : {}),
 
           ...(needsSoil
             ? {
                 soilType:
-                  form.soilType,
+                  formData.soilType,
               }
             : {}),
 
           coverImage:
-            form.coverImage ||
+            ensuredCoverImage ||
+            formData.coverImage.trim() ||
             undefined,
 
           description:
-            form.description.trim() ||
+            formData.description.trim() ||
             undefined,
 
           status:
@@ -403,6 +541,9 @@ export default function AddFarmDrawer({
                 "POST",
 
               headers: {
+                Accept:
+                  "application/json",
+
                 "Content-Type":
                   "application/json",
 
@@ -417,118 +558,232 @@ export default function AddFarmDrawer({
             }
           );
 
-        const result =
-          await response.json();
+        const data =
+          await response
+            .json()
+            .catch(
+              () =>
+                null
+            );
 
         if (
           !response.ok ||
-          !result?.success
+          !data?.success
         ) {
           throw new Error(
-            result?.message ||
-              "Unable to create farm."
+            data?.message ||
+              "Failed to create farm"
           );
         }
 
-        setForm(INITIAL);
+        coverImageRef.current
+          ?.clearLocal();
+
+        setFormData(
+          initialFormData
+        );
+
+        setErrors(
+          {}
+        );
 
         onSuccess();
+
         onClose();
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to create farm."
+      } catch (
+        error
+      ) {
+        console.error(
+          "Create farm error:",
+          error
+        );
+
+        setErrors(
+          (
+            previous
+          ) => ({
+            ...previous,
+
+            form:
+              error instanceof
+                Error
+                ? error.message
+                : "Failed to create farm",
+          })
         );
       } finally {
-        setLoading(false);
+        setLoading(
+          false
+        );
       }
+    };
+
+  const handleClose =
+    () => {
+      if (
+        loading ||
+        uploadingImg
+      ) {
+        return;
+      }
+
+      setErrors(
+        {}
+      );
+
+      onClose();
     };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
+
       <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
-        <header className="flex items-center justify-between border-b p-6">
+
+
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
+
           <div>
-            <h2 className="text-xl font-bold">
+            <h2 className="text-xl font-bold text-slate-900">
               Add New Farm
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
-              Add your farm information.
+              Add information based on your farming activity.
             </p>
           </div>
 
           <button
             type="button"
             onClick={
-              onClose
+              handleClose
             }
-            className="rounded-lg p-2 hover:bg-slate-100"
+            disabled={
+              loading ||
+              uploadingImg
+            }
+            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Close Add Farm"
           >
             <X className="h-5 w-5" />
           </button>
-        </header>
+        </div>
+
 
         <form
-          onSubmit={submit}
+          onSubmit={
+            handleSubmit
+          }
+          noValidate
           className="flex-1 space-y-5 overflow-y-auto p-6"
         >
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">
-              {error}
+
+          {/* GENERAL ERROR */}
+
+          {errors.form && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-600">
+              {
+                errors.form
+              }
             </div>
           )}
 
-          <Field label="Farm Name">
+          {/* FARM NAME */}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Farm Name
+
+              <span className="ml-1 text-red-500">
+                *
+              </span>
+            </label>
+
             <input
+              type="text"
+              placeholder="e.g. Green Valley Farm"
               value={
-                form.name
+                formData.name
               }
-              onChange={(e) =>
-                setForm(
-                  (prev) => ({
-                    ...prev,
+              disabled={
+                loading
+              }
+              onChange={(
+                event
+              ) => {
+                setFormData(
+                  (
+                    previous
+                  ) => ({
+                    ...previous,
+
                     name:
-                      e.target
+                      event.target
                         .value,
                   })
-                )
-              }
-              className={
-                inputClass
-              }
-            />
-          </Field>
+                );
 
-          <Field label="Farm Type">
+                clearError(
+                  "name"
+                );
+              }}
+              className={`w-full rounded-lg border p-2.5 text-sm outline-none transition focus:ring-2 ${
+                errors.name
+                  ? "border-red-500 focus:ring-red-100"
+                  : "border-slate-200 focus:border-emerald-500 focus:ring-emerald-100"
+              }`}
+            />
+
+            {errors.name && (
+              <p className="mt-1 text-[11px] text-red-500">
+                {
+                  errors.name
+                }
+              </p>
+            )}
+          </div>
+
+          {/* FARM TYPE */}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Farm Type
+
+              <span className="ml-1 text-red-500">
+                *
+              </span>
+            </label>
+
             <select
               value={
-                form.farmType
+                formData.farmType
               }
-              onChange={(e) =>
-                setForm(
-                  (prev) => ({
-                    ...prev,
-
-                    farmType:
-                      e.target
-                        .value as
-                        | FarmType
-                        | "",
-                  })
+              disabled={
+                loading
+              }
+              onChange={(
+                event
+              ) =>
+                handleFarmTypeChange(
+                  event.target
+                    .value as
+                    | FarmType
+                    | ""
                 )
               }
-              className={
-                inputClass
-              }
+              className={`w-full rounded-lg border bg-white p-2.5 text-sm outline-none ${
+                errors.farmType
+                  ? "border-red-500"
+                  : "border-slate-200"
+              }`}
             >
               <option value="">
-                Select Farm Type
+                Select farm type
               </option>
 
               {FARM_TYPES.map(
-                (type) => (
+                (
+                  type
+                ) => (
                   <option
                     key={
                       type.value
@@ -537,40 +792,52 @@ export default function AddFarmDrawer({
                       type.value
                     }
                   >
-                    {type.label}
+                    {
+                      type.label
+                    }
                   </option>
                 )
               )}
             </select>
-          </Field>
 
-          <Field label="Division">
+            {errors.farmType && (
+              <p className="mt-1 text-[11px] text-red-500">
+                {
+                  errors.farmType
+                }
+              </p>
+            )}
+          </div>
+
+          {/* DIVISION */}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Division
+
+              <span className="ml-1 text-red-500">
+                *
+              </span>
+            </label>
+
             <select
               value={
-                form.division
+                formData.division
               }
-              onChange={(e) =>
-                setForm(
-                  (prev) => ({
-                    ...prev,
-
-                    division:
-                      e.target
-                        .value,
-
-                    district:
-                      "",
-
-                    upazila: "",
-                  })
-                )
+              disabled={
+                loading
               }
-              className={
-                inputClass
+              onChange={
+                handleDivisionChange
               }
+              className={`w-full rounded-lg border bg-white p-2.5 text-sm outline-none ${
+                errors.division
+                  ? "border-red-500"
+                  : "border-slate-200"
+              }`}
             >
               <option value="">
-                Select Division
+                Select division
               </option>
 
               {DIVISIONS.map(
@@ -592,37 +859,48 @@ export default function AddFarmDrawer({
                 )
               )}
             </select>
-          </Field>
+
+            {errors.division && (
+              <p className="mt-1 text-[11px] text-red-500">
+                {
+                  errors.division
+                }
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="District">
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                District
+
+                <span className="ml-1 text-red-500">
+                  *
+                </span>
+              </label>
+
               <select
                 value={
-                  form.district
+                  formData.district
+                }
+                onChange={
+                  handleDistrictChange
                 }
                 disabled={
-                  !form.division
+                  !formData.division ||
+                  loading
                 }
-                onChange={(e) =>
-                  setForm(
-                    (prev) => ({
-                      ...prev,
-
-                      district:
-                        e.target
-                          .value,
-
-                      upazila:
-                        "",
-                    })
-                  )
-                }
-                className={
-                  inputClass
-                }
+                className={`w-full rounded-lg border bg-white p-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+                  errors.district
+                    ? "border-red-500"
+                    : "border-slate-200"
+                }`}
               >
                 <option value="">
-                  Select District
+                  {formData.division
+                    ? "Select district"
+                    : "Select division first"}
                 </option>
 
                 {districts.map(
@@ -644,33 +922,62 @@ export default function AddFarmDrawer({
                   )
                 )}
               </select>
-            </Field>
 
-            <Field label="Upazila">
+              {errors.district && (
+                <p className="mt-1 text-[11px] text-red-500">
+                  {
+                    errors.district
+                  }
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                Upazila
+
+                <span className="ml-1 text-red-500">
+                  *
+                </span>
+              </label>
+
               <select
                 value={
-                  form.upazila
+                  formData.upazila
                 }
                 disabled={
-                  !form.district
+                  !formData.district ||
+                  loading
                 }
-                onChange={(e) =>
-                  setForm(
-                    (prev) => ({
-                      ...prev,
+                onChange={(
+                  event
+                ) => {
+                  setFormData(
+                    (
+                      previous
+                    ) => ({
+                      ...previous,
 
                       upazila:
-                        e.target
+                        event.target
                           .value,
                     })
-                  )
-                }
-                className={
-                  inputClass
-                }
+                  );
+
+                  clearError(
+                    "upazila"
+                  );
+                }}
+                className={`w-full rounded-lg border bg-white p-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+                  errors.upazila
+                    ? "border-red-500"
+                    : "border-slate-200"
+                }`}
               >
                 <option value="">
-                  Select Upazila
+                  {formData.district
+                    ? "Select upazila"
+                    : "Select district first"}
                 </option>
 
                 {upazilas.map(
@@ -692,96 +999,179 @@ export default function AddFarmDrawer({
                   )
                 )}
               </select>
-            </Field>
+
+              {errors.upazila && (
+                <p className="mt-1 text-[11px] text-red-500">
+                  {
+                    errors.upazila
+                  }
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* CONDITIONAL AREA */}
 
           {needsArea && (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Land / Water Area">
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  {formData.farmType ===
+                  "Fishery"
+                    ? "Pond / Water Area"
+                    : "Land Area"}
+
+                  <span className="ml-1 text-red-500">
+                    *
+                  </span>
+                </label>
+
                 <input
                   type="number"
-                  min="0.01"
+                  min="0"
                   step="0.01"
+                  placeholder="0.00"
                   value={
-                    form.landArea
+                    formData.landArea
                   }
-                  onChange={(e) =>
-                    setForm(
-                      (prev) => ({
-                        ...prev,
+                  disabled={
+                    loading
+                  }
+                  onChange={(
+                    event
+                  ) => {
+                    setFormData(
+                      (
+                        previous
+                      ) => ({
+                        ...previous,
 
                         landArea:
-                          e.target
+                          event.target
                             .value,
                       })
-                    )
-                  }
-                  className={
-                    inputClass
-                  }
-                />
-              </Field>
+                    );
 
-              <Field label="Unit">
+                    clearError(
+                      "landArea"
+                    );
+                  }}
+                  className={`w-full rounded-lg border p-2.5 text-sm outline-none transition focus:ring-2 ${
+                    errors.landArea
+                      ? "border-red-500 focus:ring-red-100"
+                      : "border-slate-200 focus:border-emerald-500 focus:ring-emerald-100"
+                  }`}
+                />
+
+                {errors.landArea && (
+                  <p className="mt-1 text-[11px] text-red-500">
+                    {
+                      errors.landArea
+                    }
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Unit
+
+                  <span className="ml-1 text-red-500">
+                    *
+                  </span>
+                </label>
+
                 <select
                   value={
-                    form.unit
+                    formData.unit
                   }
-                  onChange={(e) =>
-                    setForm(
-                      (prev) => ({
-                        ...prev,
+                  disabled={
+                    loading
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setFormData(
+                      (
+                        previous
+                      ) => ({
+                        ...previous,
 
                         unit:
-                          e.target
+                          event.target
                             .value as FarmUnit,
                       })
                     )
                   }
-                  className={
-                    inputClass
-                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm outline-none"
                 >
                   <option value="Bigha">
                     Bigha
                   </option>
+
                   <option value="Decimal">
                     Decimal
                   </option>
+
                   <option value="Acre">
                     Acre
                   </option>
+
                   <option value="Hectare">
                     Hectare
                   </option>
                 </select>
-              </Field>
+              </div>
             </div>
           )}
 
+          {/* CONDITIONAL SOIL */}
+
           {needsSoil && (
-            <Field label="Soil Type">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                Soil Type
+
+                <span className="ml-1 text-red-500">
+                  *
+                </span>
+              </label>
+
               <select
                 value={
-                  form.soilType
+                  formData.soilType
                 }
-                onChange={(e) =>
-                  setForm(
-                    (prev) => ({
-                      ...prev,
+                disabled={
+                  loading
+                }
+                onChange={(
+                  event
+                ) => {
+                  setFormData(
+                    (
+                      previous
+                    ) => ({
+                      ...previous,
 
                       soilType:
-                        e.target
+                        event.target
                           .value,
                     })
-                  )
-                }
-                className={
-                  inputClass
-                }
+                  );
+
+                  clearError(
+                    "soilType"
+                  );
+                }}
+                className={`w-full rounded-lg border bg-white p-2.5 text-sm outline-none ${
+                  errors.soilType
+                    ? "border-red-500"
+                    : "border-slate-200"
+                }`}
               >
                 <option value="">
-                  Select Soil Type
+                  Select dominant soil type
                 </option>
 
                 <option value="Loamy">
@@ -800,87 +1190,102 @@ export default function AddFarmDrawer({
                   Silt
                 </option>
               </select>
-            </Field>
+
+              {errors.soilType && (
+                <p className="mt-1 text-[11px] text-red-500">
+                  {
+                    errors.soilType
+                  }
+                </p>
+              )}
+            </div>
           )}
 
-          <Field label="Description">
+          {/* DESCRIPTION */}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Description
+
+              <span className="ml-1 font-normal text-slate-400">
+                (Optional)
+              </span>
+            </label>
+
             <textarea
-              rows={3}
-              value={
-                form.description
+              rows={
+                3
               }
-              onChange={(e) =>
-                setForm(
-                  (prev) => ({
-                    ...prev,
+              placeholder="Add details about this farm..."
+              value={
+                formData.description
+              }
+              disabled={
+                loading
+              }
+              onChange={(
+                event
+              ) =>
+                setFormData(
+                  (
+                    previous
+                  ) => ({
+                    ...previous,
 
                     description:
-                      e.target
+                      event.target
                         .value,
                   })
                 )
               }
-              className={`${inputClass} h-auto resize-none`}
+              className="w-full resize-none rounded-lg border border-slate-200 p-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
-          </Field>
-
-          <div>
-            <p className="mb-2 text-xs font-semibold text-slate-700">
-              Cover Image
-            </p>
-
-            <label className="relative flex min-h-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200">
-              {uploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-              ) : form.coverImage ? (
-                <Image
-                  src={
-                    form.coverImage
-                  }
-                  alt="Farm"
-                  fill
-                  sizes="448px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="text-center">
-                  <UploadCloud className="mx-auto h-8 w-8 text-slate-400" />
-
-                  <p className="mt-2 text-xs text-slate-500">
-                    Upload JPG, PNG or WEBP
-                  </p>
-                </div>
-              )}
-
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={
-                  uploadImage
-                }
-                className="hidden"
-              />
-            </label>
-
-            {uploadError && (
-              <p className="mt-2 text-xs text-red-600">
-                {uploadError}
-              </p>
-            )}
           </div>
+
+
+          <FarmCoverImageField
+            ref={
+              coverImageRef
+            }
+            value={
+              formData.coverImage
+            }
+            purpose="farm-create"
+            disabled={
+              loading
+            }
+            onBusyChange={
+              setUploadingImg
+            }
+            onChange={(
+              coverImage
+            ) =>
+              setFormData(
+                (
+                  previous
+                ) => ({
+                  ...previous,
+
+                  coverImage,
+                })
+              )
+            }
+          />
         </form>
 
-        <footer className="grid grid-cols-2 gap-3 border-t bg-slate-50 p-6">
+
+        <div className="grid grid-cols-2 gap-3 border-t border-slate-100 bg-slate-50 p-6">
+
           <button
             type="button"
             onClick={
-              onClose
+              handleClose
             }
             disabled={
               loading ||
-              uploading
+              uploadingImg
             }
-            className="rounded-lg border border-slate-300 py-2.5 text-sm font-semibold"
+            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -888,40 +1293,26 @@ export default function AddFarmDrawer({
           <button
             type="button"
             onClick={
-              submit
+              handleSubmit
             }
             disabled={
               loading ||
-              uploading
+              uploadingImg
             }
-            className="flex items-center justify-center rounded-lg bg-[#0B513D] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            className="flex w-full items-center justify-center rounded-lg bg-[#0B513D] py-2.5 text-sm font-semibold text-white transition hover:bg-[#083f30] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+                Saving...
+              </>
             ) : (
               "Save Farm"
             )}
           </button>
-        </footer>
+        </div>
       </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-        {label}
-      </span>
-
-      {children}
-    </label>
   );
 }
