@@ -24,7 +24,9 @@ import {
 import {
   addCommunityComment,
   addCommunityReply,
+  deleteCommunityComment,
   deleteCommunityPost,
+  deleteCommunityReply,
   toggleCommunityLike,
   updateCommunityPost,
 } from "@/services/community.service";
@@ -293,30 +295,22 @@ export default function CommunityPostCard({
     useState("");
 
   /*
-    IMPORTANT:
-    On refresh, backend returns likes[].
-    We calculate visual state from current user's id.
+    Keep local state synchronized with refreshed feed/profile data.
+    This also restores the filled Like state after a page refresh
+    by checking both likedByMe and likes[].
   */
   useEffect(() => {
     setPost(
-      (
-        current
-      ) => ({
-        ...current,
+      normalize(
+        initialPost
+      )
+    );
 
-        likedByMe:
-          determineLiked(
-            current
-          ),
-
-        likeCount:
-          current.likes
-            ?.length ??
-          current.likeCount ??
-          0,
-      })
+    setEditText(
+      initialPost.content
     );
   }, [
+    initialPost,
     currentUserId,
   ]);
 
@@ -526,6 +520,14 @@ export default function CommunityPostCard({
         setCommentText(
           ""
         );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to add comment."
+        );
       } finally {
         setBusyAction(
           ""
@@ -592,6 +594,181 @@ export default function CommunityPostCard({
 
         setReplyingTo(
           null
+        );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to add reply."
+        );
+      } finally {
+        setBusyAction(
+          ""
+        );
+      }
+    };
+
+  const removeComment =
+    async (
+      commentId: string
+    ) => {
+      if (
+        !requireFarmer()
+      ) {
+        return;
+      }
+
+      if (
+        !window.confirm(
+          "Delete this comment?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+        setBusyAction(
+          `delete-comment-${commentId}`
+        );
+
+        setError(
+          ""
+        );
+
+        await deleteCommunityComment(
+          post._id,
+          commentId
+        );
+
+        setPost(
+          (
+            current
+          ) => ({
+            ...current,
+
+            comments:
+              current.comments.filter(
+                (
+                  comment
+                ) =>
+                  String(
+                    comment._id
+                  ) !==
+                  String(
+                    commentId
+                  )
+              ),
+
+            commentCount:
+              Math.max(
+                (
+                  current.comments
+                    ?.length ||
+                  current.commentCount ||
+                  1
+                ) - 1,
+                0
+              ),
+          })
+        );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to delete comment."
+        );
+      } finally {
+        setBusyAction(
+          ""
+        );
+      }
+    };
+
+  const removeReply =
+    async (
+      commentId: string,
+      replyId: string
+    ) => {
+      if (
+        !requireFarmer()
+      ) {
+        return;
+      }
+
+      if (
+        !window.confirm(
+          "Delete this reply?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+        setBusyAction(
+          `delete-reply-${replyId}`
+        );
+
+        setError(
+          ""
+        );
+
+        await deleteCommunityReply(
+          post._id,
+          commentId,
+          replyId
+        );
+
+        setPost(
+          (
+            current
+          ) => ({
+            ...current,
+
+            comments:
+              current.comments.map(
+                (
+                  comment
+                ) =>
+                  String(
+                    comment._id
+                  ) ===
+                  String(
+                    commentId
+                  )
+                    ? {
+                        ...comment,
+
+                        replies:
+                          (
+                            comment.replies ||
+                            []
+                          ).filter(
+                            (
+                              reply
+                            ) =>
+                              String(
+                                reply._id
+                              ) !==
+                              String(
+                                replyId
+                              )
+                          ),
+                      }
+                    : comment
+              ),
+          })
+        );
+      } catch (
+        err
+      ) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to delete reply."
         );
       } finally {
         setBusyAction(
@@ -1031,6 +1208,40 @@ export default function CommunityPostCard({
                   Reply
                 </button>
 
+                {(mine ||
+                  (
+                    currentUserId &&
+                    String(
+                      currentUserId
+                    ) ===
+                      String(
+                        item.authorId
+                      )
+                  )) && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void removeComment(
+                        item._id
+                      )
+                    }
+                    disabled={
+                      busyAction ===
+                      `delete-comment-${item._id}`
+                    }
+                    className="ml-2 mt-1 inline-flex items-center gap-1 text-[11px] font-black text-red-500 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {busyAction ===
+                    `delete-comment-${item._id}` ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+
+                    Delete
+                  </button>
+                )}
+
                 {item.replies?.map(
                   (
                     reply:
@@ -1083,6 +1294,45 @@ export default function CommunityPostCard({
                           }
                         </p>
                       </div>
+
+                      {(mine ||
+                        String(
+                          currentUserId ||
+                            ""
+                        ) ===
+                          String(
+                            item.authorId
+                          ) ||
+                        String(
+                          currentUserId ||
+                            ""
+                        ) ===
+                          String(
+                            reply.authorId
+                          )) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void removeReply(
+                              item._id,
+                              reply._id
+                            )
+                          }
+                          disabled={
+                            busyAction ===
+                            `delete-reply-${reply._id}`
+                          }
+                          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          aria-label="Delete reply"
+                        >
+                          {busyAction ===
+                          `delete-reply-${reply._id}` ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   )
                 )}

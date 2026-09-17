@@ -1,28 +1,23 @@
 import React from "react";
+import Link from "next/link";
 import {
+  Inbox,
+  BadgeCheck,
   CalendarDays,
   Radio,
   CheckCheck,
-  LucideIcon,
   ArrowUpRight,
+  type LucideIcon,
 } from "lucide-react";
-import Link from "next/link";
 
 export interface ExpertStatItem {
-  id: "scheduled" | "ongoing" | "completed";
+  id: "requests" | "accepted" | "scheduled" | "ongoing" | "completed";
   label: string;
   count: number;
   description: string;
   icon: LucideIcon;
   href: string;
-  colorScheme: {
-    iconBg: string;
-    iconText: string;
-    borderHover: string;
-    badgeBg: string;
-    badgeText: string;
-    accentGlow: string;
-  };
+  className: string;
 }
 
 interface ExpertStatsCardsProps {
@@ -36,8 +31,29 @@ interface ExpertStatsCardsProps {
   isLoading?: boolean;
 }
 
-export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStatsCardsProps) {
+export default function ExpertStatsCard({
+  stats,
+  isLoading = false,
+}: ExpertStatsCardsProps) {
   const statItems: ExpertStatItem[] = [
+    {
+      id: "requests",
+      label: "New Requests",
+      count: stats.newRequests || 0,
+      description: "Waiting for your review",
+      icon: Inbox,
+      href: "/dashboard/expert/requests",
+      className: "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400",
+    },
+    {
+      id: "accepted",
+      label: "Accepted",
+      count: stats.accepted || 0,
+      description: "Ready to schedule",
+      icon: BadgeCheck,
+      href: "/dashboard/expert/requests?status=ACCEPTED",
+      className: "text-sky-700 bg-sky-50 border-sky-200 hover:border-sky-400",
+    },
     {
       id: "scheduled",
       label: "Scheduled",
@@ -45,14 +61,7 @@ export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStat
       description: "Upcoming video calls",
       icon: CalendarDays,
       href: "/dashboard/expert/consultations?status=SCHEDULED",
-      colorScheme: {
-        iconBg: "bg-indigo-500/10",
-        iconText: "text-indigo-600",
-        borderHover: "hover:border-indigo-400/80",
-        badgeBg: "bg-indigo-50",
-        badgeText: "text-indigo-700",
-        accentGlow: "from-indigo-500/5 to-transparent",
-      },
+      className: "text-indigo-700 bg-indigo-50 border-indigo-200 hover:border-indigo-400",
     },
     {
       id: "ongoing",
@@ -61,14 +70,7 @@ export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStat
       description: "Active live sessions",
       icon: Radio,
       href: "/dashboard/expert/consultations?status=ONGOING",
-      colorScheme: {
-        iconBg: "bg-rose-500/10",
-        iconText: "text-rose-600",
-        borderHover: "hover:border-rose-400/80",
-        badgeBg: "bg-rose-50",
-        badgeText: "text-rose-700",
-        accentGlow: "from-rose-500/5 to-transparent",
-      },
+      className: "text-rose-700 bg-rose-50 border-rose-200 hover:border-rose-400",
     },
     {
       id: "completed",
@@ -77,19 +79,12 @@ export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStat
       description: "Consultations closed",
       icon: CheckCheck,
       href: "/dashboard/expert/consultations?status=COMPLETED",
-      colorScheme: {
-        iconBg: "bg-emerald-500/10",
-        iconText: "text-emerald-600",
-        borderHover: "hover:border-emerald-400/80",
-        badgeBg: "bg-emerald-50",
-        badgeText: "text-emerald-700",
-        accentGlow: "from-emerald-500/5 to-transparent",
-      },
+      className: "text-emerald-700 bg-emerald-50 border-emerald-200 hover:border-emerald-400",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {statItems.map((item) => {
         const Icon = item.icon;
         const isOngoing = item.id === "ongoing" && item.count > 0;
@@ -98,47 +93,37 @@ export default function ExpertStatsCard({ stats, isLoading = false }: ExpertStat
           <Link
             key={item.id}
             href={item.href}
-            className={`group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${item.colorScheme.borderHover}`}
+            className={`group relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${item.className}`}
           >
-            {/* Subtle Gradient Glow */}
-            <div
-              className={`absolute inset-0 bg-gradient-to-br ${item.colorScheme.accentGlow} opacity-70 transition-opacity group-hover:opacity-100 pointer-events-none`}
-            />
-
-            <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-              <div className="flex items-center justify-between">
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${item.colorScheme.iconBg} ${item.colorScheme.iconText} transition-transform group-hover:scale-105`}
-                >
-                  <Icon className={`h-5 w-5 ${isOngoing ? "animate-pulse" : ""}`} />
-                </div>
-                <span className="text-slate-400 group-hover:text-slate-700 transition">
-                  <ArrowUpRight className="h-4 w-4" />
-                </span>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-black/5">
+                <Icon className={`h-5 w-5 ${isOngoing ? "animate-pulse" : ""}`} />
               </div>
+              <ArrowUpRight className="h-4 w-4 opacity-50 transition group-hover:opacity-100" />
+            </div>
 
-              <div>
-                <div className="flex items-baseline gap-2">
-                  {isLoading ? (
-                    <div className="h-8 w-12 bg-slate-200 animate-pulse rounded-lg" />
-                  ) : (
-                    <span className="text-3xl font-extrabold tracking-tight text-slate-900">
-                      {item.count}
-                    </span>
-                  )}
+            <div className="mt-4">
+              {isLoading ? (
+                <div className="h-8 w-12 animate-pulse rounded-lg bg-slate-200" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-3xl font-black tracking-tight text-slate-950">
+                    {item.count}
+                  </span>
                   {isOngoing && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 animate-pulse">
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">
                       Live
                     </span>
                   )}
                 </div>
-                <h3 className="mt-1 text-sm font-semibold text-slate-700">
-                  {item.label}
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">
-                  {item.description}
-                </p>
-              </div>
+              )}
+
+              <h3 className="mt-1 text-sm font-bold text-slate-800">
+                {item.label}
+              </h3>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                {item.description}
+              </p>
             </div>
           </Link>
         );

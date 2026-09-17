@@ -73,10 +73,85 @@ export const getMyOrderById = (
     `/orders/my/${encodeURIComponent(orderId)}`
   );
 
-export const getSellerOrders = () =>
-  apiRequest<ISellerOrder[]>(
-    "/orders/seller"
+function normalizeSellerOrder(
+  raw: any
+): ISellerOrder {
+  const fulfillment =
+    raw?.fulfillment ||
+    (
+      Array.isArray(
+        raw?.fulfillments
+      )
+        ? raw.fulfillments[0]
+        : undefined
+    );
+
+  if (!fulfillment) {
+    throw new Error(
+      "Seller order response is missing fulfillment data."
+    );
+  }
+
+  return {
+    _id:
+      String(
+        raw?._id ||
+          ""
+      ),
+
+    orderNumber:
+      String(
+        raw?.orderNumber ||
+          ""
+      ),
+
+    customerName:
+      String(
+        raw?.customerName ||
+          "Customer"
+      ),
+
+    deliveryDistrict:
+      String(
+        raw?.deliveryDistrict ||
+          raw?.shippingAddress
+            ?.district ||
+          ""
+      ),
+
+    paymentMethod:
+      raw?.paymentMethod,
+
+    paymentStatus:
+      raw?.paymentStatus,
+
+    status:
+      raw?.status,
+
+    fulfillment,
+
+    createdAt:
+      raw?.createdAt,
+
+    updatedAt:
+      raw?.updatedAt,
+  };
+}
+
+export const getSellerOrders = async () => {
+  const result =
+    await apiRequest<any[]>(
+      "/orders/seller"
+    );
+
+  return (
+    Array.isArray(result)
+      ? result
+      : []
+  ).map(
+    normalizeSellerOrder
   );
+};
 
 export const updateSellerFulfillment = (
   orderId: string,
@@ -85,10 +160,12 @@ export const updateSellerFulfillment = (
     | "processing"
     | "ready_for_pickup"
 ) =>
-  apiRequest<ISellerOrder>(
+  apiRequest<any>(
     `/orders/seller/${encodeURIComponent(orderId)}/fulfillment`,
     "PATCH",
     { status }
+  ).then(
+    normalizeSellerOrder
   );
 
 export const createStripeCheckoutSession = (
