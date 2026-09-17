@@ -24,8 +24,18 @@ import {
   Loader2,
   AlertCircle,
   Building2,
+  CloudOff,
+  RefreshCw,
 } from "lucide-react";
 import type { ExpertProfile } from "@/types/expert";
+import {
+  getStoredLocalImage,
+  listStoredLocalImages,
+  removeStoredLocalImage,
+  retryStoredImage,
+  uploadImageWithFallback,
+  type StoredLocalImage,
+} from "@/lib/image-storage";
 
 interface ExpertProfileFormProps {
   initialProfile: ExpertProfile;
@@ -60,57 +70,88 @@ export default function ExpertProfileForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [localAvatar, setLocalAvatar] = useState<StoredLocalImage | null>(null);
+
+  const imageStoragePurpose = `expert-profile-${
+    initialProfile.userId || initialProfile.id || initialProfile._id || "current"
+  }`;
+
+  useEffect(() => {
+    const saved = listStoredLocalImages(imageStoragePurpose);
+
+    if (saved.length === 0) {
+      setLocalAvatar(null);
+      return;
+    }
+
+    const newest = saved[saved.length - 1];
+
+    for (const item of saved) {
+      if (item.localKey !== newest.localKey) {
+        removeStoredLocalImage(item.localKey);
+      }
+    }
+
+    setLocalAvatar(newest);
+  }, [imageStoragePurpose]);
 
   const handleImageFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = "";
+
+    if (!file || isUploadingImage || isSaving) return;
 
     setUploadError(null);
-
-    if (!file.type.startsWith("image/")) {
-      setUploadError("Please select a valid image file (PNG, JPG, or WEBP).");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("Image size must be less than 5MB.");
-      return;
-    }
-
     setIsUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+    try {
+      const result = await uploadImageWithFallback(file, {
+        purpose: imageStoragePurpose,
+        allowLocalFallback: true,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.url) {
-          setProfile((prev) => ({
-            ...prev,
-            avatar: data.url,
-          }));
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(
-              new CustomEvent("expert-profile-updated", {
-                detail: { avatar: data.url },
-              })
-            );
-          }
-        } else {
-          setUploadError(data.message || "Failed to upload image.");
+      if (result.source === "remote") {
+        if (localAvatar) {
+          removeStoredLocalImage(localAvatar.localKey);
         }
-      } else {
-        setUploadError("Server failed to upload image.");
+
+        setLocalAvatar(null);
+        setProfile((prev) => ({
+          ...prev,
+          avatar: result.url,
+        }));
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("expert-profile-updated", {
+              detail: { avatar: result.url },
+            })
+          );
+        }
+
+        return;
       }
+
+      const stored = getStoredLocalImage(result.localKey);
+
+      if (!stored) {
+        throw new Error(
+          "The profile photo was saved locally but could not be restored."
+        );
+      }
+
+      const existing = listStoredLocalImages(imageStoragePurpose);
+      for (const item of existing) {
+        if (item.localKey !== stored.localKey) {
+          removeStoredLocalImage(item.localKey);
+        }
+      }
+
+      setLocalAvatar(stored);
     } catch (err: any) {
-      setUploadError(err?.message || "Failed to upload image.");
+      setUploadError(err?.message || "Failed to process image.");
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) {
@@ -119,9 +160,49 @@ export default function ExpertProfileForm({
     }
   };
 
-  const handleRemoveImage = () => {
-    setProfile((prev) => ({ ...prev, avatar: "" }));
+  const retryLocalAvatar = async () => {
+    if (!localAvatar || isUploadingImage || isSaving) return;
+
     setUploadError(null);
+    setIsUploadingImage(true);
+
+    try {
+      const remoteUrl = await retryStoredImage(localAvatar.localKey);
+
+      setLocalAvatar(null);
+      setProfile((prev) => ({
+        ...prev,
+        avatar: remoteUrl,
+      }));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("expert-profile-updated", {
+            detail: { avatar: remoteUrl },
+          })
+        );
+      }
+    } catch (err: any) {
+      setUploadError(
+        err?.message || "Image service is still unavailable. Please try again."
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const discardLocalAvatar = () => {
+    if (localAvatar) {
+      removeStoredLocalImage(localAvatar.localKey);
+    }
+    setLocalAvatar(null);
+    setUploadError(null);
+  };
+
+  const handleRemoveImage = () => {
+    discardLocalAvatar();
+    setProfile((prev) => ({ ...prev, avatar: "" }));
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("expert-profile-updated", {
@@ -152,18 +233,49 @@ export default function ExpertProfileForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setUploadError(null);
     setIsSaving(true);
+
     try {
-      // Exclude email, role, status from payload to ensure they remain untouched
-      const { email, ...payloadToUpdate } = profile;
+      let avatarForSave = profile.avatar || "";
+
+      if (localAvatar) {
+        setIsUploadingImage(true);
+
+        try {
+          avatarForSave = await retryStoredImage(localAvatar.localKey);
+          setLocalAvatar(null);
+          setProfile((prev) => ({
+            ...prev,
+            avatar: avatarForSave,
+          }));
+        } catch (err: any) {
+          throw new Error(
+            err?.message ||
+              "Your profile photo is saved locally, but the image service is still unavailable. Please retry before saving."
+          );
+        } finally {
+          setIsUploadingImage(false);
+        }
+      }
+
+      // Exclude email from payload so it remains untouched.
+      const profileForSave = {
+        ...profile,
+        avatar: avatarForSave,
+      };
+      const { email, ...payloadToUpdate } = profileForSave;
+
       await onSave(payloadToUpdate);
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("expert-profile-updated", {
-            detail: { avatar: profile.avatar },
+            detail: { avatar: avatarForSave },
           })
         );
       }
+
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3500);
     } catch (err: any) {
@@ -173,6 +285,8 @@ export default function ExpertProfileForm({
     }
   };
 
+  const displayedAvatar = localAvatar?.dataUrl || profile.avatar || "";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Top Banner Card: Expert Identity & Current Stats */}
@@ -180,10 +294,10 @@ export default function ExpertProfileForm({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-100">
           <div className="flex items-center gap-4 sm:gap-5 min-w-0">
             <div className="relative h-20 w-20 shrink-0 rounded-2xl bg-emerald-100 border-2 border-emerald-200 overflow-hidden flex items-center justify-center font-bold text-emerald-900 text-2xl shadow-inner">
-              {profile.avatar ? (
+              {displayedAvatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={profile.avatar}
+                  src={displayedAvatar}
                   alt={profile.name}
                   className="h-full w-full object-cover"
                 />
@@ -337,27 +451,40 @@ export default function ExpertProfileForm({
             </p>
           </div>
 
-          {/* Picture Uploadable Section (Replaced URL Input) */}
+          {/* Picture Uploadable Section */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Profile Picture
             </label>
-            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 p-3 bg-slate-50/50">
+
+            <div
+              className={`flex items-center gap-4 rounded-2xl border p-3 bg-slate-50/50 ${
+                localAvatar ? "border-amber-300" : "border-slate-200"
+              }`}
+            >
               <div className="relative h-14 w-14 shrink-0 rounded-xl bg-emerald-50 border border-emerald-200 overflow-hidden flex items-center justify-center font-bold text-emerald-800 text-lg shadow-inner">
-                {profile.avatar ? (
+                {displayedAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={profile.avatar}
+                    src={displayedAvatar}
                     alt={profile.name || "Profile Picture"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
                   <User className="h-7 w-7 text-emerald-600" />
                 )}
+
                 {isUploadingImage && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <Loader2 className="h-5 w-5 text-white animate-spin" />
                   </div>
+                )}
+
+                {localAvatar && !isUploadingImage && (
+                  <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
+                    <CloudOff className="h-2.5 w-2.5" />
+                    Local
+                  </span>
                 )}
               </div>
 
@@ -365,38 +492,73 @@ export default function ExpertProfileForm({
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  accept="image/png,image/jpeg,image/webp"
                   onChange={handleImageFileChange}
                   className="hidden"
                 />
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    disabled={isUploadingImage}
+                    disabled={isUploadingImage || isSaving}
                     onClick={() => fileInputRef.current?.click()}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-950 transition disabled:opacity-50"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     {isUploadingImage
-                      ? "Uploading..."
-                      : profile.avatar
+                      ? "Processing..."
+                      : displayedAvatar
                       ? "Change Photo"
                       : "Upload Photo"}
                   </button>
-                  {profile.avatar && (
-                    <button
-                      type="button"
-                      onClick={handleRemoveImage}
-                      className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Remove
-                    </button>
+
+                  {localAvatar ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isUploadingImage || isSaving}
+                        onClick={() => void retryLocalAvatar()}
+                        className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition disabled:opacity-50"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Retry
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isUploadingImage || isSaving}
+                        onClick={discardLocalAvatar}
+                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Discard New Photo
+                      </button>
+                    </>
+                  ) : (
+                    profile.avatar && (
+                      <button
+                        type="button"
+                        disabled={isUploadingImage || isSaving}
+                        onClick={handleRemoveImage}
+                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Remove
+                      </button>
+                    )
                   )}
                 </div>
+
                 <p className="text-[11px] text-slate-400">
-                  PNG, JPG, or WEBP up to 5MB.
+                  PNG, JPG, or WEBP up to 8MB.
                 </p>
+
+                {localAvatar && (
+                  <p className="text-[11px] text-amber-700 font-semibold">
+                    Image service is unavailable. This photo is saved safely in this browser and will be retried when you save.
+                  </p>
+                )}
+
                 {uploadError && (
                   <p className="text-[11px] text-rose-600 font-semibold">
                     {uploadError}

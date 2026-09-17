@@ -4,145 +4,466 @@ import {
   ChangeEvent,
   Dispatch,
   SetStateAction,
+  useEffect,
   useState,
 } from "react";
+
 import Image from "next/image";
+
 import {
+  AlertTriangle,
+  CheckCircle2,
+  CloudOff,
   ImagePlus,
   Loader2,
+  RefreshCw,
   Trash2,
   UploadCloud,
 } from "lucide-react";
 
-const MAX_IMAGES = 5;
+import {
+  IMAGE_INPUT_MAX_BYTES,
+  listStoredLocalImages,
+  removeStoredLocalImage,
+  retryStoredImage,
+  uploadImageWithFallback,
+  type StoredLocalImage,
+} from "@/lib/image-storage";
+
+const MAX_IMAGES =
+  5;
+
+const PURPOSE =
+  "marketplace-product";
 
 interface ProductImageUploadProps {
-  images: string[];
-  setImages: Dispatch<SetStateAction<string[]>>;
-}
+  images:
+    string[];
 
-interface UploadResponse {
-  success?: boolean;
-  url?: string;
-  message?: string;
+  setImages:
+    Dispatch<
+      SetStateAction<
+        string[]
+      >
+    >;
 }
 
 export default function ProductImageUpload({
   images,
   setImages,
 }: ProductImageUploadProps) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    let result: UploadResponse | null = null;
-
-    try {
-      result = (await response.json()) as UploadResponse;
-    } catch {
-      throw new Error("Image upload returned an invalid response.");
-    }
-
-    if (!response.ok || !result?.success || !result.url) {
-      throw new Error(
-        result?.message || "Unable to upload product image."
-      );
-    }
-
-    return result.url;
-  };
-
-  const handleFiles = async (
-    event: ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = Array.from(event.target.files || []);
-
-    if (!files.length) return;
-
-    const remainingSlots = Math.max(
-      MAX_IMAGES - images.length,
-      0
+  const [
+    uploading,
+    setUploading,
+  ] =
+    useState(
+      false
     );
 
-    if (remainingSlots === 0) {
-      setError(
-        `You can upload up to ${MAX_IMAGES} product images.`
+  const [
+    retryingKey,
+    setRetryingKey,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+  const [
+    error,
+    setError,
+  ] =
+    useState(
+      ""
+    );
+
+  const [
+    message,
+    setMessage,
+  ] =
+    useState(
+      ""
+    );
+
+  const [
+    localImages,
+    setLocalImages,
+  ] =
+    useState<
+      StoredLocalImage[]
+    >(
+      []
+    );
+
+  /**
+   * Restore recent locally saved images after refresh.
+   *
+   * image-storage.ts automatically removes
+   * fallbacks older than 24 hours.
+   */
+  useEffect(
+    () => {
+      setLocalImages(
+        listStoredLocalImages(
+          PURPOSE
+        )
       );
+    },
 
-      event.target.value = "";
-      return;
-    }
+    []
+  );
 
-    const selectedFiles = files.slice(0, remainingSlots);
+  const totalImages =
+    images.length +
+    localImages.length;
 
-    try {
-      setUploading(true);
-      setError("");
+  const handleFiles =
+    async (
+      event:
+        ChangeEvent<HTMLInputElement>
+    ) => {
+      const files =
+        Array.from(
+          event.target
+            .files ||
+            []
+        );
 
-      const uploaded: string[] = [];
-
-      for (const file of selectedFiles) {
-        if (!file.type.startsWith("image/")) {
-          throw new Error(
-            `${file.name} is not a valid image file.`
-          );
-        }
-
-        if (file.size > 8 * 1024 * 1024) {
-          throw new Error(
-            `${file.name} must be 8 MB or smaller.`
-          );
-        }
-
-        uploaded.push(await uploadImage(file));
+      if (
+        !files.length
+      ) {
+        return;
       }
 
-      setImages((current) => [...current, ...uploaded]);
-    } catch (err) {
-      console.error("Product image upload failed:", err);
+      const remainingSlots =
+        Math.max(
+          MAX_IMAGES -
+            totalImages,
+
+          0
+        );
+
+      if (
+        remainingSlots ===
+        0
+      ) {
+        setError(
+          `You can upload up to ${MAX_IMAGES} product images.`
+        );
+
+        event.target.value =
+          "";
+
+        return;
+      }
+
+      const selectedFiles =
+        files.slice(
+          0,
+          remainingSlots
+        );
+
+      setUploading(
+        true
+      );
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to upload product image."
+        ""
       );
-    } finally {
-      setUploading(false);
-      event.target.value = "";
-    }
-  };
 
-  const removeImage = (index: number) => {
-    setImages((current) =>
-      current.filter(
-        (_, currentIndex) => currentIndex !== index
-      )
-    );
-  };
+      setMessage(
+        ""
+      );
+
+      const remoteUrls:
+        string[] =
+        [];
+
+      const localFallbacks:
+        StoredLocalImage[] =
+        [];
+
+      try {
+        for (
+          const file of selectedFiles
+        ) {
+          if (
+            file.size >
+            IMAGE_INPUT_MAX_BYTES
+          ) {
+            throw new Error(
+              `${file.name} must be 8 MB or smaller.`
+            );
+          }
+
+          const result =
+            await uploadImageWithFallback(
+              file,
+              {
+                purpose:
+                  PURPOSE,
+
+                allowLocalFallback:
+                  true,
+              }
+            );
+
+          if (
+            result.source ===
+            "remote"
+          ) {
+            remoteUrls.push(
+              result.url
+            );
+          } else {
+            const stored =
+              listStoredLocalImages(
+                PURPOSE
+              ).find(
+                (
+                  item
+                ) =>
+                  item.localKey ===
+                  result.localKey
+              );
+
+            if (
+              stored
+            ) {
+              localFallbacks.push(
+                stored
+              );
+            }
+          }
+        }
+
+        if (
+          remoteUrls.length
+        ) {
+          setImages(
+            (
+              current
+            ) => [
+              ...current,
+              ...remoteUrls,
+            ]
+          );
+        }
+
+        if (
+          localFallbacks.length
+        ) {
+          setLocalImages(
+            (
+              current
+            ) => {
+              const known =
+                new Set(
+                  current.map(
+                    (
+                      item
+                    ) =>
+                      item.localKey
+                  )
+                );
+
+              return [
+                ...current,
+
+                ...localFallbacks.filter(
+                  (
+                    item
+                  ) =>
+                    !known.has(
+                      item.localKey
+                    )
+                ),
+              ];
+            }
+          );
+
+          setMessage(
+            `${localFallbacks.length} image${
+              localFallbacks.length >
+              1
+                ? "s were"
+                : " was"
+            } saved safely in this browser because the image server was unavailable. Use Retry when the service is available.`
+          );
+        } else if (
+          remoteUrls.length
+        ) {
+          setMessage(
+            `${remoteUrls.length} image${
+              remoteUrls.length >
+              1
+                ? "s"
+                : ""
+            } uploaded successfully.`
+          );
+        }
+      } catch (
+        err
+      ) {
+        console.error(
+          "Product image processing failed:",
+          err
+        );
+
+        setError(
+          err instanceof
+            Error
+            ? err.message
+            : "Unable to process product image."
+        );
+      } finally {
+        setUploading(
+          false
+        );
+
+        event.target.value =
+          "";
+      }
+    };
+
+  const removeRemoteImage =
+    (
+      index: number
+    ) => {
+      setImages(
+        (
+          current
+        ) =>
+          current.filter(
+            (
+              _,
+              currentIndex
+            ) =>
+              currentIndex !==
+              index
+          )
+      );
+    };
+
+  const removeLocalImage =
+    (
+      localKey: string
+    ) => {
+      removeStoredLocalImage(
+        localKey
+      );
+
+      setLocalImages(
+        (
+          current
+        ) =>
+          current.filter(
+            (
+              item
+            ) =>
+              item.localKey !==
+              localKey
+          )
+      );
+
+      setMessage(
+        ""
+      );
+    };
+
+  const retryLocal =
+    async (
+      image:
+        StoredLocalImage
+    ) => {
+      try {
+        setRetryingKey(
+          image.localKey
+        );
+
+        setError(
+          ""
+        );
+
+        setMessage(
+          ""
+        );
+
+        const remoteUrl =
+          await retryStoredImage(
+            image.localKey
+          );
+
+        setImages(
+          (
+            current
+          ) => [
+            ...current,
+            remoteUrl,
+          ]
+        );
+
+        setLocalImages(
+          (
+            current
+          ) =>
+            current.filter(
+              (
+                item
+              ) =>
+                item.localKey !==
+                image.localKey
+            )
+        );
+
+        setMessage(
+          "Local image uploaded successfully."
+        );
+      } catch (
+        err
+      ) {
+        console.error(
+          "Local image retry failed:",
+          err
+        );
+
+        setError(
+          err instanceof
+            Error
+            ? err.message
+            : "Image upload is still unavailable."
+        );
+      } finally {
+        setRetryingKey(
+          null
+        );
+      }
+    };
 
   return (
     <div className="space-y-4">
       <label
-        className={`group flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all duration-200 ${
-          uploading
-            ? "cursor-wait border-emerald-300 bg-emerald-50"
-            : "border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50/50"
+        className={`group flex min-h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all duration-200 ${
+          uploading ||
+          totalImages >=
+            MAX_IMAGES
+            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"
+            : "cursor-pointer border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50/50"
         }`}
       >
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple
-          disabled={uploading || images.length >= MAX_IMAGES}
-          onChange={handleFiles}
+          disabled={
+            uploading ||
+            totalImages >=
+              MAX_IMAGES
+          }
+          onChange={
+            handleFiles
+          }
           className="sr-only"
         />
 
@@ -155,65 +476,246 @@ export default function ProductImageUpload({
         </div>
 
         <p className="mt-3 text-sm font-bold text-slate-800">
-          Upload product images
+          {uploading
+            ? "Processing images..."
+            : "Upload product images"}
         </p>
 
         <p className="mt-1 text-xs text-slate-500">
-          Select up to 5 product photos, maximum 8 MB each
+          Select up to
+          {" "}
+          {MAX_IMAGES}
+          {" "}
+          product photos,
+          maximum 8 MB
+          each
+        </p>
+
+        <p className="mt-1 text-[11px] text-slate-400">
+          Images are compressed automatically before upload.
         </p>
       </label>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          {error}
+        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+
+          <span>
+            {error}
+          </span>
         </div>
       )}
 
-      {images.length > 0 && (
+      {message && (
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+
+          <span>
+            {message}
+          </span>
+        </div>
+      )}
+
+      {localImages.length >
+        0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+
+          <div>
+            <p className="text-sm font-bold text-amber-900">
+              {
+                localImages.length
+              }
+              {" "}
+              photo
+              {localImages.length >
+              1
+                ? "s"
+                : ""}
+              {" "}
+              saved locally
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-amber-800">
+              These photos are safe in this browser, but they are not public yet. Retry them before publishing if you want buyers on other devices to see them.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(images.length >
+        0 ||
+        localImages.length >
+          0) && (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {images.map((image, index) => (
-            <div
-              key={`${image}-${index}`}
-              className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="relative h-40 bg-slate-100">
-                <Image
-                  src={image}
-                  alt={`Product image ${index + 1}`}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  unoptimized
-                />
+          {images.map(
+            (
+              image,
+              index
+            ) => (
+              <div
+                key={`${image}-${index}`}
+                className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="relative h-40 bg-slate-100">
+                  <Image
+                    src={
+                      image
+                    }
+                    alt={`Product image ${
+                      index +
+                      1
+                    }`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    unoptimized
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  disabled={uploading}
-                  aria-label={`Remove image ${index + 1}`}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-red-500 opacity-0 shadow-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                  <div className="absolute left-2 top-2 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                    Uploaded
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeRemoteImage(
+                        index
+                      )
+                    }
+                    disabled={
+                      uploading
+                    }
+                    aria-label={`Remove image ${
+                      index +
+                      1
+                    }`}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-red-500 shadow-sm transition hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <ImagePlus className="h-4 w-4 shrink-0 text-emerald-600" />
+
+                  <span className="truncate text-xs text-slate-500">
+                    Product image
+                    {" "}
+                    {index +
+                      1}
+                  </span>
+                </div>
+              </div>
+            )
+          )}
+
+          {localImages.map(
+            (
+              image,
+              index
+            ) => {
+              const retrying =
+                retryingKey ===
+                image.localKey;
+
+              return (
+                <div
+                  key={
+                    image.localKey
+                  }
+                  className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                  <div className="relative h-40 bg-slate-100">
+                    <Image
+                      src={
+                        image.dataUrl
+                      }
+                      alt={`Locally saved product image ${
+                        index +
+                        1
+                      }`}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+                      className="object-cover"
+                      unoptimized
+                    />
 
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <ImagePlus className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                      <CloudOff className="h-3 w-3" />
 
-                <span className="truncate text-xs text-slate-500">
-                  Product image {index + 1}
-                </span>
-              </div>
-            </div>
-          ))}
+                      Local
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeLocalImage(
+                          image.localKey
+                        )
+                      }
+                      disabled={
+                        retrying
+                      }
+                      aria-label="Remove local image"
+                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-red-500 shadow-sm transition hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 px-3 py-3">
+                    <p className="truncate text-xs font-medium text-slate-600">
+                      {
+                        image.name
+                      }
+                    </p>
+
+                    <button
+                      type="button"
+                      disabled={
+                        retrying ||
+                        uploading
+                      }
+                      onClick={() =>
+                        retryLocal(
+                          image
+                        )
+                      }
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {retrying ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+
+                      {retrying
+                        ? "Retrying..."
+                        : "Retry upload"}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+          )}
         </div>
       )}
 
-      {images.length === 0 && (
+      {totalImages ===
+        0 && (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-xs text-slate-400">
           No product images uploaded yet.
         </div>
       )}
+
+      <div className="text-right text-[11px] font-medium text-slate-400">
+        {totalImages}
+        /
+        {MAX_IMAGES}
+        {" "}
+        images selected
+      </div>
     </div>
   );
 }

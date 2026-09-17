@@ -1,3 +1,7 @@
+/* ============================================================
+   PRODUCT TYPES
+============================================================ */
+
 export type ProductCategory =
   | "crops"
   | "seeds"
@@ -18,12 +22,15 @@ export type TransactionType =
   | "sale"
   | "free";
 
-
 export type ProductStatus =
   | "pending"
   | "available"
   | "out_of_stock"
   | "disabled";
+
+/* ============================================================
+   PRODUCT
+============================================================ */
 
 export interface IProduct {
   _id: string;
@@ -34,11 +41,14 @@ export interface IProduct {
 
   price: number;
 
-  category: ProductCategory;
+  category:
+    ProductCategory;
 
-  transactionType: TransactionType;
+  transactionType:
+    TransactionType;
 
-  productionMethod: ProductionMethod;
+  productionMethod:
+    ProductionMethod;
 
   quantity: number;
 
@@ -62,18 +72,34 @@ export interface IProduct {
 
   upazila?: string;
 
-  status: ProductStatus;
+  status:
+    ProductStatus;
 
   isFeatured?: boolean;
 
+  /* ==========================================================
+     POULTRY
+  ========================================================== */
+
   poultryDetails?: {
     poultryType?: string;
+
     breed?: string;
+
     ageWeeks?: number;
+
     averageWeightKg?: number;
   };
 
+  /* ==========================================================
+     BY-PRODUCT
+  ========================================================== */
+
   byProductUses?: string[];
+
+  /* ==========================================================
+     MODERATION
+  ========================================================== */
 
   rejectionReason?: string;
 
@@ -94,6 +120,10 @@ export interface IProduct {
   updatedAt?: string;
 }
 
+/* ============================================================
+   CREATE / UPDATE PRODUCT
+============================================================ */
+
 export interface ICreateProduct {
   title: string;
 
@@ -101,11 +131,14 @@ export interface ICreateProduct {
 
   price: number;
 
-  category: ProductCategory;
+  category:
+    ProductCategory;
 
-  transactionType: TransactionType;
+  transactionType:
+    TransactionType;
 
-  productionMethod: ProductionMethod;
+  productionMethod:
+    ProductionMethod;
 
   quantity: number;
 
@@ -125,24 +158,39 @@ export interface ICreateProduct {
 
   poultryDetails?: {
     poultryType?: string;
+
     breed?: string;
+
     ageWeeks?: number;
+
     averageWeightKg?: number;
   };
 
   byProductUses?: string[];
 }
 
+/* ============================================================
+   PRODUCT LIST RESPONSE
+============================================================ */
+
 export interface IProductListResponse {
   meta: {
     page: number;
+
     limit: number;
+
     total: number;
+
     totalPages: number;
   };
 
-  data: IProduct[];
+  data:
+    IProduct[];
 }
+
+/* ============================================================
+   ORDER ITEM
+============================================================ */
 
 export interface IOrderItem {
   productId: string;
@@ -165,6 +213,10 @@ export interface IOrderItem {
 
   subtotal: number;
 }
+
+/* ============================================================
+   ORDER TYPES
+============================================================ */
 
 export type FulfillmentStatus =
   | "pending"
@@ -197,6 +249,10 @@ export type PaymentStatus =
   | "failed"
   | "refunded";
 
+/* ============================================================
+   ORDER FULFILLMENT
+============================================================ */
+
 export interface IOrderFulfillment {
   sellerId: string;
 
@@ -204,9 +260,17 @@ export interface IOrderFulfillment {
 
   sellerEmail?: string;
 
-  items: IOrderItem[];
+  items:
+    IOrderItem[];
 
   subtotal: number;
+
+  /**
+   * One delivery fee for this seller.
+   *
+   * Optional so old orders remain compatible.
+   */
+  deliveryFee?: number;
 
   commissionRate: number;
 
@@ -214,15 +278,21 @@ export interface IOrderFulfillment {
 
   sellerPayout: number;
 
-  status: FulfillmentStatus;
+  status:
+    FulfillmentStatus;
 
   pickupAddress?: string;
 
   deliveryPartner?: {
     name?: string;
+
     phone?: string;
   };
 }
+
+/* ============================================================
+   SHIPPING ADDRESS
+============================================================ */
 
 export interface IShippingAddress {
   fullName: string;
@@ -240,8 +310,17 @@ export interface IShippingAddress {
   postalCode?: string;
 }
 
+/* ============================================================
+   ORDER
+============================================================ */
+
 export interface IOrder {
   _id: string;
+
+  /**
+   * Prevents duplicate checkout.
+   */
+  idempotencyKey?: string;
 
   orderNumber: string;
 
@@ -251,14 +330,20 @@ export interface IOrder {
 
   customerEmail: string;
 
-  items: IOrderItem[];
+  items:
+    IOrderItem[];
 
-  fulfillments: IOrderFulfillment[];
+  fulfillments:
+    IOrderFulfillment[];
 
-  shippingAddress: IShippingAddress;
+  shippingAddress:
+    IShippingAddress;
 
   subtotal: number;
 
+  /**
+   * Total delivery fees from all seller fulfillments.
+   */
   deliveryFee: number;
 
   commissionAmount: number;
@@ -267,11 +352,14 @@ export interface IOrder {
 
   totalAmount: number;
 
-  status: OrderStatus;
+  status:
+    OrderStatus;
 
-  paymentMethod: PaymentMethod;
+  paymentMethod:
+    PaymentMethod;
 
-  paymentStatus: PaymentStatus;
+  paymentStatus:
+    PaymentStatus;
 
   paymentReference?: string;
 
@@ -284,64 +372,138 @@ export interface IOrder {
   updatedAt?: string;
 }
 
+/* ============================================================
+   SELLER ORDER
+============================================================ */
+
 export interface ISellerOrderItem {
   productId: string;
+
   title: string;
+
   image?: string;
+
   quantity: number;
+
   unit: string;
+
   price: number;
+
   subtotal: number;
 }
 
 export interface ISellerOrderFulfillment {
   sellerId: string;
+
   sellerName: string;
-  items: ISellerOrderItem[];
+
+  items:
+    ISellerOrderItem[];
+
   subtotal: number;
+
+  /**
+   * One delivery fee for this seller.
+   */
+  deliveryFee?: number;
+
   commissionRate: number;
+
   commissionAmount: number;
+
   sellerPayout: number;
-  status: FulfillmentStatus;
+
+  status:
+    FulfillmentStatus;
+
   pickupAddress?: string;
+
   deliveryPartner?: {
     name?: string;
+
     phone?: string;
   };
 }
 
-
 export interface ISellerOrder {
   _id: string;
+
   orderNumber: string;
+
   customerName: string;
+
   deliveryDistrict: string;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
-  status: OrderStatus;
-  fulfillment: ISellerOrderFulfillment;
+
+  paymentMethod:
+    PaymentMethod;
+
+  paymentStatus:
+    PaymentStatus;
+
+  status:
+    OrderStatus;
+
+  fulfillment:
+    ISellerOrderFulfillment;
+
   createdAt?: string;
+
   updatedAt?: string;
 }
 
+/* ============================================================
+   CREATE ORDER
+============================================================ */
+
 export interface ICreateOrderPayload {
+  /**
+   * One checkout attempt must reuse the same key.
+   *
+   * Protects against:
+   * - double click
+   * - retry
+   * - duplicate COD order
+   */
+  idempotencyKey: string;
+
   items: {
     productId: string;
+
     quantity: number;
   }[];
 
-  shippingAddress: IShippingAddress;
+  shippingAddress:
+    IShippingAddress;
 
-  paymentMethod: PaymentMethod;
+  paymentMethod:
+    PaymentMethod;
 
   notes?: string;
 }
 
+/* ============================================================
+   STRIPE
+============================================================ */
+
 export interface IStripeSession {
   sessionId: string;
 
-  url: string | null;
+  /**
+   * Current/older backend compatibility.
+   */
+  url?: string | null;
+
+  /**
+   * Newer client compatibility.
+   */
+  checkoutUrl?: string;
+
+  sessionUrl?: string;
 }
+
+/* ============================================================
+   PRODUCT CATEGORY OPTIONS
+============================================================ */
 
 export const PRODUCT_CATEGORIES = [
   {
@@ -390,6 +552,19 @@ export const PRODUCT_CATEGORIES = [
   },
 ] as const;
 
+/* ============================================================
+   POULTRY TYPE OPTIONS
+============================================================ */
+
+/**
+ * Must match backend:
+ *
+ * POULTRY_TYPES = [
+ *   "chicken",
+ *   "duck",
+ *   "other"
+ * ]
+ */
 export const POULTRY_TYPE_OPTIONS = [
   {
     value: "chicken",
@@ -407,6 +582,22 @@ export const POULTRY_TYPE_OPTIONS = [
   },
 ] as const;
 
+/* ============================================================
+   BY-PRODUCT USE OPTIONS
+============================================================ */
+
+/**
+ * Must match backend:
+ *
+ * BY_PRODUCT_USES = [
+ *   "biogas",
+ *   "compost",
+ *   "animal_feed",
+ *   "biomass",
+ *   "bedding",
+ *   "other"
+ * ]
+ */
 export const BY_PRODUCT_USE_OPTIONS = [
   {
     value: "biogas",

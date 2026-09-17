@@ -1,177 +1,351 @@
-type PasswordResetEmailInput = {
-  to: string;
-  name?: string | null;
-  resetUrl: string;
-};
+import { Resend } from "resend";
+
+/* ============================================================
+   HELPERS
+============================================================ */
 
 const escapeHtml = (
   value: string
 ) =>
   value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 
-export async function sendPasswordResetEmail({
-  to,
-  name,
-  resetUrl,
-}: PasswordResetEmailInput) {
-  const apiKey =
-    process.env.RESEND_API_KEY;
+/* ============================================================
+   RESEND CLIENT
+============================================================ */
 
-  const from =
-    process.env.AUTH_EMAIL_FROM;
+const getResendClient =
+  () => {
+    const apiKey =
+      process.env
+        .RESEND_API_KEY;
 
-  if (!apiKey || !from) {
     if (
-      process.env.NODE_ENV !==
-      "production"
+      !apiKey
     ) {
-      console.warn(
-        "\n[AgriNova Password Reset]\n" +
-          `Email: ${to}\n` +
-          `Reset URL: ${resetUrl}\n` +
-          "RESEND_API_KEY / AUTH_EMAIL_FROM are not configured.\n"
+      throw new Error(
+        "RESEND_API_KEY is not configured."
       );
-
-      return;
     }
 
-    throw new Error(
-      "Password-reset email service is not configured"
+    return new Resend(
+      apiKey
     );
-  }
+  };
 
-  const safeName =
-    escapeHtml(
-      name?.trim() ||
+/* ============================================================
+   PASSWORD RESET EMAIL
+============================================================ */
+
+export const sendPasswordResetEmail =
+  async ({
+    to,
+    name,
+    resetUrl,
+  }: {
+    to: string;
+
+    name?: string | null;
+
+    resetUrl: string;
+  }) => {
+    const resend =
+      getResendClient();
+
+    const from =
+      process.env.AUTH_EMAIL_FROM ||
+      "AgriNova <onboarding@resend.dev>";
+
+    const safeName =
+      escapeHtml(
+        name?.trim() ||
         "AgriNova user"
-    );
+      );
 
-  const safeResetUrl =
-    escapeHtml(
-      resetUrl
-    );
+    const safeUrl =
+      escapeHtml(
+        resetUrl
+      );
 
-  const response =
-    await fetch(
-      "https://api.resend.com/emails",
-      {
-        method: "POST",
+    const {
+      data,
+      error,
+    } =
+      await resend.emails.send(
+        {
+          from,
 
-        headers: {
-          Authorization:
-            `Bearer ${apiKey}`,
+          to: [
+            to,
+          ],
 
-          "Content-Type":
-            "application/json",
-        },
+          subject:
+            "Reset your AgriNova password",
 
-        body:
-          JSON.stringify({
-            from,
+          text: [
+            `Hello ${name?.trim() || "AgriNova user"},`,
+            "",
+            "We received a request to reset your AgriNova password.",
+            "",
+            `Reset your password: ${resetUrl}`,
+            "",
+            "This link expires in 60 minutes.",
+            "",
+            "If you did not request a password reset, you can ignore this email.",
+            "",
+            "AgriNova",
+          ].join(
+            "\n"
+          ),
 
-            to: [
-              to,
-            ],
-
-            subject:
-              "Reset your AgriNova password",
-
-            text:
-              `Hello ${name || "AgriNova user"},\n\n` +
-              "We received a request to reset your AgriNova password.\n\n" +
-              `Reset your password: ${resetUrl}\n\n` +
-              "This link expires in 60 minutes.\n\n" +
-              "If you did not request this, you can ignore this email.\n\n" +
-              "AgriNova",
-
-            html: `
-<!doctype html>
+          html: `
+<!DOCTYPE html>
 <html>
-  <body style="margin:0;padding:0;background:#f6f8f7;font-family:Arial,sans-serif;color:#1e293b;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f6f8f7;">
-      <tr>
-        <td align="center">
-          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;border:1px solid #e2e8f0;overflow:hidden;">
-            <tr>
-              <td style="background:#063B2B;padding:24px 28px;">
-                <div style="font-size:24px;font-weight:700;color:#ffffff;">
-                  AgriNova
-                </div>
-                <div style="margin-top:4px;font-size:13px;color:#bbf7d0;">
-                  Smart Agriculture Platform
-                </div>
-              </td>
-            </tr>
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+</head>
 
-            <tr>
-              <td style="padding:32px 28px;">
-                <h1 style="margin:0 0 16px;font-size:23px;color:#0f172a;">
-                  Reset your password
-                </h1>
+<body
+  style="
+    margin:0;
+    padding:0;
+    background:#f4f7f5;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#17211d;
+  "
+>
+  <table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    role="presentation"
+    style="
+      background:#f4f7f5;
+      padding:32px 16px;
+    "
+  >
+    <tr>
+      <td align="center">
 
-                <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#475569;">
-                  Hello ${safeName},
-                </p>
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          style="
+            max-width:560px;
+            background:#ffffff;
+            border-radius:18px;
+            overflow:hidden;
+            border:1px solid #e3ebe6;
+          "
+        >
 
-                <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#475569;">
-                  We received a request to reset the password for your AgriNova account.
-                </p>
+          <tr>
+            <td
+              style="
+                background:#063b2b;
+                padding:24px 28px;
+              "
+            >
+              <div
+                style="
+                  color:#ffffff;
+                  font-size:24px;
+                  line-height:1;
+                  font-weight:800;
+                "
+              >
+                AgriNova
+              </div>
 
-                <a
-                  href="${safeResetUrl}"
-                  style="display:inline-block;background:#0B513D;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 22px;border-radius:10px;"
-                >
-                  Reset Password
-                </a>
+              <div
+                style="
+                  margin-top:7px;
+                  color:#a7f3d0;
+                  font-size:12px;
+                  font-weight:600;
+                "
+              >
+                Smart Agriculture Platform
+              </div>
+            </td>
+          </tr>
 
-                <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-                  This password reset link expires in 60 minutes.
-                </p>
+          <tr>
+            <td
+              style="
+                padding:30px 28px 28px;
+              "
+            >
+              <div
+                style="
+                  font-size:22px;
+                  font-weight:800;
+                  color:#10231b;
+                "
+              >
+                Reset your password
+              </div>
 
-                <p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-                  If you did not request a password reset, no action is required.
-                </p>
+              <p
+                style="
+                  margin:18px 0 0;
+                  color:#52615a;
+                  font-size:14px;
+                  line-height:1.7;
+                "
+              >
+                Hello ${safeName},
+              </p>
 
-                <div style="margin-top:26px;padding-top:20px;border-top:1px solid #e2e8f0;">
-                  <p style="margin:0;font-size:11px;line-height:1.5;color:#94a3b8;word-break:break-all;">
-                    If the button does not work, copy this URL into your browser:<br />
-                    ${safeResetUrl}
-                  </p>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
+              <p
+                style="
+                  margin:10px 0 0;
+                  color:#52615a;
+                  font-size:14px;
+                  line-height:1.7;
+                "
+              >
+                We received a request to reset the
+                password for your AgriNova account.
+              </p>
+
+              <table
+                role="presentation"
+                cellpadding="0"
+                cellspacing="0"
+                style="
+                  margin-top:24px;
+                "
+              >
+                <tr>
+                  <td
+                    style="
+                      border-radius:10px;
+                      background:#07583f;
+                    "
+                  >
+                    <a
+                      href="${safeUrl}"
+                      style="
+                        display:inline-block;
+                        padding:13px 22px;
+                        color:#ffffff;
+                        font-size:14px;
+                        font-weight:700;
+                        text-decoration:none;
+                      "
+                    >
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <div
+                style="
+                  margin-top:22px;
+                  padding:14px 16px;
+                  border-radius:10px;
+                  background:#f0fdf4;
+                  color:#356148;
+                  font-size:12px;
+                  line-height:1.6;
+                "
+              >
+                This password reset link expires in
+                <strong>60 minutes</strong>.
+              </div>
+
+              <p
+                style="
+                  margin:20px 0 0;
+                  color:#76827c;
+                  font-size:12px;
+                  line-height:1.6;
+                "
+              >
+                If you did not request this password
+                reset, you can safely ignore this email.
+                Your password will remain unchanged.
+              </p>
+
+              <p
+                style="
+                  margin:22px 0 0;
+                  color:#94a09a;
+                  font-size:11px;
+                  line-height:1.6;
+                  word-break:break-all;
+                "
+              >
+                If the button does not work, copy and
+                paste this link into your browser:
+                <br />
+                ${safeUrl}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td
+              style="
+                border-top:1px solid #edf1ee;
+                padding:18px 28px;
+                color:#87938d;
+                font-size:11px;
+              "
+            >
+              © ${new Date().getFullYear()} AgriNova
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
-            `,
-          }),
-      }
-    );
+          `,
+        }
+      );
 
-  if (!response.ok) {
-    const responseText =
-      await response
-        .text()
-        .catch(
-          () => ""
-        );
+    if (
+      error
+    ) {
+      console.error(
+        "Resend password reset email error:",
+        error
+      );
 
-    console.error(
-      "Resend password reset email failed:",
-      response.status,
-      responseText
-    );
+      throw new Error(
+        "Password reset email could not be sent."
+      );
+    }
 
-    throw new Error(
-      "Password reset email could not be sent"
-    );
-  }
-}
+    return data;
+  };

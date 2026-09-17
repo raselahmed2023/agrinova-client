@@ -1,65 +1,180 @@
-import { apiRequest, apiRequestWithMeta } from "./api.client";
+import {
+  apiRequest,
+} from "./api.client";
+
 import type {
   InvestmentApplication,
   InvestmentListResponse,
   InvestmentProject,
-  InvestmentApplicationStatus,
-  InvestmentPaymentStatus,
 } from "@/types/investment";
 
-const withMeta = async <T>(endpoint: string, queryString?: string): Promise<InvestmentListResponse<T>> => {
-  const result = await apiRequestWithMeta<T[]>(endpoint, "GET", undefined, queryString);
-  return {
-    data: result.data,
-    meta: {
-      page: Number(result.meta?.page || 1),
-      limit: Number(result.meta?.limit || result.data.length || 1),
-      total: Number(result.meta?.total || result.data.length),
-      totalPages: Number(result.meta?.totalPages || 1),
-    },
-  };
-};
+/* ============================================================
+   ADMIN INVESTMENT SERVICE
+============================================================ */
 
 export const investmentAdminService = {
-  getProjects: (queryString?: string) =>
-    withMeta<InvestmentProject>("/investments/admin/projects", queryString),
+  /* ==========================================================
+     PROJECTS
+  ========================================================== */
 
-  getProject: (projectId: string) =>
-    apiRequest<InvestmentProject>(`/investments/admin/projects/${projectId}`),
+  async getProjects(
+    queryString?: string
+  ): Promise<
+    InvestmentListResponse<InvestmentProject>
+  > {
+    return apiRequest<
+      InvestmentListResponse<InvestmentProject>
+    >(
+      "/investments/admin/projects",
+      "GET",
+      undefined,
+      queryString
+    );
+  },
 
-  approveProject: (projectId: string) =>
-    apiRequest<InvestmentProject>(`/investments/admin/projects/${projectId}/review`, "PATCH", {
-      status: "APPROVED",
-    }),
+  async getProject(
+    projectId: string
+  ): Promise<InvestmentProject> {
+    return apiRequest<InvestmentProject>(
+      `/investments/admin/projects/${projectId}`,
+      "GET"
+    );
+  },
 
-  rejectProject: (projectId: string, adminNote: string) =>
-    apiRequest<InvestmentProject>(`/investments/admin/projects/${projectId}/review`, "PATCH", {
-      status: "REJECTED",
-      adminNote,
-    }),
-
-  getApplications: (queryString?: string) =>
-    withMeta<InvestmentApplication>("/investments/admin/applications", queryString),
-
-  reviewApplication: (
-    applicationId: string,
-    status: InvestmentApplicationStatus,
+  async approveProject(
+    projectId: string,
     adminNote?: string
-  ) =>
-    apiRequest<InvestmentApplication>(
+  ): Promise<InvestmentProject> {
+    return apiRequest<InvestmentProject>(
+      `/investments/admin/projects/${projectId}/review`,
+      "PATCH",
+      {
+        status:
+          "APPROVED",
+
+        ...(adminNote?.trim()
+          ? {
+              adminNote:
+                adminNote.trim(),
+            }
+          : {}),
+      }
+    );
+  },
+
+  async rejectProject(
+    projectId: string,
+    adminNote: string
+  ): Promise<InvestmentProject> {
+    return apiRequest<InvestmentProject>(
+      `/investments/admin/projects/${projectId}/review`,
+      "PATCH",
+      {
+        status:
+          "REJECTED",
+
+        adminNote:
+          adminNote.trim(),
+      }
+    );
+  },
+
+  /* ==========================================================
+     INVESTMENT APPLICATIONS
+  ========================================================== */
+
+  async getApplications(
+    queryString?: string
+  ): Promise<
+    InvestmentListResponse<InvestmentApplication>
+  > {
+    return apiRequest<
+      InvestmentListResponse<InvestmentApplication>
+    >(
+      "/investments/admin/applications",
+      "GET",
+      undefined,
+      queryString
+    );
+  },
+
+  async approveApplication(
+    applicationId: string,
+    adminNote?: string
+  ): Promise<InvestmentApplication> {
+    return apiRequest<InvestmentApplication>(
       `/investments/admin/applications/${applicationId}/review`,
       "PATCH",
-      { status, adminNote }
-    ),
+      {
+        status:
+          "APPROVED",
 
-  reviewBankPayment: (
+        ...(adminNote?.trim()
+          ? {
+              adminNote:
+                adminNote.trim(),
+            }
+          : {}),
+      }
+    );
+  },
+
+  async rejectApplication(
     applicationId: string,
-    paymentStatus: InvestmentPaymentStatus,
-    paymentAdminNote?: string
-  ) =>
-    apiRequest<InvestmentApplication>(
+    adminNote: string
+  ): Promise<InvestmentApplication> {
+    return apiRequest<InvestmentApplication>(
+      `/investments/admin/applications/${applicationId}/review`,
+      "PATCH",
+      {
+        status:
+          "REJECTED",
+
+        adminNote:
+          adminNote.trim(),
+      }
+    );
+  },
+
+  /* ==========================================================
+     BANK PAYMENT REVIEW
+  ========================================================== */
+
+  async confirmBankPayment(
+    applicationId: string,
+    note?: string
+  ): Promise<InvestmentApplication> {
+    return apiRequest<InvestmentApplication>(
       `/investments/admin/applications/${applicationId}/payment-review`,
       "PATCH",
-      { paymentStatus, paymentAdminNote }
-    ),
+      {
+        paymentStatus:
+          "PAID",
+
+        ...(note?.trim()
+          ? {
+              paymentAdminNote:
+                note.trim(),
+            }
+          : {}),
+      }
+    );
+  },
+
+  async rejectBankPayment(
+    applicationId: string,
+    reason: string
+  ): Promise<InvestmentApplication> {
+    return apiRequest<InvestmentApplication>(
+      `/investments/admin/applications/${applicationId}/payment-review`,
+      "PATCH",
+      {
+        paymentStatus:
+          "PAYMENT_REJECTED",
+
+        paymentAdminNote:
+          reason.trim(),
+      }
+    );
+  },
 };
