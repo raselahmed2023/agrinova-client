@@ -104,10 +104,23 @@ export default function ProductImageUpload({
    */
   useEffect(
     () => {
-      setLocalImages(
+      // Permanent remote storage only. Remove any old browser-only
+      // fallbacks left by previous versions of the uploader.
+      const stored =
         listStoredLocalImages(
           PURPOSE
-        )
+        );
+
+      for (
+        const item of stored
+      ) {
+        removeStoredLocalImage(
+          item.localKey
+        );
+      }
+
+      setLocalImages(
+        []
       );
     },
 
@@ -205,7 +218,7 @@ export default function ProductImageUpload({
                   PURPOSE,
 
                 allowLocalFallback:
-                  true,
+                  false,
               }
             );
 

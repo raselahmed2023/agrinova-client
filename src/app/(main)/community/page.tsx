@@ -244,16 +244,25 @@ export default function CommunityPage() {
       return;
     }
 
+    /*
+     * Clear legacy browser-only Community images.
+     * New uploads must succeed remotely before they are
+     * attached to a post. This prevents LOCAL images from
+     * looking like successfully uploaded images.
+     */
     const saved =
       listStoredLocalImages(
         imagePurpose
       );
 
+    for (const item of saved) {
+      removeStoredLocalImage(
+        item.localKey
+      );
+    }
+
     setLocalImages(
-      saved.slice(
-        0,
-        MAX_POST_IMAGES
-      )
+      []
     );
   }, [
     currentUserId,
@@ -306,7 +315,7 @@ export default function CommunityPage() {
                 imagePurpose,
 
               allowLocalFallback:
-                true,
+                false,
             }
           );
 

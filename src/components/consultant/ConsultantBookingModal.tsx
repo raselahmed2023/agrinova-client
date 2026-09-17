@@ -118,13 +118,15 @@ export default function ConsultantBookingModal({
 
   // Compute upcoming available dates matching enabled weekdays
   const availableDates = useMemo(() => {
-    if (!expert) return [];
-    const enabledSlots = (expert.availabilitySlots || []).filter((s) => s.enabled);
-    const enabledDayNames = new Set(
-      enabledSlots.length > 0
-        ? enabledSlots.map((s) => s.day)
-        : (["SATURDAY", "SUNDAY", "TUESDAY", "THURSDAY"] as WeekDay[])
+    if (!expert || expert.availabilityStatus !== "AVAILABLE") return [];
+
+    const enabledSlots = (expert.availabilitySlots || []).filter(
+      (slot) => slot.enabled && slot.startTime && slot.endTime
     );
+
+    if (enabledSlots.length === 0) return [];
+
+    const enabledDayNames = new Set(enabledSlots.map((slot) => slot.day));
 
     const dates: {
       dateStr: string;
@@ -179,8 +181,13 @@ export default function ConsultantBookingModal({
   const timeSlots = useMemo(() => {
     if (!selectedDateStr) return [];
     const matchedDate = availableDates.find((d) => d.dateStr === selectedDateStr);
-    const startTimeStr = matchedDate?.slot?.startTime || "18:00";
-    const endTimeStr = matchedDate?.slot?.endTime || "21:00";
+
+    if (!matchedDate?.slot?.startTime || !matchedDate.slot.endTime) {
+      return [];
+    }
+
+    const startTimeStr = matchedDate.slot.startTime;
+    const endTimeStr = matchedDate.slot.endTime;
 
     const [startH, startM] = startTimeStr.split(":").map(Number);
     const [endH, endM] = endTimeStr.split(":").map(Number);
@@ -325,7 +332,7 @@ export default function ConsultantBookingModal({
     const payload: CreateConsultationRequestPayload = {
       expertId: expert._id || expert.id,
       expertName: expert.name,
-      expertEmail: expert.email,
+      expertEmail: expert.email || undefined,
       cropType: effectiveCrop,
       cropName: effectiveCrop,
       problemTitle: problemTitle.trim(),
@@ -337,9 +344,9 @@ export default function ConsultantBookingModal({
       scheduledTime: selectedTimeSlot,
       preferredDate: selectedDateStr,
       preferredTime: selectedTimeSlot,
-      farmerName: farmerName.trim() || user?.name || "Farmer",
-      farmerEmail: farmerEmail.trim() || user?.email || "farmer@agrinova.io",
-      farmerPhone: farmerPhone.trim() || "+880 1700-000000",
+      farmerName: farmerName.trim() || user?.name || undefined,
+      farmerEmail: farmerEmail.trim() || user?.email || undefined,
+      farmerPhone: farmerPhone.trim() || undefined,
     };
 
     try {

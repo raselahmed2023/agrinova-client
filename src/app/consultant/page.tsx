@@ -841,25 +841,6 @@ export default function ConsultantPage() {
                 </div>
               </div>
 
-              <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-                <Link
-                  href="/dashboard/farmer/ai-diagnose"
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 lg:flex-none"
-                >
-                  <Sparkles className="h-4 w-4 text-emerald-600" />
-
-                  AI Crop Scanner
-                </Link>
-
-                <Link
-                  href="/dashboard/farmer/consultation"
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-emerald-800 lg:flex-none"
-                >
-                  My Consultation Hub
-
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
             </div>
           </section>
         </div>

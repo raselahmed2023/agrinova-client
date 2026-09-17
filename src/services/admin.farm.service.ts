@@ -49,12 +49,7 @@ export interface AdminFarm {
 
 export const adminFarmService =
   {
-    /**
-     * apiRequest already returns result.data.
-     *
-     * Therefore this method returns AdminFarm[],
-     * NOT { success, data }.
-     */
+    
     async getAdminFarms(
       queryString?:
         string

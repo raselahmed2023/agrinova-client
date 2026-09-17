@@ -22,9 +22,7 @@ import {
   sendPasswordResetEmail,
 } from "@/lib/email";
 
-/* ============================================================
-   ENVIRONMENT
-============================================================ */
+
 
 const mongoUrl =
   process.env.MONGODB_URL;
@@ -37,9 +35,7 @@ if (
   );
 }
 
-/* ============================================================
-   MONGODB CLIENT
-============================================================ */
+
 
 const globalForMongo =
   globalThis as unknown as {
@@ -61,27 +57,18 @@ if (
     client;
 }
 
-/* ============================================================
-   AUTH DATABASE
 
-   Exported because some API routes, including
-   expert-application, directly access auth collections.
-============================================================ */
 
 export const authDb =
   client.db(
     "AgriNove-auth"
   );
 
-/* ============================================================
-   BETTER AUTH
-============================================================ */
+
 
 export const auth =
   betterAuth({
-    /* ========================================================
-       EMAIL + PASSWORD
-    ======================================================== */
+    
 
     emailAndPassword: {
       enabled:
@@ -93,40 +80,23 @@ export const auth =
       maxPasswordLength:
         128,
 
-      /* ======================================================
-         PASSWORD RESET TOKEN
 
-         60 minutes
-      ====================================================== */
 
       resetPasswordTokenExpiresIn:
         60 *
         60,
 
-      /* ======================================================
-         SECURITY
 
-         When password changes, old sessions are revoked.
-      ====================================================== */
 
       revokeSessionsOnPasswordReset:
         true,
-
-      /* ======================================================
-         SEND PASSWORD RESET EMAIL
-      ====================================================== */
 
       sendResetPassword:
         async ({
           user,
           url,
         }) => {
-          /*
-           * Send email after response.
-           *
-           * This avoids making the reset-request response
-           * unnecessarily dependent on Resend response time.
-           */
+         
           after(
             async () => {
               try {
@@ -145,10 +115,7 @@ export const auth =
               } catch (
                 error
               ) {
-                /*
-                 * Do not expose Resend/internal email
-                 * provider errors to the browser.
-                 */
+                
                 console.error(
                   "Failed to send password reset email:",
                   error
@@ -158,9 +125,7 @@ export const auth =
           );
         },
 
-      /* ======================================================
-         AFTER PASSWORD RESET
-      ====================================================== */
+     
 
       onPasswordReset:
         async ({
@@ -173,19 +138,11 @@ export const auth =
         },
     },
 
-    /* ========================================================
-       USER FIELDS
-    ======================================================== */
+
 
     user: {
       additionalFields: {
-        /* ====================================================
-           ROLE
 
-           FARMER
-           ADMIN
-           EXPERT
-        ==================================================== */
 
         role: {
           type:
@@ -198,13 +155,7 @@ export const auth =
             false,
         },
 
-        /* ====================================================
-           ACCOUNT / EXPERT STATUS
 
-           APPROVED
-           PENDING
-           REJECTED
-        ==================================================== */
 
         status: {
           type:
@@ -217,9 +168,7 @@ export const auth =
             false,
         },
 
-        /* ====================================================
-           PHONE
-        ==================================================== */
+
 
         phone: {
           type:
@@ -229,9 +178,7 @@ export const auth =
             false,
         },
 
-        /* ====================================================
-           EXPERT PROFILE
-        ==================================================== */
+
 
         specialization: {
           type:
