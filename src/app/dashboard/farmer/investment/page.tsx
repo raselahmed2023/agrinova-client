@@ -1834,24 +1834,6 @@ export default function FarmerInvestmentPage() {
             </FieldLabel>
           </div>
 
-          {/* ==================================================
-              REMOVED FIELDS NOTICE
-          ================================================== */}
-
-          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-
-            <p className="text-xs font-black text-blue-800">
-              Farmer Care investment model
-            </p>
-
-            <p className="mt-1 text-[10px] leading-5 text-blue-700">
-              You do not need to provide
-              own contribution, estimated
-              revenue, estimated profit,
-              profit-sharing percentage or
-              NID here.
-            </p>
-          </div>
 
           {/* ==================================================
               SUBMIT
