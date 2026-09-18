@@ -109,8 +109,8 @@ export default function RegisterPage() {
               <span className="text-emerald-300">Modern Farming.</span>
             </h1>
             <p className="text-sm text-emerald-100/80 leading-relaxed xl:text-base">
-              Track your fields, monitor crop growth, and connect directly with
-              trusted buyers.
+              Track your fields and connect directly with
+              trusted expert.
             </p>
           </div>
 

@@ -415,8 +415,7 @@ export default function InvestmentDetailsPage() {
                 <p className="mt-3 text-[9px] leading-4 text-slate-400">
                   Based on the projected
                   ROI for the full investment
-                  term. Returns are projections,
-                  not guarantees.
+                  term.
                 </p>
               </div>
 
@@ -514,8 +513,6 @@ export default function InvestmentDetailsPage() {
                 <p className="mt-1 text-[10px] leading-5 text-emerald-700">
                   This project was reviewed
                   before being listed publicly.
-                  Projected ROI is not a
-                  guaranteed return.
                 </p>
               </div>
             </div>
