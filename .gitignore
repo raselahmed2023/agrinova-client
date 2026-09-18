@@ -32,7 +32,7 @@ yarn-error.log*
 
 # env files
 .env
-.env*
+.env.*.local
 
 # vercel
 .vercel
@@ -42,13 +42,4 @@ yarn-error.log*
 next-env.d.ts
 config.bat
 
-.env
-.env.local
-.env.*.local
 public/uploads/*
-<<<<<<< HEAD
-
-.env
-=======
-
->>>>>>> origin/rasel
