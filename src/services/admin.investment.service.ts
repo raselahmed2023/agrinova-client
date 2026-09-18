@@ -1,5 +1,6 @@
 import {
   apiRequest,
+  apiRequestWithMeta,
 } from "./api.client";
 
 import type {
@@ -22,15 +23,56 @@ export const investmentAdminService = {
   ): Promise<
     InvestmentListResponse<InvestmentProject>
   > {
-    return apiRequest<
-      InvestmentListResponse<InvestmentProject>
-    >(
-      "/investments/admin/projects",
-      "GET",
-      undefined,
-      queryString
-    );
+    const result =
+      await apiRequestWithMeta<
+        InvestmentProject[]
+      >(
+        "/investments/admin/projects",
+        "GET",
+        undefined,
+        queryString
+      );
+
+    const data =
+      Array.isArray(
+        result.data
+      )
+        ? result.data
+        : [];
+
+    return {
+      data,
+
+      meta: {
+        page:
+          Number(
+            result.meta?.page ??
+              1
+          ),
+
+        limit:
+          Number(
+            result.meta?.limit ??
+              data.length ??
+              1
+          ),
+
+        total:
+          Number(
+            result.meta?.total ??
+              data.length
+          ),
+
+        totalPages:
+          Number(
+            result.meta
+              ?.totalPages ??
+              1
+          ),
+      },
+    };
   },
+
 
   async getProject(
     projectId: string
@@ -40,6 +82,7 @@ export const investmentAdminService = {
       "GET"
     );
   },
+
 
   async approveProject(
     projectId: string,
@@ -62,6 +105,7 @@ export const investmentAdminService = {
     );
   },
 
+
   async rejectProject(
     projectId: string,
     adminNote: string
@@ -79,6 +123,7 @@ export const investmentAdminService = {
     );
   },
 
+
   /* ==========================================================
      INVESTMENT APPLICATIONS
   ========================================================== */
@@ -88,15 +133,56 @@ export const investmentAdminService = {
   ): Promise<
     InvestmentListResponse<InvestmentApplication>
   > {
-    return apiRequest<
-      InvestmentListResponse<InvestmentApplication>
-    >(
-      "/investments/admin/applications",
-      "GET",
-      undefined,
-      queryString
-    );
+    const result =
+      await apiRequestWithMeta<
+        InvestmentApplication[]
+      >(
+        "/investments/admin/applications",
+        "GET",
+        undefined,
+        queryString
+      );
+
+    const data =
+      Array.isArray(
+        result.data
+      )
+        ? result.data
+        : [];
+
+    return {
+      data,
+
+      meta: {
+        page:
+          Number(
+            result.meta?.page ??
+              1
+          ),
+
+        limit:
+          Number(
+            result.meta?.limit ??
+              data.length ??
+              1
+          ),
+
+        total:
+          Number(
+            result.meta?.total ??
+              data.length
+          ),
+
+        totalPages:
+          Number(
+            result.meta
+              ?.totalPages ??
+              1
+          ),
+      },
+    };
   },
+
 
   async approveApplication(
     applicationId: string,
@@ -119,6 +205,7 @@ export const investmentAdminService = {
     );
   },
 
+
   async rejectApplication(
     applicationId: string,
     adminNote: string
@@ -135,6 +222,7 @@ export const investmentAdminService = {
       }
     );
   },
+
 
   /* ==========================================================
      BANK PAYMENT REVIEW
@@ -160,6 +248,7 @@ export const investmentAdminService = {
       }
     );
   },
+
 
   async rejectBankPayment(
     applicationId: string,
