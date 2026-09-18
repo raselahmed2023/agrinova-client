@@ -31,11 +31,6 @@ const sidebarItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Requests",
-    href: "/dashboard/expert/requests",
-    icon: Inbox,
-  },
-  {
     label: "My Consultations",
     href: "/dashboard/expert/consultations",
     icon: Video,
