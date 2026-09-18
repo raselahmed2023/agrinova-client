@@ -412,11 +412,6 @@ export default function InvestmentDetailsPage() {
                   />
                 </div>
 
-                <p className="mt-3 text-[9px] leading-4 text-slate-400">
-                  Based on the projected
-                  ROI for the full investment
-                  term.
-                </p>
               </div>
 
               {/* PROGRESS */}
