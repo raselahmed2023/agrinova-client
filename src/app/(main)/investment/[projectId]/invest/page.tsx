@@ -495,10 +495,7 @@ export default function InvestPage() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
 
               <p className="text-[10px] leading-5 text-amber-800">
-                Projected ROI is an
-                estimate for the full
-                project term and is not
-                guaranteed.
+                We are highly optimistic about delivering strong returns
               </p>
             </div>
           </aside>
@@ -666,12 +663,6 @@ export default function InvestPage() {
                 </span>
               </div>
 
-              <p className="mt-3 text-[9px] leading-4 text-slate-400">
-                This calculation uses the
-                project&apos;s projected ROI.
-                Actual agricultural results
-                can vary.
-              </p>
             </div>
 
             {/* ===============================================
