@@ -849,19 +849,6 @@ export default function ConsultantPage() {
             </div>
           </section>
 
-         
-          <section className="relative mt-6 overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-8">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
-
-            <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex max-w-3xl items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-md">
-                  <PhoneCall className="h-5 w-5" />
-                </div>
-              </div>
-
-            </div>
-          </section>
         </div>
 
         {/* Booking Modal */}

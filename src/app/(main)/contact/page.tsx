@@ -65,42 +65,87 @@ export default function ContactPage() {
           </Link>
 
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-[32px] border border-white/20 bg-gradient-to-br from-[#063B2B] via-[#07523B] to-[#0D684A] px-6 py-12 text-white shadow-2xl shadow-emerald-950/15 sm:px-10 lg:px-14 lg:py-16">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10" />
-            <div className="pointer-events-none absolute -right-8 -top-8 h-44 w-44 rounded-full border border-white/10" />
+          <div className="relative overflow-hidden rounded-[32px] bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_32%),linear-gradient(135deg,#03261c_0%,#074432_48%,#0b5d42_100%)] p-1 shadow-[0_30px_80px_rgba(6,47,36,0.20)]">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -left-20 top-8 h-60 w-60 rounded-full bg-emerald-300/10 blur-3xl" />
+              <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+              <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-teal-200/10 blur-3xl" />
+            </div>
 
-            <div className="relative max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-emerald-100 backdrop-blur-md">
-                <MessageSquareText className="h-4 w-4" />
-                AgriNova Contact Center
-              </div>
+            <div className="relative rounded-[28px] border border-white/15 bg-white/10 px-6 py-9 text-white backdrop-blur-xl sm:px-9 sm:py-10 lg:px-12 lg:py-11">
+              <div className="grid gap-8 xl:grid-cols-[1.15fr_.85fr] xl:items-center">
+                <div className="max-w-3xl">
+                  <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-emerald-100 backdrop-blur">
+                    <MessageSquareText className="h-4 w-4" />
+                    AgriNova Contact Center
+                  </div>
 
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-                How can we help?
-              </h1>
+                  <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+                    How can we help?
+                  </h1>
 
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-emerald-50/80 sm:text-base">
-                Whether you need help with your account, marketplace,
-                agricultural consultation, investment, or another AgriNova
-                service, our support channels are available to assist you.
-              </p>
+                  <p className="mt-5 max-w-2xl text-sm leading-7 text-emerald-50/80 sm:text-base">
+                    Whether you need help with your account, marketplace,
+                    agricultural consultation, investment, or another AgriNova
+                    service, our support channels are available to assist you.
+                  </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href="mailto:support@agrinova.io"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#063B2B] shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-50"
-                >
-                  <Mail className="h-4 w-4" />
-                  Email Us
-                </a>
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <a
+                      href="mailto:support@agrinova.io"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#063B2B] shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-50"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Email Us
+                    </a>
 
-                <Link
-                  href="/support"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur-md transition duration-200 hover:bg-white/15"
-                >
-                  <Headphones className="h-4 w-4" />
-                  Support Center
-                </Link>
+                    <Link
+                      href="/support"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur transition duration-200 hover:bg-white/15"
+                    >
+                      <Headphones className="h-4 w-4" />
+                      Support Center
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                  <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                      Account Help
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      Login & Profile
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                      Support for access, profiles, authentication, and role-related issues.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                      Platform Help
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      Marketplace & Services
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                      Assistance with Marketplace, Community, Consultation, Investment, and support tools.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                      Security
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      Safe Support
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                      Never send passwords, access tokens, or payment credentials in support messages.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

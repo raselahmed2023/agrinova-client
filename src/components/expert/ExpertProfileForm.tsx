@@ -3,27 +3,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   User,
-  Mail,
-  Phone,
-  Briefcase,
-  GraduationCap,
-  Award,
-  DollarSign,
-  Languages,
-  MapPin,
   Save,
   Check,
-  Plus,
   X,
   Star,
   ShieldCheck,
   Lock,
   Upload,
-  Camera,
   Trash2,
   Loader2,
   AlertCircle,
-  Building2,
   CloudOff,
   RefreshCw,
 } from "lucide-react";
@@ -42,20 +31,41 @@ interface ExpertProfileFormProps {
   onSave: (updated: Partial<ExpertProfile>) => Promise<void> | void;
 }
 
+const DEFAULT_CONSULTATION_FEE = 500;
+const MAX_SPECIALIZATIONS = 20;
+const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
+
+const sanitizeProfile = (
+  profile: ExpertProfile
+): ExpertProfile => ({
+  ...profile,
+
+  specialization: Array.isArray(profile.specialization)
+    ? profile.specialization
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+        .slice(0, MAX_SPECIALIZATIONS)
+    : typeof profile.specialization === "string" &&
+        profile.specialization.trim()
+      ? profile.specialization
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, MAX_SPECIALIZATIONS)
+      : [],
+
+  consultationFee:
+    typeof profile.consultationFee === "number" &&
+    Number.isFinite(profile.consultationFee) &&
+    profile.consultationFee > 0
+      ? profile.consultationFee
+      : DEFAULT_CONSULTATION_FEE,
+});
+
 export default function ExpertProfileForm({
   initialProfile,
   onSave,
 }: ExpertProfileFormProps) {
-  const sanitizeProfile = (p: ExpertProfile): ExpertProfile => ({
-    ...p,
-    specialization: Array.isArray(p.specialization)
-      ? p.specialization
-      : typeof p.specialization === "string" && (p.specialization as string).trim()
-      ? (p.specialization as string).split(",").map((s) => s.trim())
-      : [],
-    consultationFee: typeof p.consultationFee === "number" ? p.consultationFee : 500,
-  });
-
   const [profile, setProfile] = useState<ExpertProfile>(() => sanitizeProfile(initialProfile));
   const [newTag, setNewTag] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -104,6 +114,23 @@ export default function ExpertProfileForm({
     if (!file || isUploadingImage || isSaving) return;
 
     setUploadError(null);
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Please select a JPG, PNG, or WEBP image.");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setUploadError("Profile photo must be 8 MB or smaller.");
+      return;
+    }
+
     setIsUploadingImage(true);
 
     try {
@@ -214,13 +241,31 @@ export default function ExpertProfileForm({
 
   const handleAddTag = () => {
     const trimmed = newTag.trim();
-    if (trimmed && !profile.specialization.includes(trimmed)) {
-      setProfile((prev) => ({
-        ...prev,
-        specialization: [...prev.specialization, trimmed],
-      }));
-      setNewTag("");
+
+    if (!trimmed) {
+      return;
     }
+
+    if (profile.specialization.includes(trimmed)) {
+      setErrorMessage("That specialization is already listed.");
+      return;
+    }
+
+    if (profile.specialization.length >= MAX_SPECIALIZATIONS) {
+      setErrorMessage(
+        `You can add up to ${MAX_SPECIALIZATIONS} specializations.`
+      );
+      return;
+    }
+
+    setErrorMessage(null);
+
+    setProfile((prev) => ({
+      ...prev,
+      specialization: [...prev.specialization, trimmed],
+    }));
+
+    setNewTag("");
   };
 
   const handleRemoveTag = (tag: string) => {
@@ -234,6 +279,43 @@ export default function ExpertProfileForm({
     e.preventDefault();
     setErrorMessage(null);
     setUploadError(null);
+
+    const cleanName = profile.name?.trim() || "";
+    const cleanTitle = profile.title?.trim() || "";
+    const cleanPhone = profile.phone?.trim() || "";
+    const fee = Number(profile.consultationFee);
+    const experience = Number(profile.experienceYears ?? 0);
+
+    if (cleanName.length < 2) {
+      setErrorMessage("Full name must be at least 2 characters.");
+      return;
+    }
+
+    if (cleanTitle.length < 2) {
+      setErrorMessage("Professional title must be at least 2 characters.");
+      return;
+    }
+
+    if (cleanPhone && !/^01[3-9]\d{8}$/.test(cleanPhone)) {
+      setErrorMessage("Enter a valid Bangladeshi phone number.");
+      return;
+    }
+
+    if (!Number.isFinite(fee) || fee <= 0) {
+      setErrorMessage("Consultation fee must be greater than 0.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(experience) ||
+      !Number.isInteger(experience) ||
+      experience < 0 ||
+      experience > 80
+    ) {
+      setErrorMessage("Experience years must be a whole number from 0 to 80.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -262,6 +344,11 @@ export default function ExpertProfileForm({
       // Exclude email from payload so it remains untouched.
       const profileForSave = {
         ...profile,
+        name: cleanName,
+        title: cleanTitle,
+        phone: cleanPhone,
+        consultationFee: fee,
+        experienceYears: experience,
         avatar: avatarForSave,
       };
       const { email, ...payloadToUpdate } = profileForSave;
@@ -288,10 +375,10 @@ export default function ExpertProfileForm({
   const displayedAvatar = localAvatar?.dataUrl || profile.avatar || "";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-6xl space-y-6 pb-8">
       {/* Top Banner Card: Expert Identity & Current Stats */}
-      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 lg:p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-100">
+      <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.07)] sm:p-6 lg:p-8">
+        <div className="rounded-[22px] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-4 sm:p-5"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center sm:gap-6">
           <div className="flex items-center gap-4 sm:gap-5 min-w-0">
             <div className="relative h-20 w-20 shrink-0 rounded-2xl bg-emerald-100 border-2 border-emerald-200 overflow-hidden flex items-center justify-center font-bold text-emerald-900 text-2xl shadow-inner">
               {displayedAvatar ? (
@@ -327,13 +414,14 @@ export default function ExpertProfileForm({
                 <span>·</span>
                 <span className="flex items-center gap-1 text-amber-500 font-semibold">
                   <Star className="h-3.5 w-3.5 fill-amber-400" />
-                  {profile.rating || 5.0} ({profile.ratingCount || 0} reviews)
+                  {profile.rating ?? 0} ({profile.ratingCount ?? 0} reviews)
                 </span>
                 <span>·</span>
                 <span>{profile.totalConsultations || 0} Consultations Completed</span>
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {errorMessage && (
@@ -353,6 +441,8 @@ export default function ExpertProfileForm({
             <input
               type="text"
               required
+              minLength={2}
+              maxLength={100}
               value={profile.name}
               onChange={(e) =>
                 setProfile((prev) => ({ ...prev, name: e.target.value }))
@@ -370,6 +460,8 @@ export default function ExpertProfileForm({
             <input
               type="text"
               required
+              minLength={2}
+              maxLength={120}
               value={profile.title || ""}
               onChange={(e) =>
                 setProfile((prev) => ({ ...prev, title: e.target.value }))
@@ -410,12 +502,23 @@ export default function ExpertProfileForm({
               Phone Number
             </label>
             <input
-              type="text"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={11}
+              pattern="01[3-9][0-9]{8}"
               value={profile.phone || ""}
-              onChange={(e) =>
-                setProfile((prev) => ({ ...prev, phone: e.target.value }))
-              }
-              placeholder="+880 1712-345678"
+              onChange={(e) => {
+                const digitsOnly = e.target.value.replace(/\D/g, "");
+
+                setProfile((prev) => ({
+                  ...prev,
+                  phone: digitsOnly.slice(0, 11),
+                }));
+
+                setErrorMessage(null);
+              }}
+              placeholder="01XXXXXXXXX"
               className="w-full rounded-2xl border border-slate-200 py-3 px-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
             />
           </div>
@@ -431,17 +534,21 @@ export default function ExpertProfileForm({
               </span>
               <input
                 type="number"
-                min={0}
+                min={1}
                 max={50000}
                 step={50}
                 required
                 value={profile.consultationFee ?? 500}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+
                   setProfile((prev) => ({
                     ...prev,
-                    consultationFee: Number(e.target.value),
-                  }))
-                }
+                    consultationFee: Number.isFinite(value) ? value : 0,
+                  }));
+
+                  setErrorMessage(null);
+                }}
                 placeholder="500"
                 className="w-full rounded-2xl border border-slate-200 py-3 pl-9 pr-4 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100 shadow-sm font-medium"
               />
@@ -575,6 +682,7 @@ export default function ExpertProfileForm({
             </label>
             <input
               type="text"
+              maxLength={500}
               value={profile.qualification || ""}
               onChange={(e) =>
                 setProfile((prev) => ({
@@ -595,7 +703,8 @@ export default function ExpertProfileForm({
             <input
               type="number"
               min={0}
-              max={60}
+              max={80}
+              step={1}
               value={profile.experienceYears || 0}
               onChange={(e) =>
                 setProfile((prev) => ({
@@ -615,6 +724,7 @@ export default function ExpertProfileForm({
             </label>
             <input
               type="text"
+              maxLength={200}
               value={profile.institution || ""}
               onChange={(e) =>
                 setProfile((prev) => ({
@@ -634,6 +744,7 @@ export default function ExpertProfileForm({
             </label>
             <input
               type="text"
+              maxLength={250}
               value={profile.location || ""}
               onChange={(e) =>
                 setProfile((prev) => ({
@@ -649,9 +760,15 @@ export default function ExpertProfileForm({
 
         {/* Specialization Tags */}
         <div className="pt-6 mt-6 border-t border-slate-100">
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-            Specialization Tags
-          </label>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              Specialization Tags
+            </label>
+
+            <span className="text-[11px] font-semibold text-slate-400">
+              {profile.specialization.length}/{MAX_SPECIALIZATIONS}
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {profile.specialization?.map((spec) => (
               <span
@@ -673,6 +790,7 @@ export default function ExpertProfileForm({
           <div className="flex items-center gap-2 max-w-md">
             <input
               type="text"
+              maxLength={80}
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={(e) => {
@@ -700,7 +818,8 @@ export default function ExpertProfileForm({
             Bio
           </label>
           <textarea
-            rows={4}
+            rows={5}
+            maxLength={3000}
             value={profile.bio || ""}
             onChange={(e) =>
               setProfile((prev) => ({ ...prev, bio: e.target.value }))
@@ -712,7 +831,7 @@ export default function ExpertProfileForm({
       </div>
 
       {/* Save Button Bar */}
-      <div className="sticky bottom-4 z-20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3.5 sm:p-4 backdrop-blur shadow-lg">
+      <div className="sticky bottom-4 z-20 flex flex-col items-stretch justify-between gap-3 rounded-[22px] border border-slate-200 bg-white/95 p-3.5 shadow-[0_18px_55px_rgba(15,23,42,0.14)] backdrop-blur sm:flex-row sm:items-center sm:p-4">
         <div>
           {savedSuccess ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-fade-in">
@@ -729,7 +848,7 @@ export default function ExpertProfileForm({
         <button
           type="submit"
           disabled={isSaving || isUploadingImage}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50 active:scale-98"
+          className="inline-flex min-w-[150px] items-center justify-center gap-2 rounded-xl bg-[#0b5d42] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#084a35] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {isSaving ? "Saving..." : "Save Profile"}

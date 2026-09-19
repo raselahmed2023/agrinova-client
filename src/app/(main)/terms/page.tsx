@@ -66,37 +66,85 @@ export default function TermsOfServicePage() {
           HERO
       ====================================================== */}
 
-      <section className="bg-gradient-to-br from-[#043526] via-[#07513b] to-[#0b654a]">
-        <div className="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">
-              <Scale className="h-3.5 w-3.5" />
-              Platform Agreement
-            </div>
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_32%),linear-gradient(135deg,#03261c_0%,#074432_48%,#0b5d42_100%)]">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-16 top-8 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
+          <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-emerald-200/10 blur-3xl" />
+        </div>
 
-            <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-              Terms of Service
-            </h1>
+        <div className="relative mx-auto max-w-[1500px] px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
+          <div className="rounded-[32px] border border-white/15 bg-white/10 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:p-7 lg:p-8">
+            <div className="grid gap-8 xl:grid-cols-[1.15fr_.85fr] xl:items-center">
+              <div className="max-w-4xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-50">
+                  <Scale className="h-3.5 w-3.5" />
+                  Platform Agreement
+                </div>
 
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-emerald-50/80 sm:text-base">
-              These Terms explain the rules for using AgriNova&apos;s accounts,
-              marketplace, agricultural advisory tools, expert consultations,
-              community, supply-chain services, payments, and related platform
-              features.
-            </p>
+                <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
+                  Terms of Service
+                </h1>
 
-            <div className="mt-7 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-100/85">
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-                Effective: September 2026
-              </span>
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-emerald-50/80 sm:text-base">
+                  These Terms explain the rules for using AgriNova&apos;s accounts,
+                  marketplace, agricultural advisory tools, expert consultations,
+                  community, supply-chain services, payments, and related platform
+                  features.
+                </p>
 
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-                Version 2.0
-              </span>
+                <div className="mt-7 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-100/90">
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur">
+                    Effective: September 2026
+                  </span>
 
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-                Visitors & Registered Users
-              </span>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur">
+                    Version 2.0
+                  </span>
+
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur">
+                    Visitors & Registered Users
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                    Coverage
+                  </p>
+                  <p className="mt-2 text-lg font-black text-white">
+                    Core Platform Rules
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                    Applies to Marketplace, Community, Consultations, Supply Chain, and related services.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                    Compliance
+                  </p>
+                  <p className="mt-2 text-lg font-black text-white">
+                    Account & Role Use
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                    Users must provide accurate information and respect access restrictions.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/75">
+                    Important
+                  </p>
+                  <p className="mt-2 text-lg font-black text-white">
+                    Read Before Use
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-50/75">
+                    Continued use of AgriNova means acceptance of these Terms and future updates.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
