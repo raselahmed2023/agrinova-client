@@ -2,17 +2,48 @@ import {
   authClient,
 } from "@/lib/auth-client";
 
-const API_URL =
-  (
-    process.env
-      .NEXT_PUBLIC_API_URL ||
-    "http://localhost:5000/api/v1"
-  ).replace(
-    /\/$/,
-    ""
-  );
+/* ============================================================
+   API CONFIG
+============================================================ */
 
+const LOCAL_API_URL =
+  "http://localhost:5000/api/v1";
 
+const getApiUrl =
+  () => {
+    const configuredUrl =
+      process.env
+        .NEXT_PUBLIC_API_URL
+        ?.trim();
+
+    if (
+      configuredUrl
+    ) {
+      return configuredUrl.replace(
+        /\/+$/,
+        ""
+      );
+    }
+
+    /*
+     * Keep localhost available during local development,
+     * but never silently use it in a production build.
+     */
+    if (
+      process.env.NODE_ENV ===
+      "production"
+    ) {
+      throw new Error(
+        "AgriNova API is not configured. Set NEXT_PUBLIC_API_URL."
+      );
+    }
+
+    return LOCAL_API_URL;
+  };
+
+/* ============================================================
+   TYPES
+============================================================ */
 
 export type SupplyRequestStatus =
   | "SUBMITTED"
@@ -22,74 +53,101 @@ export type SupplyRequestStatus =
   | "COMPLETED";
 
 export interface CreateSupplyRequestPayload {
-  farmerName: string;
+  farmerName:
+    string;
 
-  phone: string;
+  phone:
+    string;
 
-  farmerEmail?: string;
+  farmerEmail?:
+    string;
 
-  productName: string;
+  productName:
+    string;
 
-  category: string;
+  category:
+    string;
 
-  quantity: number;
+  quantity:
+    number;
 
-  unit: string;
+  unit:
+    string;
 
-  expectedPrice: number;
+  expectedPrice:
+    number;
 
-  division: string;
+  division:
+    string;
 
-  district: string;
+  district:
+    string;
 
-  upazila: string;
+  upazila:
+    string;
 
-  location: string;
+  location:
+    string;
 
-  branch: string;
+  branch:
+    string;
 
-  notes?: string;
+  notes?:
+    string;
 
-  images?: string[];
+  images?:
+    string[];
 }
 
 export interface SupplyRequest
   extends CreateSupplyRequestPayload {
-  _id: string;
+  _id:
+    string;
 
-  trackingCode: string;
+  trackingCode:
+    string;
 
-  farmerId?: string;
+  farmerId?:
+    string;
 
   status:
     SupplyRequestStatus;
 
-  adminNote?: string;
+  adminNote?:
+    string;
 
-  acceptedAt?: string;
+  acceptedAt?:
+    string;
 
-  rejectedAt?: string;
+  rejectedAt?:
+    string;
 
-  receivedAt?: string;
+  receivedAt?:
+    string;
 
-  completedAt?: string;
+  completedAt?:
+    string;
 
-  createdAt: string;
+  createdAt:
+    string;
 
-  updatedAt: string;
+  updatedAt:
+    string;
 }
-
 
 export interface SupplyRequestMeta {
-  page: number;
+  page:
+    number;
 
-  limit: number;
+  limit:
+    number;
 
-  total: number;
+  total:
+    number;
 
-  totalPages: number;
+  totalPages:
+    number;
 }
-
 
 export type SupplyRequestStats =
   Record<
@@ -98,16 +156,22 @@ export type SupplyRequestStats =
   >;
 
 export interface ApiResponse<T> {
-  success: boolean;
+  success:
+    boolean;
 
-  message?: string;
+  message?:
+    string;
 
-  data: T;
+  data:
+    T;
 
   meta?:
     SupplyRequestMeta;
 }
 
+/* ============================================================
+   AUTH HELPERS
+============================================================ */
 
 const getFarmerAccessToken =
   async () => {
@@ -127,22 +191,52 @@ const getFarmerAccessToken =
         );
       }
 
-      return data.token;
-    } catch (
-      error
-    ) {
-      console.error(
-        "Unable to retrieve supply-chain token:",
-        error
-      );
+      const token =
+        String(
+          data.token
+        ).trim();
 
+      if (
+        !token
+      ) {
+        throw new Error(
+          "Authentication required."
+        );
+      }
+
+      return token;
+    } catch {
       throw new Error(
         "Authentication required. Please sign in again."
       );
     }
   };
 
+const requireAccessToken =
+  (
+    token:
+      string
+  ) => {
+    const normalized =
+      String(
+        token ||
+          ""
+      ).trim();
 
+    if (
+      !normalized
+    ) {
+      throw new Error(
+        "Authentication required."
+      );
+    }
+
+    return normalized;
+  };
+
+/* ============================================================
+   RESPONSE HELPER
+============================================================ */
 
 const parseResponse =
   async <T>(
@@ -177,7 +271,9 @@ const parseResponse =
     return result;
   };
 
-
+/* ============================================================
+   FARMER - CREATE REQUEST
+============================================================ */
 
 export const createSupplyRequest =
   async (
@@ -189,7 +285,7 @@ export const createSupplyRequest =
 
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests`,
+        `${getApiUrl()}/supply-chain/requests`,
         {
           method:
             "POST",
@@ -222,7 +318,9 @@ export const createSupplyRequest =
     );
   };
 
-
+/* ============================================================
+   FARMER - MY REQUESTS
+============================================================ */
 
 export const getMySupplyRequests =
   async ({
@@ -230,9 +328,11 @@ export const getMySupplyRequests =
     limit = 20,
     status,
   }: {
-    page?: number;
+    page?:
+      number;
 
-    limit?: number;
+    limit?:
+      number;
 
     status?:
       SupplyRequestStatus;
@@ -246,14 +346,20 @@ export const getMySupplyRequests =
     params.set(
       "page",
       String(
-        page
+        Math.max(
+          page,
+          1
+        )
       )
     );
 
     params.set(
       "limit",
       String(
-        limit
+        Math.max(
+          limit,
+          1
+        )
       )
     );
 
@@ -268,7 +374,7 @@ export const getMySupplyRequests =
 
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests/mine?${params.toString()}`,
+        `${getApiUrl()}/supply-chain/requests/mine?${params.toString()}`,
         {
           method:
             "GET",
@@ -293,7 +399,9 @@ export const getMySupplyRequests =
     );
   };
 
-
+/* ============================================================
+   FARMER - TRACK OWN REQUEST
+============================================================ */
 
 export const trackSupplyRequest =
   async (
@@ -304,7 +412,10 @@ export const trackSupplyRequest =
       await getFarmerAccessToken();
 
     const normalized =
-      trackingCode
+      String(
+        trackingCode ||
+          ""
+      )
         .trim()
         .toUpperCase();
 
@@ -316,9 +427,26 @@ export const trackSupplyRequest =
       );
     }
 
+    /*
+     * Current production tracking format:
+     * AGN-XXXXXXXX
+     *
+     * Keep this synchronized with the server and
+     * SubmissionStatusFlow.tsx.
+     */
+    if (
+      !/^AGN-[A-F0-9]{8}$/.test(
+        normalized
+      )
+    ) {
+      throw new Error(
+        "Enter a valid tracking ID in the format AGN-XXXXXXXX."
+      );
+    }
+
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests/track/${encodeURIComponent(
+        `${getApiUrl()}/supply-chain/requests/track/${encodeURIComponent(
           normalized
         )}`,
         {
@@ -345,7 +473,9 @@ export const trackSupplyRequest =
     );
   };
 
-
+/* ============================================================
+   ADMIN - GET REQUESTS
+============================================================ */
 
 export const getAdminSupplyRequests =
   async (
@@ -353,18 +483,27 @@ export const getAdminSupplyRequests =
       string,
 
     options?: {
-      page?: number;
+      page?:
+        number;
 
-      limit?: number;
+      limit?:
+        number;
 
       status?:
         SupplyRequestStatus;
 
-      branch?: string;
+      branch?:
+        string;
 
-      search?: string;
+      search?:
+        string;
     }
   ) => {
+    const accessToken =
+      requireAccessToken(
+        token
+      );
+
     const params =
       new URLSearchParams();
 
@@ -374,7 +513,10 @@ export const getAdminSupplyRequests =
       params.set(
         "page",
         String(
-          options.page
+          Math.max(
+            options.page,
+            1
+          )
         )
       );
     }
@@ -385,7 +527,10 @@ export const getAdminSupplyRequests =
       params.set(
         "limit",
         String(
-          options.limit
+          Math.max(
+            options.limit,
+            1
+          )
         )
       );
     }
@@ -401,10 +546,11 @@ export const getAdminSupplyRequests =
 
     if (
       options?.branch
+        ?.trim()
     ) {
       params.set(
         "branch",
-        options.branch
+        options.branch.trim()
       );
     }
 
@@ -423,7 +569,7 @@ export const getAdminSupplyRequests =
 
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests${
+        `${getApiUrl()}/supply-chain/requests${
           queryString
             ? `?${queryString}`
             : ""
@@ -434,7 +580,7 @@ export const getAdminSupplyRequests =
 
           headers: {
             Authorization:
-              `Bearer ${token}`,
+              `Bearer ${accessToken}`,
           },
 
           credentials:
@@ -452,6 +598,9 @@ export const getAdminSupplyRequests =
     );
   };
 
+/* ============================================================
+   ADMIN - REQUEST STATS
+============================================================ */
 
 export const getAdminSupplyRequestStats =
   async (
@@ -460,6 +609,11 @@ export const getAdminSupplyRequestStats =
   ): Promise<
     ApiResponse<SupplyRequestStats>
   > => {
+    const accessToken =
+      requireAccessToken(
+        token
+      );
+
     const statuses:
       SupplyRequestStatus[] =
       [
@@ -477,7 +631,7 @@ export const getAdminSupplyRequestStats =
             status
           ) =>
             getAdminSupplyRequests(
-              token,
+              accessToken,
               {
                 page:
                   1,
@@ -520,10 +674,9 @@ export const getAdminSupplyRequestStats =
             index
           ];
 
-        /**
-         * Preferred:
-         *
-         * server pagination total
+        /*
+         * Preferred source: server pagination total.
+         * Fallback keeps the UI usable if meta is absent.
          */
         if (
           typeof response
@@ -540,9 +693,6 @@ export const getAdminSupplyRequestStats =
           return;
         }
 
-        /**
-         * Safe fallback.
-         */
         stats[
           status
         ] =
@@ -579,10 +729,29 @@ export const getSupplyRequestById =
     token:
       string
   ) => {
+    const normalizedId =
+      String(
+        requestId ||
+          ""
+      ).trim();
+
+    if (
+      !normalizedId
+    ) {
+      throw new Error(
+        "Supply request ID is required."
+      );
+    }
+
+    const accessToken =
+      requireAccessToken(
+        token
+      );
+
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests/${encodeURIComponent(
-          requestId
+        `${getApiUrl()}/supply-chain/requests/${encodeURIComponent(
+          normalizedId
         )}`,
         {
           method:
@@ -590,7 +759,7 @@ export const getSupplyRequestById =
 
           headers: {
             Authorization:
-              `Bearer ${token}`,
+              `Bearer ${accessToken}`,
           },
 
           credentials:
@@ -626,10 +795,29 @@ export const updateSupplyRequestStatus =
     adminNote?:
       string
   ) => {
+    const normalizedId =
+      String(
+        requestId ||
+          ""
+      ).trim();
+
+    if (
+      !normalizedId
+    ) {
+      throw new Error(
+        "Supply request ID is required."
+      );
+    }
+
+    const accessToken =
+      requireAccessToken(
+        token
+      );
+
     const response =
       await fetch(
-        `${API_URL}/supply-chain/requests/${encodeURIComponent(
-          requestId
+        `${getApiUrl()}/supply-chain/requests/${encodeURIComponent(
+          normalizedId
         )}/status`,
         {
           method:
@@ -640,7 +828,7 @@ export const updateSupplyRequestStatus =
               "application/json",
 
             Authorization:
-              `Bearer ${token}`,
+              `Bearer ${accessToken}`,
           },
 
           credentials:

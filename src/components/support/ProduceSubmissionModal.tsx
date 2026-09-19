@@ -8,15 +8,20 @@ import {
   useState,
 } from "react";
 
+import Link from "next/link";
+
 import {
   Building2,
   CheckCircle2,
   Copy,
   FileText,
   ImagePlus,
+  Loader2,
+  LogIn,
   MapPin,
   Package,
   Phone,
+  ShieldCheck,
   Sprout,
   Trash2,
   Upload,
@@ -190,6 +195,7 @@ export default function ProductSubmissionModal({
 }: ProductSubmissionModalProps) {
   const {
     data: session,
+    isPending,
   } = useSession();
 
   const [
@@ -239,12 +245,22 @@ export default function ProductSubmissionModal({
   const userId =
     session?.user?.id;
 
+  const role =
+    String(
+      session?.user?.role ||
+        ""
+    ).toUpperCase();
+
+  const isFarmer =
+    role ===
+    "FARMER";
+
   const imagePurpose =
     useMemo(
       () =>
         userId
           ? `supply-chain-${userId}`
-          : "supply-chain-guest",
+          : "supply-chain",
       [
         userId,
       ]
@@ -268,8 +284,13 @@ export default function ProductSubmissionModal({
   useEffect(() => {
     if (
       !isOpen ||
-      !userId
+      !userId ||
+      !isFarmer
     ) {
+      setLocalImages(
+        []
+      );
+
       return;
     }
 
@@ -288,6 +309,7 @@ export default function ProductSubmissionModal({
     imagePurpose,
     isOpen,
     userId,
+    isFarmer,
   ]);
 
   useEffect(() => {
@@ -897,13 +919,15 @@ export default function ProductSubmissionModal({
       }
 
       if (
+        !formData.expectedPrice
+          .trim() ||
         Number(
           formData.expectedPrice
-        ) <
+        ) <=
         0
       ) {
         setFormError(
-          "Expected price cannot be negative."
+          "Expected price must be greater than 0."
         );
 
         return false;
@@ -1033,7 +1057,7 @@ export default function ProductSubmissionModal({
         );
 
         setSuccessMessage(
-          "Your product was submitted successfully."
+          "Your product submission has been received and is waiting for AgriNova review. Save the tracking ID below to check its status."
         );
 
         setFormData(
@@ -1107,11 +1131,11 @@ export default function ProductSubmissionModal({
 
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-black sm:text-xl">
-                  Sell Through AgriNova
+                  Submit Produce to AgriNova
                 </h2>
 
                 <p className="mt-0.5 text-xs text-white/70 sm:text-sm">
-                  Submit your farm product for supply chain review.
+                  Farmer-only supply submission for AgriNova review.
                 </p>
               </div>
             </div>
@@ -1132,9 +1156,104 @@ export default function ProductSubmissionModal({
           </div>
         </div>
 
-        {/* SUCCESS */}
+        {/* ACCESS / SUCCESS / FORM */}
 
-        {trackingCode ? (
+        {isPending ? (
+          <div className="flex min-h-[320px] flex-1 items-center justify-center bg-slate-50 p-6">
+            <div className="text-center">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-700" />
+
+              <p className="mt-3 text-sm font-bold text-slate-600">
+                Checking your account...
+              </p>
+            </div>
+          </div>
+        ) : !session?.user ? (
+          <div className="flex flex-1 items-center justify-center overflow-y-auto bg-slate-50 p-5 sm:p-8">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <LogIn className="h-7 w-7" />
+              </div>
+
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                Farmer Account Required
+              </p>
+
+              <h3 className="mt-2 text-xl font-black text-slate-950">
+                Sign in to submit produce
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                AgriNova links every supply submission to a Farmer account so requests can be reviewed, tracked, and managed securely.
+              </p>
+
+              <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                <Link
+                  href="/login?redirect=%2Fsupport"
+                  onClick={
+                    handleClose
+                  }
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0b5d42] px-4 text-sm font-black text-white transition hover:bg-[#084a35]"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </Link>
+
+                <Link
+                  href="/register"
+                  onClick={
+                    handleClose
+                  }
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                >
+                  Create Farmer Account
+                </Link>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  handleClose
+                }
+                className="mt-4 text-xs font-bold text-slate-400 transition hover:text-slate-700"
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        ) : !isFarmer ? (
+          <div className="flex flex-1 items-center justify-center overflow-y-auto bg-slate-50 p-5 sm:p-8">
+            <div className="w-full max-w-lg rounded-3xl border border-amber-200 bg-white p-6 text-center shadow-sm sm:p-8">
+
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                <ShieldCheck className="h-7 w-7" />
+              </div>
+
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">
+                Farmer Access Only
+              </p>
+
+              <h3 className="mt-2 text-xl font-black text-slate-950">
+                This form is for Farmer accounts
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                Your current account role is not permitted to create supply-chain product submissions.
+              </p>
+
+              <button
+                type="button"
+                onClick={
+                  handleClose
+                }
+                className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : trackingCode ? (
           <div className="flex flex-1 items-center justify-center overflow-y-auto bg-slate-50 p-6">
 
             <div className="w-full max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
@@ -1144,7 +1263,7 @@ export default function ProductSubmissionModal({
               </div>
 
               <h3 className="mt-5 text-xl font-black text-slate-900">
-                Product Submitted
+                Submission Received
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -1163,6 +1282,10 @@ export default function ProductSubmissionModal({
                   {
                     trackingCode
                   }
+                </p>
+
+                <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                  Keep this ID private and use it when checking this submission&apos;s status.
                 </p>
 
                 <button
@@ -1202,6 +1325,25 @@ export default function ProductSubmissionModal({
             {/* BODY */}
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-[#f7f9f8] p-4 sm:p-5">
+
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+
+                <div>
+                  <p className="text-xs font-black text-emerald-900">
+                    Farmer account verified
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] leading-5 text-emerald-700">
+                    This submission will be linked to{" "}
+                    <span className="font-black">
+                      {session.user.name ||
+                        "your Farmer account"}
+                    </span>
+                    .
+                  </p>
+                </div>
+              </div>
 
               {formError && (
                 <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -1255,6 +1397,8 @@ export default function ProductSubmissionModal({
 
                           <input
                             name="phone"
+                            inputMode="numeric"
+                            autoComplete="tel"
                             value={
                               formData.phone
                             }
@@ -1411,7 +1555,9 @@ export default function ProductSubmissionModal({
                           <input
                             type="number"
                             name="expectedPrice"
-                            min="0"
+                            required
+                            min="0.01"
+                            step="0.01"
                             value={
                               formData.expectedPrice
                             }
@@ -1832,7 +1978,7 @@ export default function ProductSubmissionModal({
                       ? "Submitting..."
                       : uploadingImages
                         ? "Uploading..."
-                        : "Submit Product"}
+                        : "Submit for Review"}
                   </button>
                 </div>
               </div>
