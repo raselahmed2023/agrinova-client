@@ -1,113 +1,527 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Scale, CheckCircle2, AlertTriangle, HelpCircle, ArrowLeft } from "lucide-react";
+
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgeCheck,
+  Banknote,
+  Bot,
+  CheckCircle2,
+  FileText,
+  Gavel,
+  Handshake,
+  HelpCircle,
+  LockKeyhole,
+  Scale,
+  ShieldCheck,
+  ShoppingBag,
+  UsersRound,
+} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms of Service | AgriNova",
-  description: "Terms and conditions governing the usage of AgriNova platform, marketplace, and agronomy services.",
+  description:
+    "Terms governing the use of AgriNova accounts, marketplace, agricultural advisory, consultation, community, supply-chain and related platform services.",
 };
+
+const sectionLinks = [
+  { id: "acceptance", label: "Acceptance" },
+  { id: "accounts", label: "Accounts" },
+  { id: "advisory", label: "AI & Advisory" },
+  { id: "marketplace", label: "Marketplace" },
+  { id: "consultations", label: "Consultations" },
+  { id: "supply-chain", label: "Supply Chain" },
+  { id: "community", label: "Community" },
+  { id: "payments", label: "Payments" },
+  { id: "platform-use", label: "Acceptable Use" },
+  { id: "liability", label: "Availability" },
+];
 
 export default function TermsOfServicePage() {
   return (
-    <main className="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition-colors mb-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Link>
+    <main className="min-h-screen bg-[#f5f7f6]">
+      {/* =====================================================
+          TOP BAR
+      ====================================================== */}
 
-        {/* Header Header */}
-        <div className="rounded-3xl bg-gradient-to-br from-[#063B2B] to-[#0D5941] p-8 sm:p-12 text-white shadow-xl shadow-emerald-950/10 mb-10">
-          <div className="flex items-center gap-3 text-emerald-300 text-sm font-medium mb-3">
-            <Scale className="h-5 w-5" />
-            <span>Platform Agreement & Governance</span>
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-bold text-slate-700 transition hover:text-emerald-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+
+          <div className="hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            AgriNova Legal
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Terms of Service
-          </h1>
-          <p className="mt-4 text-emerald-100/80 text-sm sm:text-base max-w-2xl leading-relaxed">
-            Welcome to AgriNova. By accessing or using our website, digital advisory tools, AI diagnostics, and marketplace services, you agree to comply with the terms set forth below.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-4 text-xs text-emerald-200">
-            <span>Effective Date: September 2026</span>
-            <span>•</span>
-            <span>Version 1.8</span>
-            <span>•</span>
-            <span>Applies to all registered Farmers, Experts & Visitors</span>
+        </div>
+      </div>
+
+      {/* =====================================================
+          HERO
+      ====================================================== */}
+
+      <section className="bg-gradient-to-br from-[#043526] via-[#07513b] to-[#0b654a]">
+        <div className="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
+          <div className="max-w-4xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">
+              <Scale className="h-3.5 w-3.5" />
+              Platform Agreement
+            </div>
+
+            <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
+              Terms of Service
+            </h1>
+
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-emerald-50/80 sm:text-base">
+              These Terms explain the rules for using AgriNova&apos;s accounts,
+              marketplace, agricultural advisory tools, expert consultations,
+              community, supply-chain services, payments, and related platform
+              features.
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-100/85">
+              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                Effective: September 2026
+              </span>
+
+              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                Version 2.0
+              </span>
+
+              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                Visitors & Registered Users
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          QUICK NAV
+      ====================================================== */}
+
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-[1500px] px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {sectionLinks.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-[11px] font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================
+          MAIN CONTENT
+      ====================================================== */}
+
+      <div className="mx-auto max-w-[1500px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mb-7 grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <FileText className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-black text-slate-950">
+                  AgriNova Platform Terms
+                </h2>
+
+                <p className="mt-1.5 max-w-4xl text-sm leading-6 text-slate-600">
+                  Please read these Terms carefully before using AgriNova. By
+                  accessing or using the platform, you agree to these Terms and
+                  any policies expressly incorporated by reference.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+
+              <div>
+                <p className="text-sm font-black text-amber-900">
+                  Important Notice
+                </p>
+
+                <p className="mt-1.5 text-xs leading-5 text-amber-800">
+                  Agricultural, AI, weather, marketplace, payment, and other
+                  platform information may involve uncertainty. Important
+                  decisions should be reviewed independently where appropriate.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Terms Content */}
-        <div className="rounded-3xl bg-white p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-10 text-slate-700">
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900">1. Account Registration & Roles</h2>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-600 mb-3">
-              Users must provide accurate, verified information during account creation. AgriNova supports distinct roles:
-            </p>
-            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
-              <li><strong>Farmers:</strong> Gain access to farm tracking, field records, AI diagnostic engines, weather alerts, and crop trade.</li>
-              <li><strong>Agricultural Experts:</strong> Must provide legitimate credentials, academic background, and relevant certification subject to review.</li>
-              <li><strong>Administrators:</strong> Govern platform security, marketplace integrity, and verification workflows.</li>
-            </ul>
-          </section>
+        {/* =====================================================
+            TERMS GRID
+            Mobile: 1 column
+            Tablet: 2 columns
+            Desktop: 3 columns
+        ====================================================== */}
 
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900">2. AI Diagnosis & Agronomy Disclaimer</h2>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-600">
-              AgriNova’s AI models provide advisory predictions with high statistical accuracy (over 98% in tested datasets). However, AI recommendations should be treated as guidance tools. Local meteorological conditions, unforeseen soil pathogens, and microclimates must be verified with on-the-ground visual assessments or certified agronomists before deploying extensive chemical treatments.
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <TermsCard
+            id="acceptance"
+            number="01"
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            title="Acceptance of Terms"
+          >
+            <p>
+              By accessing, registering for, or using AgriNova, you agree to
+              comply with these Terms. If you do not agree, you should not use
+              the platform.
             </p>
-          </section>
 
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <Scale className="h-5 w-5" />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900">3. Marketplace Conduct & Fair Trade</h2>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-600 mb-3">
-              Sellers listing crops, seeds, organic fertilizers, or equipment must ensure:
+            <p>
+              AgriNova may update these Terms when services, operational
+              practices, or legal requirements change. Updated Terms apply from
+              the effective date shown on this page.
             </p>
-            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
-              <li>Goods conform strictly to stated quantity, grade, and harvest date.</li>
-              <li>No counterfeit, prohibited, or hazardous agrochemicals are marketed.</li>
-              <li>Pricing is transparent, with all regional levies and logistics clarified.</li>
-            </ul>
-          </section>
+          </TermsCard>
 
-          <section className="border-t border-slate-100 pt-8">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <TermsCard
+            id="accounts"
+            number="02"
+            icon={<UsersRound className="h-5 w-5" />}
+            title="Accounts, Roles & Security"
+          >
+            <p>
+              Users must provide accurate account information and protect their
+              login credentials.
+            </p>
+
+            <BulletList
+              items={[
+                "Farmers may access enabled farmer tools and services.",
+                "Experts may be required to provide qualifications and verification information.",
+                "Administrators manage platform operations, verification, and moderation.",
+                "Users must not impersonate others or bypass role restrictions.",
+              ]}
+            />
+          </TermsCard>
+
+          <TermsCard
+            id="advisory"
+            number="03"
+            icon={<Bot className="h-5 w-5" />}
+            title="AI & Agricultural Advisory"
+          >
+            <p>
+              AgriNova may provide AI-assisted crop analysis, disease
+              detection, weather information, and agricultural guidance.
+            </p>
+
+            <p>
+              These tools support decision-making but do not guarantee a
+              diagnosis, yield, treatment outcome, weather condition, or
+              commercial result.
+            </p>
+
+            <MiniNotice>
+              Use qualified agricultural professionals when an on-site or
+              specialist assessment is reasonably required.
+            </MiniNotice>
+          </TermsCard>
+
+          <TermsCard
+            id="marketplace"
+            number="04"
+            icon={<ShoppingBag className="h-5 w-5" />}
+            title="Marketplace Listings"
+          >
+            <p>
+              Sellers are responsible for accurate, lawful, and non-misleading
+              listings, including price, quantity, condition, availability, and
+              product details.
+            </p>
+
+            <BulletList
+              items={[
+                "No counterfeit, stolen, prohibited, or unsafe goods.",
+                "No false quality, origin, condition, or pricing information.",
+                "AgriNova may remove listings that violate platform rules.",
+              ]}
+            />
+          </TermsCard>
+
+          <TermsCard
+            id="consultations"
+            number="05"
+            icon={<BadgeCheck className="h-5 w-5" />}
+            title="Expert Consultations"
+          >
+            <p>
+              Farmers may book consultations with approved agricultural
+              Experts. Availability, schedule, fee, duration, payment
+              requirements, and meeting format may vary.
+            </p>
+
+            <p>
+              Recommendations are based on information available to the Expert
+              at the time of consultation. Farmers remain responsible for
+              deciding whether and how to apply them.
+            </p>
+          </TermsCard>
+
+          <TermsCard
+            id="supply-chain"
+            number="06"
+            icon={<Handshake className="h-5 w-5" />}
+            title="Supply Chain & Buyer Connections"
+          >
+            <p>
+              AgriNova may connect approved farm produce with suitable buyers,
+              businesses, or industries.
+            </p>
+
+            <p>
+              A submission does not guarantee acceptance, buyer matching,
+              purchase, final price, delivery arrangement, or transaction
+              completion.
+            </p>
+
+            <MiniNotice>
+              Unless a specific transaction states otherwise, AgriNova acts as
+              a platform and coordination bridge between participants.
+            </MiniNotice>
+          </TermsCard>
+
+          <TermsCard
+            id="community"
+            number="07"
+            icon={<UsersRound className="h-5 w-5" />}
+            title="Community Content"
+          >
+            <p>
+              Users are responsible for posts, comments, images, and other
+              content they submit.
+            </p>
+
+            <p>
+              AgriNova may review, restrict, remove, or moderate content that is
+              unlawful, abusive, deceptive, sexually explicit, threatening,
+              harassing, or otherwise inappropriate.
+            </p>
+          </TermsCard>
+
+          <TermsCard
+            id="payments"
+            number="08"
+            icon={<Banknote className="h-5 w-5" />}
+            title="Payments, Fees & Refunds"
+          >
+            <p>
+              Certain AgriNova services may require payment. Applicable prices
+              and payment requirements should be shown before confirmation.
+            </p>
+
+            <p>
+              Refunds, cancellations, and payment disputes depend on the
+              relevant service, transaction status, payment-provider rules, and
+              any applicable refund policy.
+            </p>
+          </TermsCard>
+
+          <TermsCard
+            id="platform-use"
+            number="09"
+            icon={<LockKeyhole className="h-5 w-5" />}
+            title="Acceptable Use & Security"
+          >
+            <BulletList
+              items={[
+                "No unauthorized account, API, or dashboard access.",
+                "No malicious code, abusive automation, or security interference.",
+                "No fraud, harassment, unlawful transactions, or deceptive activity.",
+                "No bypassing role, moderation, payment, or security controls.",
+              ]}
+            />
+          </TermsCard>
+
+          <TermsCard
+            id="liability"
+            number="10"
+            icon={<Gavel className="h-5 w-5" />}
+            title="Availability & Third Parties"
+          >
+            <p>
+              AgriNova may rely on third-party services such as payment
+              processors, hosting, maps, weather data, image services, and
+              video-conferencing providers.
+            </p>
+
+            <p>
+              The platform may occasionally be unavailable because of
+              maintenance, outages, security work, updates, or other technical
+              issues.
+            </p>
+          </TermsCard>
+
+          {/* =================================================
+              CONTACT CARD
+          ================================================== */}
+
+          <section className="md:col-span-2 xl:col-span-2 rounded-[24px] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm sm:p-7">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <HelpCircle className="h-5 w-5" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Assistance & Inquiries</h2>
+
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                  Need Help?
+                </p>
+
+                <h2 className="mt-1 text-xl font-black text-slate-950">
+                  Questions About These Terms?
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                  For general questions about these Terms or AgriNova
+                  services, contact us through the Contact page. For
+                  privacy-related matters, please also review the Privacy
+                  Policy.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/contact"
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-700 px-4 text-xs font-black text-white transition hover:bg-emerald-800"
+                  >
+                    Contact AgriNova
+                  </Link>
+
+                  <Link
+                    href="/privacy"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
+                  >
+                    Privacy Policy
+                  </Link>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              If you have inquiries regarding these terms, contract agreements, or corporate licensing, reach out to our legal department at{" "}
-              <a href="mailto:legal@agrinova.io" className="font-medium text-emerald-600 hover:underline">
-                legal@agrinova.io
-              </a>{" "}
-              or browse our{" "}
-              <Link href="/contact" className="font-medium text-emerald-600 hover:underline">
-                Contact Desk
-              </Link>.
+          </section>
+
+          {/* =================================================
+              VERSION CARD
+          ================================================== */}
+
+          <section className="rounded-[24px] border border-slate-200 bg-slate-900 p-6 text-white shadow-sm sm:p-7">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-emerald-300">
+              <Scale className="h-5 w-5" />
+            </div>
+
+            <p className="mt-5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-300">
+              Current Terms
+            </p>
+
+            <h2 className="mt-1 text-xl font-black">
+              Version 2.0
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-white/65">
+              Effective September 2026. Future revisions should update the
+              version and effective date shown on this page.
             </p>
           </section>
         </div>
       </div>
     </main>
+  );
+}
+
+/* ============================================================
+   COMPONENTS
+============================================================ */
+
+function TermsCard({
+  id,
+  number,
+  icon,
+  title,
+  children,
+}: {
+  id: string;
+  number: string;
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="scroll-mt-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_35px_-30px_rgba(15,23,42,0.4)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_20px_42px_-30px_rgba(4,120,87,0.28)] sm:p-7"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          {icon}
+        </div>
+
+        <span className="text-4xl font-black leading-none text-slate-100">
+          {number}
+        </span>
+      </div>
+
+      <h2 className="mt-5 text-lg font-black tracking-tight text-slate-950">
+        {title}
+      </h2>
+
+      <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function MiniNotice({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+      <div className="flex gap-2.5">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+
+        <p className="text-xs font-semibold leading-5 text-amber-800">
+          {children}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BulletList({
+  items,
+}: {
+  items: string[];
+}) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item) => (
+        <li
+          key={item}
+          className="flex items-start gap-2.5 text-sm leading-6 text-slate-600"
+        >
+          <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
