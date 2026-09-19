@@ -35,24 +35,35 @@ const DEFAULT_CONSULTATION_FEE = 500;
 const MAX_SPECIALIZATIONS = 20;
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 
+const normalizeSpecializations = (
+  value: unknown
+): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+      .slice(0, MAX_SPECIALIZATIONS);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item: string) => item.trim())
+      .filter(Boolean)
+      .slice(0, MAX_SPECIALIZATIONS);
+  }
+
+  return [];
+};
+
 const sanitizeProfile = (
   profile: ExpertProfile
 ): ExpertProfile => ({
   ...profile,
 
-  specialization: Array.isArray(profile.specialization)
-    ? profile.specialization
-        .map((item) => String(item).trim())
-        .filter(Boolean)
-        .slice(0, MAX_SPECIALIZATIONS)
-    : typeof profile.specialization === "string" &&
-        profile.specialization.trim()
-      ? profile.specialization
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .slice(0, MAX_SPECIALIZATIONS)
-      : [],
+  specialization: normalizeSpecializations(
+    profile.specialization as unknown
+  ),
 
   consultationFee:
     typeof profile.consultationFee === "number" &&
