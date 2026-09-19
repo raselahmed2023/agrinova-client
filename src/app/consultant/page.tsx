@@ -858,26 +858,6 @@ export default function ConsultantPage() {
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-md">
                   <PhoneCall className="h-5 w-5" />
                 </div>
-
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
-                    Agricultural Support
-                  </p>
-
-                  <h3 className="mt-1 text-lg font-black tracking-tight text-slate-950 sm:text-xl">
-                    Need Help With a Crop
-                    Problem?
-                  </h3>
-
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Connect with an
-                    agricultural specialist
-                    or use AgriNova&apos;s
-                    crop disease detection
-                    tool for additional
-                    guidance.
-                  </p>
-                </div>
               </div>
 
             </div>
