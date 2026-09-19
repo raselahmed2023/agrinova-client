@@ -20,12 +20,9 @@ import type { Consultation } from "@/types/consultation";
 import {
   ArrowRight,
   Calendar,
-  FileCheck2,
-  HeartPulse,
   PhoneCall,
   RefreshCw,
   Search,
-  Sparkles,
   Users,
   Video,
   X,
@@ -70,6 +67,9 @@ export default function ConsultantPage() {
   const [isLoading, setIsLoading] =
     useState(true);
 
+  const [loadError, setLoadError] =
+    useState("");
+
   // Search & Filters
   const [searchQuery, setSearchQuery] =
     useState("");
@@ -106,6 +106,7 @@ export default function ConsultantPage() {
 
   const fetchExperts = async () => {
     setIsLoading(true);
+    setLoadError("");
 
     try {
       const data =
@@ -116,6 +117,14 @@ export default function ConsultantPage() {
       console.error(
         "Error loading experts:",
         err,
+      );
+
+      setExperts([]);
+
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load agricultural specialists right now.",
       );
     } finally {
       setIsLoading(false);
@@ -350,25 +359,25 @@ export default function ConsultantPage() {
        
         <div className="pointer-events-none fixed inset-0 -z-20">
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            className="consultant-page-bg absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
               backgroundImage:
                 "url('/images/marketplace-bg.jpg')",
               animation:
-                "consultantBg 45s ease-in-out infinite alternate",
+                "consultantBg 55s ease-in-out infinite alternate",
             }}
           />
 
-          {/* Light overlay */}
-          <div className="absolute inset-0 bg-white/15" />
+          {/* Strong readability layer: keeps the agricultural image subtle */}
+          <div className="absolute inset-0 bg-white/62" />
 
-          {/* Readability gradient */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-[#f5f8f2]/15 to-[#f5f8f2]/25" />
+          {/* Soft depth without exposing too much of the background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/28 via-[#f5f8f2]/48 to-[#eef5f0]/72" />
         </div>
 
         <div className="relative mx-auto w-full max-w-[1600px] px-3 py-6 sm:px-4 lg:px-5 lg:py-8">
          
-          <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/70 bg-white/55 shadow-xl shadow-slate-900/10 backdrop-blur-md">
+          <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow-xl shadow-slate-900/10 backdrop-blur-md">
             {/* Decorative glow */}
             <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
 
@@ -431,7 +440,7 @@ export default function ConsultantPage() {
                   <HeroMetric
                     icon={Users}
                     value={`${experts.length}`}
-                    label="Experts Loaded"
+                    label="Available Experts"
                   />
 
                   <HeroMetric
@@ -449,7 +458,7 @@ export default function ConsultantPage() {
                   <HeroMetric
                     icon={Calendar}
                     value="Booking"
-                    label="Schedule Support"
+                    label="Flexible Booking"
                   />
                 </div>
               </div>
@@ -617,6 +626,7 @@ export default function ConsultantPage() {
                 type="button"
                 onClick={fetchExperts}
                 title="Refresh Specialist Roster"
+                aria-label="Refresh specialist roster"
                 className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
               >
                 <RefreshCw
@@ -704,14 +714,37 @@ export default function ConsultantPage() {
             </div>
 
            
-            {isLoading ? (
+            {loadError && !isLoading ? (
+              <div className="rounded-3xl border border-rose-200 bg-white/95 p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                  <RefreshCw className="h-5 w-5" />
+                </div>
+
+                <h3 className="mt-4 text-lg font-black text-slate-900">
+                  Unable to Load Specialists
+                </h3>
+
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
+                  {loadError}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={fetchExperts}
+                  className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-bold text-white transition hover:bg-emerald-800"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Try Again
+                </button>
+              </div>
+            ) : isLoading ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {[
                   1, 2, 3, 4, 5, 6,
                 ].map((n) => (
                   <div
                     key={n}
-                    className="h-80 animate-pulse rounded-3xl border border-white/70 bg-white/75 shadow-sm backdrop-blur-md"
+                    className="h-80 animate-pulse rounded-3xl border border-white/70 bg-white/92 shadow-sm backdrop-blur-sm"
                   />
                 ))}
               </div>
@@ -769,7 +802,7 @@ export default function ConsultantPage() {
           </section>
 
      
-          <section className="mt-8 rounded-3xl border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-8 lg:p-9">
+          <section className="mt-8 rounded-3xl border border-white/70 bg-white/92 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-8 lg:p-9">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
                 Consultation Process
@@ -817,7 +850,7 @@ export default function ConsultantPage() {
           </section>
 
          
-          <section className="relative mt-6 overflow-hidden rounded-3xl border border-white/70 bg-white/75 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-8">
+          <section className="relative mt-6 overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-8">
             <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
 
             <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -880,8 +913,9 @@ export default function ConsultantPage() {
           }
 
           @media (prefers-reduced-motion: reduce) {
-            * {
+            .consultant-page-bg {
               animation: none !important;
+              transform: none !important;
             }
           }
         `}</style>
@@ -904,7 +938,7 @@ function HeroMetric({
   label: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/65 p-4 shadow-sm backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:bg-white/80 hover:shadow-md">
+    <div className="rounded-2xl border border-white/70 bg-white/92 p-4 shadow-sm backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:bg-white/80 hover:shadow-md">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
           <Icon className="h-4.5 w-4.5" />
