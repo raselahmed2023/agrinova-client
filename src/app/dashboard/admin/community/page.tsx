@@ -334,14 +334,8 @@ export default function AdminCommunityModerationPage() {
       );
     };
 
-  const closeModeration =
+  const resetModerationState =
     () => {
-      if (
-        submitting
-      ) {
-        return;
-      }
-
       setSelectedPost(
         null
       );
@@ -357,6 +351,17 @@ export default function AdminCommunityModerationPage() {
       setCustomReason(
         ""
       );
+    };
+
+  const closeModeration =
+    () => {
+      if (
+        submitting
+      ) {
+        return;
+      }
+
+      resetModerationState();
     };
 
   const submitModeration =
@@ -436,7 +441,7 @@ export default function AdminCommunityModerationPage() {
           );
         }
 
-        closeModeration();
+        resetModerationState();
 
         void load();
       } catch (
@@ -488,53 +493,55 @@ export default function AdminCommunityModerationPage() {
     };
 
   return (
-    <main className="space-y-5">
+    <main className="mx-auto w-full max-w-[1600px] space-y-6 pb-10">
+      {/* HERO */}
+      <section className="overflow-hidden rounded-[30px] border border-emerald-950/10 bg-[linear-gradient(135deg,#062f24_0%,#0b5d42_55%,#11775a_100%)] shadow-[0_24px_80px_rgba(6,47,36,0.20)]">
+        <div className="relative px-5 py-6 sm:px-7 sm:py-7 lg:px-8">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
 
-      <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative grid gap-6 xl:grid-cols-[1fr_auto] xl:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100 backdrop-blur">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Community Moderation
+              </div>
 
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Community Moderation
-            </div>
+              <h1 className="mt-4 max-w-3xl text-2xl font-black tracking-tight text-white sm:text-3xl lg:text-[34px]">
+                Keep AgriNova Community safe and useful
+              </h1>
 
-            <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              Review Community Posts
-            </h1>
-
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Review every Community post, warn a farmer, or remove content that violates AgriNova Community rules.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[280px]">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-              <p className="text-[8px] font-black uppercase tracking-wide text-slate-400">
-                Results
-              </p>
-
-              <p className="mt-1 text-xl font-black text-slate-900">
-                {total}
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/75 sm:text-[15px]">
+                Review farmer posts, inspect media safely, issue warnings, and remove content when it violates Community rules.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
-              <p className="text-[8px] font-black uppercase tracking-wide text-emerald-600">
-                Active on page
-              </p>
+            <div className="grid grid-cols-2 gap-3 sm:min-w-[330px]">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-100/70">
+                  Matching Posts
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">
+                  {total}
+                </p>
+              </div>
 
-              <p className="mt-1 text-xl font-black text-emerald-800">
-                {activeCount}
-              </p>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-100/70">
+                  Active This Page
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">
+                  {activeCount}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-
+      {/* CONTROL BAR */}
+      <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_10px_35px_rgba(15,23,42,0.05)] sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
             {(
               [
@@ -560,11 +567,11 @@ export default function AdminCommunityModerationPage() {
                       1
                     );
                   }}
-                  className={`rounded-xl px-4 py-2 text-xs font-black transition ${
+                  className={`rounded-xl px-4 py-2.5 text-xs font-black transition ${
                     status ===
                     item
-                      ? "bg-emerald-700 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-slate-950 text-white shadow-sm"
+                      : "border border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
                   }`}
                 >
                   {item ===
@@ -579,54 +586,95 @@ export default function AdminCommunityModerationPage() {
             )}
           </div>
 
-          <div className="relative w-full lg:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="flex flex-col gap-2 sm:flex-row xl:min-w-[520px]">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-            <input
-              value={
-                search
+              <input
+                value={
+                  search
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+                placeholder="Search farmer or post content..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                void load()
               }
-              onChange={(
-                event
-              ) =>
-                setSearch(
-                  event.target.value
-                )
+              disabled={
+                loading
               }
-              placeholder="Search farmer name or post content..."
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-            />
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  loading
+                    ? "animate-spin"
+                    : ""
+                }`}
+              />
+              Refresh
+            </button>
           </div>
         </div>
       </section>
 
+      {/* FEEDBACK */}
       {success && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-          {success}
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-900 shadow-sm">
+          <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <span>
+            {success}
+          </span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-          {error}
+        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm font-semibold text-red-800 shadow-sm">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <span>
+            {error}
+          </span>
         </div>
       )}
 
+      {/* CONTENT */}
       {loading ? (
-        <div className="flex min-h-[360px] items-center justify-center rounded-[24px] border border-slate-200 bg-white">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-700" />
+        <div className="flex min-h-[420px] items-center justify-center rounded-[26px] border border-slate-200 bg-white shadow-sm">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-700" />
+            <p className="mt-3 text-sm font-bold text-slate-500">
+              Loading moderation queue...
+            </p>
+          </div>
         </div>
       ) : posts.length ===
         0 ? (
-        <div className="rounded-[24px] border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-          <MessageSquareWarning className="mx-auto h-9 w-9 text-slate-300" />
+        <div className="rounded-[26px] border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+            <MessageSquareWarning className="h-6 w-6 text-slate-400" />
+          </div>
 
-          <p className="mt-3 font-black text-slate-800">
+          <p className="mt-4 text-base font-black text-slate-900">
             No Community posts found
+          </p>
+
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+            Try a different status filter or search term.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-5 xl:grid-cols-2">
           {posts.map(
             (
               post
@@ -636,17 +684,20 @@ export default function AdminCommunityModerationPage() {
                   post._id
                 );
 
+              const isActive =
+                post.status ===
+                "ACTIVE";
+
               return (
                 <article
                   key={
                     post._id
                   }
-                  className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                  className="group overflow-hidden rounded-[26px] border border-slate-200/90 bg-white shadow-[0_10px_34px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.08)]"
                 >
-                  <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-4">
-
+                  <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-5">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-800">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-800 ring-4 ring-white shadow-sm">
                         {post.authorAvatar ? (
                           <img
                             src={
@@ -665,11 +716,11 @@ export default function AdminCommunityModerationPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-900">
+                        <p className="truncate text-sm font-black text-slate-950">
                           {post.authorName}
                         </p>
 
-                        <p className="mt-0.5 text-[10px] text-slate-400">
+                        <p className="mt-1 text-[10px] font-medium text-slate-400">
                           {formatDate(
                             post.createdAt
                           )}
@@ -678,33 +729,32 @@ export default function AdminCommunityModerationPage() {
                     </div>
 
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
-                        post.status ===
-                        "ACTIVE"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-red-50 text-red-700"
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
+                        isActive
+                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                          : "bg-red-50 text-red-700 ring-1 ring-red-100"
                       }`}
                     >
                       {post.status}
                     </span>
                   </div>
 
-                  <div className="p-4">
+                  <div className="p-4 sm:p-5">
                     <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                       {post.content}
                     </p>
 
                     {post.images?.length >
                       0 && (
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2.5">
+                          <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide text-slate-500">
                             <ImageIcon className="h-3.5 w-3.5" />
-                            {post.images.length} image
+                            {post.images.length} attached
                             {post.images.length >
                             1
-                              ? "s"
-                              : ""}
+                              ? " images"
+                              : " image"}
                           </div>
 
                           <button
@@ -714,7 +764,7 @@ export default function AdminCommunityModerationPage() {
                                 post._id
                               )
                             }
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-200"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-600 transition hover:bg-slate-100"
                           >
                             {mediaVisible ? (
                               <EyeOff className="h-3.5 w-3.5" />
@@ -723,12 +773,12 @@ export default function AdminCommunityModerationPage() {
                             )}
 
                             {mediaVisible
-                              ? "Hide media"
-                              : "Reveal media"}
+                              ? "Hide"
+                              : "Reveal"}
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 p-2">
                           {post.images.map(
                             (
                               image,
@@ -743,16 +793,16 @@ export default function AdminCommunityModerationPage() {
                                     image
                                   }
                                   alt="Community moderation media"
-                                  className={`h-full w-full object-cover transition ${
+                                  className={`h-full w-full object-cover transition duration-300 ${
                                     mediaVisible
                                       ? ""
-                                      : "blur-xl scale-110"
+                                      : "scale-110 blur-xl"
                                   }`}
                                 />
 
                                 {!mediaVisible && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-slate-950/20">
-                                    <span className="rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-black text-slate-700">
+                                  <div className="absolute inset-0 flex items-center justify-center bg-slate-950/25">
+                                    <span className="rounded-full border border-white/40 bg-white/90 px-3 py-1 text-[9px] font-black text-slate-700 shadow-sm">
                                       Media hidden
                                     </span>
                                   </div>
@@ -766,18 +816,18 @@ export default function AdminCommunityModerationPage() {
 
                     {post.status ===
                       "REMOVED" && (
-                      <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3">
-                        <p className="text-[9px] font-black uppercase tracking-wide text-red-500">
-                          Removal reason
+                      <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/70 p-3.5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-red-500">
+                          Removal Reason
                         </p>
 
-                        <p className="mt-1 text-xs leading-5 text-red-700">
+                        <p className="mt-1.5 text-xs leading-5 text-red-800">
                           {post.moderationReason ||
                             "No reason recorded."}
                         </p>
 
                         {post.removedAt && (
-                          <p className="mt-1 text-[9px] text-red-400">
+                          <p className="mt-2 text-[9px] font-medium text-red-400">
                             Removed{" "}
                             {formatDate(
                               post.removedAt
@@ -787,18 +837,20 @@ export default function AdminCommunityModerationPage() {
                       </div>
                     )}
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                      <p className="text-[10px] text-slate-400">
+                    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-[10px] font-semibold text-slate-400">
                         {post.likeCount ||
                           0}{" "}
-                        likes •{" "}
+                        likes
+                        <span className="mx-1.5">
+                          •
+                        </span>
                         {post.commentCount ||
                           0}{" "}
                         comments
                       </p>
 
-                      {post.status ===
-                        "ACTIVE" && (
+                      {isActive && (
                         <div className="flex gap-2">
                           <button
                             type="button"
@@ -808,10 +860,10 @@ export default function AdminCommunityModerationPage() {
                                 "WARN"
                               )
                             }
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-black text-amber-800 transition hover:bg-amber-100"
+                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[10px] font-black text-amber-800 transition hover:bg-amber-100 sm:flex-none"
                           >
                             <AlertTriangle className="h-3.5 w-3.5" />
-                            Warn
+                            Warn Farmer
                           </button>
 
                           <button
@@ -822,7 +874,7 @@ export default function AdminCommunityModerationPage() {
                                 "REMOVE"
                               )
                             }
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-[10px] font-black text-white transition hover:bg-red-700"
+                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black text-white shadow-sm transition hover:bg-red-700 sm:flex-none"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Remove Post
@@ -838,110 +890,152 @@ export default function AdminCommunityModerationPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3">
-        <button
-          type="button"
-          disabled={
-            page <=
-              1 ||
-            loading
-          }
-          onClick={() =>
-            setPage(
-              (
-                current
-              ) =>
-                Math.max(
-                  current -
-                    1,
-                  1
-                )
-            )
-          }
-          className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
-        >
-          Previous
-        </button>
+      {/* PAGINATION */}
+      <section className="flex flex-col gap-3 rounded-[22px] border border-slate-200 bg-white px-4 py-3.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-bold text-slate-500">
+          Page {page} of {totalPages}
+          <span className="mx-2 text-slate-300">
+            •
+          </span>
+          {total} total result
+          {total ===
+          1
+            ? ""
+            : "s"}
+        </p>
 
-        <span className="text-xs font-bold text-slate-500">
-          Page {page} of{" "}
-          {totalPages}
-        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={
+              page <=
+                1 ||
+              loading
+            }
+            onClick={() =>
+              setPage(
+                (
+                  current
+                ) =>
+                  Math.max(
+                    current -
+                      1,
+                    1
+                  )
+              )
+            }
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+          >
+            Previous
+          </button>
 
-        <button
-          type="button"
-          disabled={
-            page >=
-              totalPages ||
-            loading
-          }
-          onClick={() =>
-            setPage(
-              (
-                current
-              ) =>
-                Math.min(
-                  current +
-                    1,
-                  totalPages
-                )
-            )
-          }
-          className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
-        >
-          Next
-        </button>
-      </div>
+          <button
+            type="button"
+            disabled={
+              page >=
+                totalPages ||
+              loading
+            }
+            onClick={() =>
+              setPage(
+                (
+                  current
+                ) =>
+                  Math.min(
+                    current +
+                      1,
+                    totalPages
+                  )
+              )
+            }
+            className="flex-1 rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+          >
+            Next
+          </button>
+        </div>
+      </section>
 
+      {/* MODERATION MODAL */}
       {selectedPost &&
         action && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-[24px] bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl overflow-hidden rounded-[28px] border border-white/20 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.30)]">
+            <div
+              className={`border-b px-5 py-5 sm:px-6 ${
+                action ===
+                "REMOVE"
+                  ? "border-red-100 bg-gradient-to-r from-red-50 to-white"
+                  : "border-amber-100 bg-gradient-to-r from-amber-50 to-white"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                      action ===
+                      "REMOVE"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {action ===
+                    "REMOVE" ? (
+                      <Trash2 className="h-5 w-5" />
+                    ) : (
+                      <MessageSquareWarning className="h-5 w-5" />
+                    )}
+                  </div>
 
-            <div className="flex items-start justify-between border-b border-slate-100 p-5">
-              <div>
-                <p
-                  className={`text-[10px] font-black uppercase tracking-[0.16em] ${
-                    action ===
-                    "REMOVE"
-                      ? "text-red-600"
-                      : "text-amber-600"
-                  }`}
+                  <div className="min-w-0">
+                    <p
+                      className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+                        action ===
+                        "REMOVE"
+                          ? "text-red-600"
+                          : "text-amber-600"
+                      }`}
+                    >
+                      {action ===
+                      "REMOVE"
+                        ? "Remove Community Post"
+                        : "Send Community Warning"}
+                    </p>
+
+                    <h2 className="mt-1 truncate text-xl font-black text-slate-950">
+                      {selectedPost.authorName}
+                    </h2>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    submitting
+                  }
+                  onClick={
+                    closeModeration
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 disabled:opacity-50"
+                  aria-label="Close moderation dialog"
                 >
-                  {action ===
-                  "REMOVE"
-                    ? "Remove Community Post"
-                    : "Send Community Warning"}
-                </p>
-
-                <h2 className="mt-1 text-xl font-black text-slate-950">
-                  {selectedPost.authorName}
-                </h2>
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-
-              <button
-                type="button"
-                disabled={
-                  submitting
-                }
-                onClick={
-                  closeModeration
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
 
-            <div className="p-5">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="line-clamp-3 text-xs leading-5 text-slate-600">
+            <div className="p-5 sm:p-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
+                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Post preview
+                </p>
+
+                <p className="mt-2 line-clamp-4 text-xs leading-5 text-slate-650">
                   {selectedPost.content}
                 </p>
               </div>
 
-              <label className="mt-4 block text-xs font-black text-slate-700">
-                Reason
+              <label className="mt-5 block text-xs font-black text-slate-700">
+                Moderation reason
               </label>
 
               <select
@@ -955,7 +1049,10 @@ export default function AdminCommunityModerationPage() {
                     event.target.value
                   )
                 }
-                className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                disabled={
+                  submitting
+                }
+                className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
               >
                 {REASONS.map(
                   (
@@ -991,71 +1088,81 @@ export default function AdminCommunityModerationPage() {
                       event.target.value
                     )
                   }
-                  placeholder="Enter a short reason..."
-                  className="mt-3 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                  disabled={
+                    submitting
+                  }
+                  maxLength={
+                    500
+                  }
+                  placeholder="Enter a clear moderation reason..."
+                  className="mt-3 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
                 />
               )}
 
               <div
-                className={`mt-4 rounded-xl border p-3 text-xs leading-5 ${
+                className={`mt-4 rounded-2xl border p-3.5 text-xs leading-5 ${
                   action ===
                   "REMOVE"
-                    ? "border-red-100 bg-red-50 text-red-700"
+                    ? "border-red-100 bg-red-50 text-red-800"
                     : "border-amber-100 bg-amber-50 text-amber-800"
                 }`}
               >
                 {action ===
                 "REMOVE"
-                  ? "The post will disappear from the public Community feed. The farmer will receive a notification with this reason."
-                  : "The post will stay visible, but the farmer will receive a warning notification."}
+                  ? "This post will be removed from the public Community feed and the farmer will receive the selected reason."
+                  : "The post will remain visible, but the farmer will receive a warning notification with this reason."}
               </div>
 
-              <button
-                type="button"
-                disabled={
-                  submitting
-                }
-                onClick={() =>
-                  void submitModeration()
-                }
-                className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-white disabled:opacity-50 ${
-                  action ===
-                  "REMOVE"
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-amber-600 hover:bg-amber-700"
-                }`}
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : action ===
-                  "REMOVE" ? (
-                  <Trash2 className="h-4 w-4" />
-                ) : (
-                  <MessageSquareWarning className="h-4 w-4" />
-                )}
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={
+                    submitting
+                  }
+                  onClick={
+                    closeModeration
+                  }
+                  className="order-2 inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 sm:order-1"
+                >
+                  Cancel
+                </button>
 
-                {submitting
-                  ? "Processing..."
-                  : action ===
-                      "REMOVE"
-                    ? "Remove Post & Notify Farmer"
-                    : "Send Warning"}
-              </button>
+                <button
+                  type="button"
+                  disabled={
+                    submitting
+                  }
+                  onClick={() =>
+                    void submitModeration()
+                  }
+                  className={`order-1 inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-black text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 sm:order-2 ${
+                    action ===
+                    "REMOVE"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-amber-600 hover:bg-amber-700"
+                  }`}
+                >
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : action ===
+                    "REMOVE" ? (
+                    <Trash2 className="h-4 w-4" />
+                  ) : (
+                    <MessageSquareWarning className="h-4 w-4" />
+                  )}
+
+                  {submitting
+                    ? "Processing..."
+                    : action ===
+                        "REMOVE"
+                      ? "Remove & Notify"
+                      : "Send Warning"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={() =>
-          void load()
-        }
-        className="fixed bottom-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-700 text-white shadow-lg transition hover:bg-emerald-800"
-        aria-label="Refresh Community moderation"
-      >
-        <RefreshCw className="h-4 w-4" />
-      </button>
     </main>
   );
 }

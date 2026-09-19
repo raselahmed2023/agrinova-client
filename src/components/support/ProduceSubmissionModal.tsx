@@ -1396,18 +1396,44 @@ export default function ProductSubmissionModal({
                           <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                           <input
+                            type="tel"
                             name="phone"
                             inputMode="numeric"
                             autoComplete="tel"
                             value={
                               formData.phone
                             }
-                            onChange={
-                              handleChange
-                            }
+                            onChange={(
+                              event
+                            ) => {
+                              const digitsOnly =
+                                event.target.value.replace(
+                                  /\D/g,
+                                  ""
+                                );
+
+                              setFormData(
+                                (
+                                  previous
+                                ) => ({
+                                  ...previous,
+
+                                  phone:
+                                    digitsOnly.slice(
+                                      0,
+                                      11
+                                    ),
+                                })
+                              );
+
+                              setFormError(
+                                ""
+                              );
+                            }}
                             maxLength={
                               11
                             }
+                            pattern="01[3-9][0-9]{8}"
                             placeholder="01XXXXXXXXX"
                             className={`${inputClass} pl-9`}
                           />
