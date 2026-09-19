@@ -91,13 +91,6 @@ export default function HowItWorks() {
           <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] text-slate-950 md:text-4xl">
             From Farmer to the Right Buyer
           </h2>
-
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
-            AgriNova acts as the bridge between farmers and suitable buyers or
-            industries. Farmers submit produce, AgriNova reviews and matches
-            the opportunity, and the transaction moves forward through an
-            organized supply process.
-          </p>
         </div>
 
         {/* =====================================================
@@ -231,26 +224,6 @@ export default function HowItWorks() {
             TRUST NOTE
         ====================================================== */}
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-[24px] border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-5 py-5 text-center sm:flex-row sm:text-left md:px-7">
-
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <BadgeCheck className="h-5 w-5" />
-            </div>
-
-            <div>
-              <p className="text-sm font-black text-slate-950">
-                AgriNova connects — farmers remain part of the transaction
-              </p>
-
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                AgriNova&apos;s role is to organize the supply opportunity,
-                connect approved produce with suitable demand, and coordinate
-                the process between the farmer and buyer or industry.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <style>{`

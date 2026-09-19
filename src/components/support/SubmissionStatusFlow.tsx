@@ -284,14 +284,8 @@ export default function SubmissionStatusFlow({
           </p>
 
           <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-slate-950 md:text-4xl">
-            Submit Produce or Track a Submission
+            Submit Product or Track a Submission
           </h2>
-
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
-            AgriNova helps connect approved farm produce with suitable buyers
-            and industries while keeping farmers informed throughout the
-            supply process.
-          </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -314,14 +308,9 @@ export default function SubmissionStatusFlow({
               </p>
 
               <h3 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-                Have produce ready for the supply network?
+                Have product ready for the supply network?
               </h3>
 
-              <p className="mt-3 max-w-xl text-sm leading-7 text-white/70">
-                Submit your product details for AgriNova review. Approved
-                produce can then be connected with suitable buyers or
-                industries through the AgriNova supply network.
-              </p>
 
               <div className="mt-6 space-y-3">
                 <FeatureLine

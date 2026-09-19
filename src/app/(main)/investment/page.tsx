@@ -507,53 +507,6 @@ function ProjectCard({
           />
         </div>
 
-        {/* MINIMUM RETURN */}
-
-        <div className="mt-2.5 rounded-xl border border-emerald-100 bg-emerald-50/75 px-2.5 py-2">
-          <p className="text-[8px] font-black uppercase tracking-wide text-emerald-700">
-            Minimum investment example
-          </p>
-
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="truncate text-[10px] font-semibold text-slate-600">
-              {money(
-                project.minimumInvestment
-              )}
-            </span>
-
-            <span className="shrink-0 text-[10px] font-black text-emerald-700">
-              +{money(
-                minimumProfit
-              )}
-            </span>
-          </div>
-        </div>
-
-        {/* PROGRESS */}
-
-        <div className="mt-3">
-          <div className="mb-1.5 flex items-center justify-between gap-2 text-[9px] font-bold">
-            <span className="truncate text-slate-400">
-              {money(
-                funded
-              )} funded
-            </span>
-
-            <span className="shrink-0 text-emerald-700">
-              {progress}%
-            </span>
-          </div>
-
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-emerald-600 transition-all"
-              style={{
-                width:
-                  `${progress}%`,
-              }}
-            />
-          </div>
-        </div>
 
         {/* ACTIONS */}
 
