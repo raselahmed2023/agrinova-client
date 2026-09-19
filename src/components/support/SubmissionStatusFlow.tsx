@@ -1,19 +1,32 @@
 "use client";
 
 import {
-  FormEvent,
-  useEffect,
+  type FormEvent,
+  useMemo,
   useState,
 } from "react";
 
+import Link from "next/link";
+
 import {
+  ArrowRight,
   CheckCircle2,
+  ClipboardList,
+  Clock3,
   Loader2,
+  LogIn,
+  PackageCheck,
   Search,
+  ShieldCheck,
+  Truck,
 } from "lucide-react";
 
 import {
-  SupplyRequest,
+  useSession,
+} from "@/lib/auth-client";
+
+import {
+  type SupplyRequest,
   trackSupplyRequest,
 } from "@/services/supply-chain.service";
 
@@ -29,31 +42,99 @@ const statusCopy: Record<
     "Submitted — AgriNova is reviewing your product details.",
 
   ACCEPTED:
-    "Accepted — AgriNova approved the submission. Follow the branch instructions before delivery.",
+    "Accepted — AgriNova approved the submission. Follow the instructions provided before product handover.",
 
   REJECTED:
-    "Rejected — the submission was not accepted. Check the note below for the reason.",
+    "Rejected — this submission was not accepted. Check the AgriNova note below for the reason.",
 
   RECEIVED:
-    "Received — AgriNova has received the product at the selected branch.",
+    "Received — AgriNova has received the approved produce at the selected branch.",
 
   COMPLETED:
-    "Completed — this supply request has been completed.",
+    "Completed — the approved supply transaction has been completed.",
 };
+
+const statusLabel: Record<
+  SupplyRequest["status"],
+  string
+> = {
+  SUBMITTED: "Submitted",
+  ACCEPTED: "Accepted",
+  REJECTED: "Rejected",
+  RECEIVED: "Received",
+  COMPLETED: "Completed",
+};
+
+const ACTIVE_FLOW: Array<{
+  status:
+    | "SUBMITTED"
+    | "ACCEPTED"
+    | "RECEIVED"
+    | "COMPLETED";
+  label: string;
+}> = [
+  {
+    status: "SUBMITTED",
+    label: "Submitted",
+  },
+  {
+    status: "ACCEPTED",
+    label: "Accepted",
+  },
+  {
+    status: "RECEIVED",
+    label: "Received",
+  },
+  {
+    status: "COMPLETED",
+    label: "Completed",
+  },
+];
+
+function formatBranch(
+  value?: string
+) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return value
+    .replace(
+      /_/g,
+      " "
+    )
+    .replace(
+      /\b\w/g,
+      (
+        character
+      ) =>
+        character.toUpperCase()
+    );
+}
 
 export default function SubmissionStatusFlow({
   onSubmitClick,
 }: SubmissionStatusFlowProps) {
+  const {
+    data:
+      session,
+    isPending,
+  } =
+    useSession();
+
   const [
     trackingCode,
     setTrackingCode,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     request,
     setRequest,
   ] =
-    useState<SupplyRequest | null>(
+    useState<
+      SupplyRequest | null
+    >(
       null
     );
 
@@ -69,25 +150,26 @@ export default function SubmissionStatusFlow({
   ] =
     useState("");
 
-  useEffect(() => {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return;
-    }
+  const role =
+    String(
+      session?.user?.role ||
+        ""
+    ).toUpperCase();
 
-    const saved =
-      localStorage.getItem(
-        "agrinova:lastSupplyTrackingCode"
-      );
+  const isFarmer =
+    role ===
+    "FARMER";
 
-    if (saved) {
-      setTrackingCode(
-        saved
-      );
-    }
-  }, []);
+  const normalizedTrackingCode =
+    useMemo(
+      () =>
+        trackingCode
+          .trim()
+          .toUpperCase(),
+      [
+        trackingCode,
+      ]
+    );
 
   const handleTrack =
     async (
@@ -96,23 +178,56 @@ export default function SubmissionStatusFlow({
     ) => {
       event.preventDefault();
 
-      const code =
-        trackingCode
-          .trim()
-          .toUpperCase();
-
-      if (!code) {
+      if (
+        !session?.user
+      ) {
         setError(
-          "Enter your tracking code."
+          "Please sign in to your Farmer account to track a supply submission."
+        );
+
+        return;
+      }
+
+      if (
+        !isFarmer
+      ) {
+        setError(
+          "Supply tracking is available to Farmer accounts only."
+        );
+
+        return;
+      }
+
+      if (
+        !normalizedTrackingCode
+      ) {
+        setError(
+          "Enter your tracking ID."
+        );
+
+        return;
+      }
+
+      if (
+        !/^AGN-[A-F0-9]{8}$/.test(
+          normalizedTrackingCode
+        )
+      ) {
+        setError(
+          "Enter a valid tracking ID in the format AGN-XXXXXXXX."
         );
 
         return;
       }
 
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
 
-        setError("");
+        setError(
+          ""
+        );
 
         setRequest(
           null
@@ -120,208 +235,556 @@ export default function SubmissionStatusFlow({
 
         const response =
           await trackSupplyRequest(
-            code
+            normalizedTrackingCode
           );
 
         setRequest(
           response.data
         );
-
-        if (
-          typeof window !==
-          "undefined"
-        ) {
-          localStorage.setItem(
-            "agrinova:lastSupplyTrackingCode",
-            response.data
-              .trackingCode
-          );
-        }
-      } catch (err) {
+      } catch (
+        err
+      ) {
         setError(
-          err instanceof Error
+          err instanceof
+            Error
             ? err.message
-            : "Unable to track this request."
+            : "Unable to track this submission."
         );
       } finally {
-        setLoading(false);
+        setLoading(
+          false
+        );
       }
     };
 
-  return (
-    <section className="w-full bg-[#f8f9fa] px-6 py-16 md:px-10">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
-        <div className="rounded-[2rem] bg-[#053225] px-6 py-12 text-center shadow-lg md:px-10 md:py-14">
-          <h2 className="text-2xl font-bold text-white md:text-4xl">
-            Ready to Sell Your Product?
-          </h2>
+  const currentFlowIndex =
+    request &&
+    request.status !==
+      "REJECTED"
+      ? ACTIVE_FLOW.findIndex(
+          (
+            item
+          ) =>
+            item.status ===
+            request.status
+        )
+      : -1;
 
-          <p className="mx-auto mt-4 max-w-xl text-sm font-normal leading-relaxed text-gray-300 md:text-base">
-            Submit your product details
-            and let AgriNova help connect
-            you with suitable buyers.
+  return (
+    <section className="w-full bg-[#f6f8f7] px-4 py-16 sm:px-6 md:px-8 lg:py-20">
+      <div className="mx-auto max-w-[1400px]">
+
+        {/* =====================================================
+            SECTION HEADING
+        ====================================================== */}
+
+        <div className="mx-auto mb-9 max-w-3xl text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+            Farmer Supply Support
           </p>
 
-          <button
-            type="button"
-            onClick={
-              onSubmitClick
-            }
-            className="mt-8 cursor-pointer rounded-md bg-[#b2f2bb] px-6 py-3 text-sm font-semibold text-[#053225] shadow-sm transition-colors duration-200 hover:bg-[#9eeaa8] md:text-base"
-          >
-            Submit Your Product
-          </button>
+          <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-slate-950 md:text-4xl">
+            Submit Produce or Track a Submission
+          </h2>
+
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
+            AgriNova helps connect approved farm produce with suitable buyers
+            and industries while keeping farmers informed throughout the
+            supply process.
+          </p>
         </div>
 
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-              <Search className="h-5 w-5" />
-            </div>
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
 
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">
-                Track Your Submission
+          {/* =====================================================
+              SUBMISSION CTA
+          ====================================================== */}
+
+          <div className="relative overflow-hidden rounded-[28px] bg-[#053225] p-6 text-white shadow-[0_22px_60px_-38px_rgba(5,50,37,0.7)] sm:p-8 lg:p-9">
+
+            <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
+
+            <div className="relative">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-emerald-200 ring-1 ring-white/10">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+
+              <p className="mt-6 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
+                Farmer Submission
+              </p>
+
+              <h3 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+                Have produce ready for the supply network?
               </h3>
 
-              <p className="text-sm text-slate-500">
-                Use the AGN tracking
-                code received after
-                submission.
+              <p className="mt-3 max-w-xl text-sm leading-7 text-white/70">
+                Submit your product details for AgriNova review. Approved
+                produce can then be connected with suitable buyers or
+                industries through the AgriNova supply network.
               </p>
+
+              <div className="mt-6 space-y-3">
+                <FeatureLine
+                  icon={
+                    <ShieldCheck className="h-4 w-4" />
+                  }
+                  text="Farmer account required"
+                />
+
+                <FeatureLine
+                  icon={
+                    <PackageCheck className="h-4 w-4" />
+                  }
+                  text="Submission reviewed before acceptance"
+                />
+
+                <FeatureLine
+                  icon={
+                    <Truck className="h-4 w-4" />
+                  }
+                  text="Track progress with your AgriNova tracking ID"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  onSubmitClick
+                }
+                className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#b2f2bb] px-5 text-sm font-black text-[#053225] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#9eeaa8]"
+              >
+                Submit Produce
+
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          <form
-            onSubmit={
-              handleTrack
-            }
-            className="mt-6 flex flex-col gap-3 sm:flex-row"
-          >
-            <input
-              value={
-                trackingCode
-              }
-              onChange={(
-                event
-              ) =>
-                setTrackingCode(
-                  event.target.value.toUpperCase()
-                )
-              }
-              placeholder="AGN-XXXXXXXX"
-              maxLength={12}
-              className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
+          {/* =====================================================
+              TRACKING
+          ====================================================== */}
 
-            <button
-              type="submit"
-              disabled={
-                loading
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#053225] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#032018] disabled:opacity-60"
-            >
-              {loading && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_-42px_rgba(15,23,42,0.4)] sm:p-7 lg:p-8">
 
-              Track
-            </button>
-          </form>
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <Search className="h-5 w-5" />
+              </div>
 
-          {error && (
-            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </div>
-          )}
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                  Submission Tracking
+                </p>
 
-          {request && (
-            <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+                <h3 className="mt-1 text-xl font-black text-slate-950">
+                  Track Your Submission
+                </h3>
 
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                    {
-                      request.trackingCode
-                    }
-                  </p>
-
-                  <p className="mt-1 font-bold text-slate-900">
-                    {
-                      request.productName
-                    }
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {
-                      statusCopy[
-                        request.status
-                      ]
-                    }
-                  </p>
-
-                  <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                    <p>
-                      <span className="font-semibold">
-                        Status:
-                      </span>{" "}
-                      {
-                        request.status
-                      }
-                    </p>
-
-                    <p>
-                      <span className="font-semibold">
-                        Branch:
-                      </span>{" "}
-                      {
-                        request.branch
-                      }
-                    </p>
-
-                    <p>
-                      <span className="font-semibold">
-                        Quantity:
-                      </span>{" "}
-                      {
-                        request.quantity
-                      }{" "}
-                      {
-                        request.unit
-                      }
-                    </p>
-
-                    <p>
-                      <span className="font-semibold">
-                        Location:
-                      </span>{" "}
-                      {
-                        request.upazila
-                      }
-                      ,{" "}
-                      {
-                        request.district
-                      }
-                    </p>
-                  </div>
-
-                  {request.adminNote && (
-                    <div className="mt-4 rounded-xl bg-white p-3 text-sm text-slate-700">
-                      <span className="font-semibold">
-                        AgriNova note:
-                      </span>{" "}
-                      {
-                        request.adminNote
-                      }
-                    </div>
-                  )}
-                </div>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Use the tracking ID shown after your successful product
+                  submission.
+                </p>
               </div>
             </div>
-          )}
+
+            {/* SESSION STATE */}
+
+            {isPending ? (
+              <div className="mt-6 flex min-h-[150px] items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
+                <div className="text-center">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-emerald-700" />
+
+                  <p className="mt-2 text-xs font-bold text-slate-500">
+                    Checking your account...
+                  </p>
+                </div>
+              </div>
+            ) : !session?.user ? (
+              <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+
+                <div className="flex items-start gap-3">
+                  <LogIn className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+
+                  <div>
+                    <p className="text-sm font-black text-slate-900">
+                      Sign in to track your submission
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Supply requests are linked to Farmer accounts for secure
+                      tracking.
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/login?redirect=%2Fsupport"
+                  className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#053225] px-4 text-xs font-black text-white transition hover:bg-[#032018]"
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  Login to Track
+                </Link>
+              </div>
+            ) : !isFarmer ? (
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <p className="text-sm font-black text-amber-900">
+                  Farmer account required
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-amber-700">
+                  Supply submissions and tracking are available to Farmer
+                  accounts only.
+                </p>
+              </div>
+            ) : (
+              <>
+                <form
+                  onSubmit={
+                    handleTrack
+                  }
+                  className="mt-6 flex flex-col gap-3 sm:flex-row"
+                >
+                  <div className="min-w-0 flex-1">
+                    <label
+                      htmlFor="supply-tracking-code"
+                      className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-slate-500"
+                    >
+                      Tracking ID
+                    </label>
+
+                    <input
+                      id="supply-tracking-code"
+                      value={
+                        trackingCode
+                      }
+                      onChange={(
+                        event
+                      ) => {
+                        setTrackingCode(
+                          event.target.value
+                            .toUpperCase()
+                            .replace(
+                              /\s/g,
+                              ""
+                            )
+                        );
+
+                        if (
+                          error
+                        ) {
+                          setError(
+                            ""
+                          );
+                        }
+
+                        if (
+                          request
+                        ) {
+                          setRequest(
+                            null
+                          );
+                        }
+                      }}
+                      placeholder="AGN-XXXXXXXX"
+                      maxLength={
+                        12
+                      }
+                      autoComplete="off"
+                      spellCheck={
+                        false
+                      }
+                      className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 font-mono text-sm font-bold uppercase tracking-wide text-slate-900 outline-none transition placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      loading
+                    }
+                    className="mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#053225] px-5 text-sm font-black text-white transition hover:bg-[#032018] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+
+                    {loading
+                      ? "Checking..."
+                      : "Track"}
+                  </button>
+                </form>
+
+                <p className="mt-2 text-[10px] leading-5 text-slate-400">
+                  Example: AGN-1A2B3C4D. Tracking IDs are issued after a
+                  successful submission.
+                </p>
+
+                {error && (
+                  <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold leading-5 text-rose-700">
+                    {error}
+                  </div>
+                )}
+
+                {request && (
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
+
+                    {/* RESULT HEADER */}
+
+                    <div className="flex flex-col gap-3 border-b border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-mono text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                          {request.trackingCode}
+                        </p>
+
+                        <h4 className="mt-1 truncate text-base font-black text-slate-950">
+                          {request.productName}
+                        </h4>
+                      </div>
+
+                      <StatusBadge
+                        status={
+                          request.status
+                        }
+                      />
+                    </div>
+
+                    <div className="p-4 sm:p-5">
+
+                      <p className="text-sm leading-6 text-slate-600">
+                        {
+                          statusCopy[
+                            request.status
+                          ] ||
+                          "AgriNova is processing this submission."
+                        }
+                      </p>
+
+                      {/* PROGRESS */}
+
+                      {request.status !==
+                        "REJECTED" && (
+                        <div className="mt-5">
+                          <p className="mb-3 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                            Supply Progress
+                          </p>
+
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {ACTIVE_FLOW.map(
+                              (
+                                item,
+                                index
+                              ) => {
+                                const done =
+                                  index <=
+                                  currentFlowIndex;
+
+                                return (
+                                  <div
+                                    key={
+                                      item.status
+                                    }
+                                    className="min-w-0"
+                                  >
+                                    <div
+                                      className={`h-1.5 rounded-full ${
+                                        done
+                                          ? "bg-emerald-600"
+                                          : "bg-slate-200"
+                                      }`}
+                                    />
+
+                                    <p
+                                      className={`mt-1 truncate text-[8px] font-bold ${
+                                        done
+                                          ? "text-emerald-700"
+                                          : "text-slate-400"
+                                      }`}
+                                    >
+                                      {item.label}
+                                    </p>
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* DETAILS */}
+
+                      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                        <DetailItem
+                          label="Status"
+                          value={
+                            statusLabel[
+                              request.status
+                            ]
+                          }
+                        />
+
+                        <DetailItem
+                          label="AgriNova Branch"
+                          value={
+                            formatBranch(
+                              request.branch
+                            )
+                          }
+                        />
+
+                        <DetailItem
+                          label="Quantity"
+                          value={`${request.quantity} ${request.unit}`}
+                        />
+
+                        <DetailItem
+                          label="Product Location"
+                          value={[
+                            request.upazila,
+                            request.district,
+                          ]
+                            .filter(
+                              Boolean
+                            )
+                            .join(
+                              ", "
+                            )}
+                        />
+                      </div>
+
+                      {request.adminNote && (
+                        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                            AgriNova Note
+                          </p>
+
+                          <p className="mt-1 text-xs leading-5 text-slate-700">
+                            {
+                              request.adminNote
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/* ============================================================
+   SMALL COMPONENTS
+============================================================ */
+
+function FeatureLine({
+  icon,
+  text,
+}: {
+  icon:
+    React.ReactNode;
+
+  text:
+    string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 text-xs font-semibold text-white/80">
+      <span className="text-emerald-200">
+        {icon}
+      </span>
+
+      {text}
+    </div>
+  );
+}
+
+function DetailItem({
+  label,
+  value,
+}: {
+  label:
+    string;
+
+  value:
+    string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white p-3">
+      <p className="text-[8px] font-black uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xs font-black text-slate-800">
+        {value ||
+          "Not available"}
+      </p>
+    </div>
+  );
+}
+
+function StatusBadge({
+  status,
+}: {
+  status:
+    SupplyRequest["status"];
+}) {
+  if (
+    status ===
+    "REJECTED"
+  ) {
+    return (
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-rose-700">
+        <ShieldCheck className="h-3 w-3" />
+        Rejected
+      </span>
+    );
+  }
+
+  if (
+    status ===
+    "COMPLETED"
+  ) {
+    return (
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-emerald-800">
+        <CheckCircle2 className="h-3 w-3" />
+        Completed
+      </span>
+    );
+  }
+
+  if (
+    status ===
+    "RECEIVED"
+  ) {
+    return (
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-blue-700">
+        <PackageCheck className="h-3 w-3" />
+        Received
+      </span>
+    );
+  }
+
+  if (
+    status ===
+    "ACCEPTED"
+  ) {
+    return (
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-emerald-700">
+        <CheckCircle2 className="h-3 w-3" />
+        Accepted
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-amber-700">
+      <Clock3 className="h-3 w-3" />
+      Submitted
+    </span>
   );
 }

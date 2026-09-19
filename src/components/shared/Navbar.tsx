@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useEffect,
@@ -39,6 +39,10 @@ import NotificationBell from "@/components/shared/NotificationBell";
 import {
   getMyCommunityProfile,
 } from "@/services/community.service";
+
+import {
+  listStoredLocalImages,
+} from "@/lib/image-storage";
 
 const navLinks = [
   {
@@ -241,13 +245,59 @@ export default function Navbar() {
   useEffect(() => {
     if (
       !isFarmer ||
-      !user
+      !user?.id
     ) {
+      setProfileAvatar(
+        ""
+      );
+
       return;
     }
 
     let active =
       true;
+
+    const profilePurpose =
+      `community-profile-${user.id}`;
+
+    const getNewestLocalAvatar =
+      () =>
+        listStoredLocalImages(
+          profilePurpose
+        )
+          .sort(
+            (a, b) =>
+              b.createdAt -
+              a.createdAt
+          )[0];
+
+    const localAvatar =
+      getNewestLocalAvatar();
+
+    const typedUser =
+      user as typeof user & {
+        avatar?: string;
+        image?: string;
+      };
+
+    const sessionAvatar =
+      String(
+        typedUser.avatar ||
+        typedUser.image ||
+        ""
+      );
+
+    if (
+      localAvatar?.dataUrl
+    ) {
+      setProfileAvatar(
+        localAvatar.dataUrl
+      );
+    } else {
+      setProfileAvatar(
+        sessionAvatar
+      );
+    }
 
     const load =
       async () => {
@@ -255,16 +305,20 @@ export default function Navbar() {
           const profile =
             await getMyCommunityProfile();
 
+          const newestLocal =
+            getNewestLocalAvatar();
+
           if (
-            active
+            active &&
+            !newestLocal?.dataUrl
           ) {
             setProfileAvatar(
               profile.avatar ||
-                ""
+                sessionAvatar
             );
           }
         } catch {
-          // Keep initials.
+          // Keep browser-local/session avatar or initials.
         }
       };
 
@@ -281,8 +335,9 @@ export default function Navbar() {
           }>;
 
         if (
-          customEvent.detail
-            ?.avatar
+          typeof customEvent.detail
+            ?.avatar ===
+          "string"
         ) {
           setProfileAvatar(
             customEvent.detail
@@ -309,7 +364,7 @@ export default function Navbar() {
     };
   }, [
     isFarmer,
-    user,
+    user?.id,
   ]);
 
   const active = (
@@ -628,26 +683,142 @@ export default function Navbar() {
               )
             )}
 
-            {user && (
+            {!isPending &&
+              user && (
               <>
+                <div className="my-2 border-t border-slate-100" />
+
+                <div className="flex items-center gap-3 rounded-xl px-3 py-3">
+                  <UserAvatar
+                    name={
+                      user.name
+                    }
+                    avatar={
+                      profileAvatar
+                    }
+                    size="h-11 w-11"
+                  />
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-slate-900">
+                      {
+                        user.name
+                      }
+                    </p>
+
+                    <p className="truncate text-xs text-slate-500">
+                      {
+                        user.email
+                      }
+                    </p>
+                  </div>
+                </div>
+
                 <Link
                   href={
                     dashboardPath
                   }
-                  className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-700"
+                  onClick={() =>
+                    setMobileOpen(
+                      false
+                    )
+                  }
+                  className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
                 >
                   Dashboard
                 </Link>
+
+                {isFarmer && (
+                  <>
+                    <Link
+                      href={`/community/profile/${user.id}`}
+                      onClick={() =>
+                        setMobileOpen(
+                          false
+                        )
+                      }
+                      className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Community Profile
+                    </Link>
+
+                    <Link
+                      href="/orders"
+                      onClick={() =>
+                        setMobileOpen(
+                          false
+                        )
+                      }
+                      className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      My Orders
+                    </Link>
+
+                    <Link
+                      href="/cart"
+                      onClick={() =>
+                        setMobileOpen(
+                          false
+                        )
+                      }
+                      className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      <span>
+                        Cart
+                      </span>
+
+                      {totalItems >
+                        0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-700 px-1.5 text-[10px] font-black text-white">
+                          {
+                            totalItems
+                          }
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                )}
 
                 <button
                   type="button"
                   onClick={() =>
                     void logout()
                   }
-                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600"
+                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
                 >
                   Logout
                 </button>
+              </>
+            )}
+
+            {!isPending &&
+              !user && (
+              <>
+                <div className="my-2 border-t border-slate-100" />
+
+                <Link
+                  href="/login"
+                  onClick={() =>
+                    setMobileOpen(
+                      false
+                    )
+                  }
+                  className="block rounded-xl px-4 py-3 text-center text-sm font-black text-slate-700 hover:bg-slate-50"
+                >
+                  Login
+                </Link>
+
+                <Link
+                  href="/register"
+                  onClick={() =>
+                    setMobileOpen(
+                      false
+                    )
+                  }
+                  className="mt-2 block rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-800"
+                >
+                  Join AgriNova
+                </Link>
               </>
             )}
           </div>

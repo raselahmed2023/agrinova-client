@@ -160,6 +160,7 @@ export default function CommunityPostCard({
   initialPost,
   currentUserId,
   currentUserRole,
+  currentUserAvatar,
   onDeleted,
 }: {
   initialPost:
@@ -170,6 +171,9 @@ export default function CommunityPostCard({
 
   currentUserRole?:
     string | null;
+
+  currentUserAvatar?:
+    string;
 
   onDeleted?: (
     postId:
@@ -188,6 +192,29 @@ export default function CommunityPostCard({
   const isFarmer =
     role ===
     "FARMER";
+
+  const avatarFor =
+    (
+      authorId:
+        string,
+      avatar?:
+        string
+    ) => {
+      if (
+        currentUserId &&
+        String(
+          authorId
+        ) ===
+          String(
+            currentUserId
+          ) &&
+        currentUserAvatar
+      ) {
+        return currentUserAvatar;
+      }
+
+      return avatar;
+    };
 
   const determineLiked =
     (
@@ -881,7 +908,10 @@ export default function CommunityPostCard({
               post.authorName
             }
             src={
-              post.authorAvatar
+              avatarFor(
+                post.authorId,
+                post.authorAvatar
+              )
             }
           />
 
@@ -1151,7 +1181,10 @@ export default function CommunityPostCard({
                     item.authorName
                   }
                   src={
-                    item.authorAvatar
+                    avatarFor(
+                      item.authorId,
+                      item.authorAvatar
+                    )
                   }
                   size="h-8 w-8 text-[10px]"
                 />
@@ -1266,7 +1299,10 @@ export default function CommunityPostCard({
                             reply.authorName
                           }
                           src={
-                            reply.authorAvatar
+                            avatarFor(
+                              reply.authorId,
+                              reply.authorAvatar
+                            )
                           }
                           size="h-7 w-7 text-[9px]"
                         />

@@ -165,31 +165,7 @@ export default function Footer() {
             <FooterColumn title="Account" links={accountLinks} />
           </div>
         </div>
-
-        {/* contact information */}
-        <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] sm:grid-cols-3">
-          <ContactItem
-            icon={Mail}
-            label="Email"
-            value="support@agrinova.io"
-            href="mailto:support@agrinova.io"
-          />
-
-          <ContactItem
-            icon={Phone}
-            label="Support"
-            value="+880 1785-473355"
-            href="tel:+8801785473355"
-          />
-
-          <ContactItem
-            icon={MapPin}
-            label="Location"
-            value="Dhaka, Bangladesh"
-            last
-          />
-        </div>
-
+        
         {/* bottom */}
         <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-7 md:flex-row md:items-center md:justify-between">
           <div className="text-xs leading-6 text-slate-500">

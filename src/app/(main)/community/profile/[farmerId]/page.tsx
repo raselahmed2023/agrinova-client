@@ -32,6 +32,7 @@ import CommunityPostCard from "@/components/community/CommunityPostCard";
 
 import {
   getCommunityFarmerProfile,
+  getMyCommunityProfile,
   updateMyCommunityProfile,
 } from "@/services/community.service";
 
@@ -136,6 +137,12 @@ export default function CommunityFarmerProfilePage({
       StoredLocalImage | null
     >(null);
 
+  const [
+    currentUserAvatar,
+    setCurrentUserAvatar,
+  ] =
+    useState("");
+
   const role =
     String(
       session?.user?.role ||
@@ -168,6 +175,118 @@ export default function CommunityFarmerProfilePage({
           : "community-profile",
       [userId]
     );
+
+
+  /*
+   * Keep the signed-in Farmer's avatar synchronized on this page.
+   * This is used by CommunityPostCard for the current user's own
+   * posts, comments, and replies, even while viewing another Farmer.
+   */
+  useEffect(() => {
+    if (
+      !isFarmer ||
+      !userId
+    ) {
+      setCurrentUserAvatar(
+        ""
+      );
+
+      return;
+    }
+
+    let active =
+      true;
+
+    const profilePurpose =
+      `community-profile-${userId}`;
+
+    const getNewestLocalAvatar =
+      () =>
+        listStoredLocalImages(
+          profilePurpose
+        )
+          .sort(
+            (a, b) =>
+              b.createdAt -
+              a.createdAt
+          )[0];
+
+    const local =
+      getNewestLocalAvatar();
+
+    if (
+      local?.dataUrl
+    ) {
+      setCurrentUserAvatar(
+        local.dataUrl
+      );
+    }
+
+    const loadCurrentUserAvatar =
+      async () => {
+        try {
+          const profile =
+            await getMyCommunityProfile();
+
+          const newestLocal =
+            getNewestLocalAvatar();
+
+          if (
+            active &&
+            !newestLocal?.dataUrl
+          ) {
+            setCurrentUserAvatar(
+              profile.avatar ||
+                ""
+            );
+          }
+        } catch {
+          // Keep local avatar or initials.
+        }
+      };
+
+    void loadCurrentUserAvatar();
+
+    const handleProfileUpdate =
+      (
+        event:
+          Event
+      ) => {
+        const customEvent =
+          event as CustomEvent<{
+            avatar?: string;
+          }>;
+
+        if (
+          typeof customEvent.detail
+            ?.avatar ===
+          "string"
+        ) {
+          setCurrentUserAvatar(
+            customEvent.detail
+              .avatar
+          );
+        }
+      };
+
+    window.addEventListener(
+      "agrinova:profile-updated",
+      handleProfileUpdate
+    );
+
+    return () => {
+      active =
+        false;
+
+      window.removeEventListener(
+        "agrinova:profile-updated",
+        handleProfileUpdate
+      );
+    };
+  }, [
+    isFarmer,
+    userId,
+  ]);
 
 
 
@@ -332,6 +451,23 @@ export default function CommunityFarmerProfilePage({
       newest
     );
 
+    setCurrentUserAvatar(
+      newest.dataUrl
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "agrinova:profile-updated",
+
+        {
+          detail: {
+            avatar:
+              newest.dataUrl,
+          },
+        }
+      )
+    );
+
     setNotice(
       "Your selected profile photo is saved in this browser and is waiting to be uploaded."
     );
@@ -346,6 +482,10 @@ export default function CommunityFarmerProfilePage({
     (
       avatar: string
     ) => {
+      setCurrentUserAvatar(
+        avatar
+      );
+
       setData(
         (
           current
@@ -498,6 +638,23 @@ export default function CommunityFarmerProfilePage({
           stored
         );
 
+        setCurrentUserAvatar(
+          stored.dataUrl
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(
+            "agrinova:profile-updated",
+
+            {
+              detail: {
+                avatar:
+                  stored.dataUrl,
+              },
+            }
+          )
+        );
+
         setNotice(
           "Image server is temporarily unavailable. Your new profile photo is saved safely in this browser. Use Retry Upload when the image service is available."
         );
@@ -614,6 +771,27 @@ export default function CommunityFarmerProfilePage({
 
       setLocalAvatar(
         null
+      );
+
+      const fallbackAvatar =
+        data?.profile.avatar ||
+        "";
+
+      setCurrentUserAvatar(
+        fallbackAvatar
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "agrinova:profile-updated",
+
+          {
+            detail: {
+              avatar:
+                fallbackAvatar,
+            },
+          }
+        )
       );
 
       setNotice(
@@ -938,6 +1116,9 @@ export default function CommunityFarmerProfilePage({
                 }
                 currentUserRole={
                   role
+                }
+                currentUserAvatar={
+                  currentUserAvatar
                 }
               />
             )

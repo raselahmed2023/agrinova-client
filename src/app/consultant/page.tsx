@@ -781,8 +781,8 @@ export default function ConsultantPage() {
               </h2>
             </div>
 
-            <div className="relative mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="pointer-events-none absolute left-[11%] right-[11%] top-6 hidden h-px bg-emerald-100 lg:block" />
+            <div className="relative mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="pointer-events-none absolute left-[8%] right-[8%] top-6 hidden h-px bg-emerald-100 lg:block" />
 
               <ProcessCard
                 number="1"
@@ -798,12 +798,18 @@ export default function ConsultantPage() {
 
               <ProcessCard
                 number="3"
+                title="Complete Payment"
+                description="Review the consultation fee and complete the required payment to confirm your booking."
+              />
+
+              <ProcessCard
+                number="4"
                 title="Join Video Consultation"
                 description="Join your scheduled consultation and discuss the farming issue directly with the specialist."
               />
 
               <ProcessCard
-                number="4"
+                number="5"
                 title="Get Recommendation"
                 description="Review the consultation recommendation and follow-up information available through your dashboard."
               />

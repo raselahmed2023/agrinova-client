@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 
+import {
+  enforcePublicRoleBoundary,
+} from "@/lib/enforce-public-role-boundary";
+
 export const metadata: Metadata = {
   title: "Agricultural Blog & Expert Farming Guides | AgriNova",
   description: "Read practical agricultural articles written by AgriNova experts, with community comments and replies from farmers and specialists.",
@@ -15,6 +19,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex min-h-screen flex-col bg-slate-50"><Navbar /><main className="flex-1">{children}</main><Footer /></div>;
+export default async function BlogLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await enforcePublicRoleBoundary();
+
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <Navbar />
+
+      <main className="flex-1">
+        {children}
+      </main>
+
+      <Footer />
+    </div>
+  );
 }

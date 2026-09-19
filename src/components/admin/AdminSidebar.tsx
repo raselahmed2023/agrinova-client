@@ -21,6 +21,7 @@ import {
   LogOut,
   MessageSquareText,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   ShoppingBag,
   HandCoins,
@@ -45,6 +46,12 @@ const sidebarItems = [
     label: "Users",
     href: "/dashboard/admin/users",
     icon: Users,
+  },
+
+  {
+    label: "Community Moderation",
+    href: "/dashboard/admin/community",
+    icon: ShieldAlert,
   },
 
   {

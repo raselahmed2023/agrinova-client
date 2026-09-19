@@ -1,15 +1,16 @@
-"use client";
-
-import type { ReactNode } from "react";
+import type {
+  ReactNode,
+} from "react";
 
 export default function MarketplaceBackground({
   children,
+  overlayClassName = "bg-white/35",
 }: {
   children: ReactNode;
+  overlayClassName?: string;
 }) {
   return (
     <div className="relative min-h-screen">
-      {/* Background image */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
         style={{
@@ -18,10 +19,10 @@ export default function MarketplaceBackground({
         }}
       />
 
-      {/* Readability overlay */}
-      <div className="fixed inset-0 z-0 bg-white/35" />
+      <div
+        className={`fixed inset-0 z-0 ${overlayClassName}`}
+      />
 
-      {/* Content */}
       <div className="relative z-10">
         {children}
       </div>

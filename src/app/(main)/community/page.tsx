@@ -35,6 +35,7 @@ import CommunityPostCard from "@/components/community/CommunityPostCard";
 import {
   createCommunityPost,
   getCommunityFeed,
+  getMyCommunityProfile,
 } from "@/services/community.service";
 
 import {
@@ -72,6 +73,32 @@ function initials(
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function FarmerAvatar({
+  name,
+  src,
+  size = "h-10 w-10",
+}: {
+  name: string;
+  src?: string;
+  size?: string;
+}) {
+  return (
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-sm font-black text-emerald-800 ${size}`}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        initials(name)
+      )}
+    </div>
+  );
 }
 
 export default function CommunityPage() {
@@ -148,6 +175,12 @@ export default function CommunityPage() {
   ] =
     useState("");
 
+  const [
+    profileAvatar,
+    setProfileAvatar,
+  ] =
+    useState("");
+
   const user =
     session?.user;
 
@@ -173,15 +206,6 @@ export default function CommunityPage() {
           ? `community-post-${currentUserId}`
           : "community-post-guest",
       [currentUserId]
-    );
-
-  const avatarText =
-    useMemo(
-      () =>
-        initials(
-          displayName
-        ),
-      [displayName]
     );
 
   const totalImages =
@@ -230,6 +254,100 @@ export default function CommunityPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+
+  useEffect(() => {
+    if (
+      !isFarmer ||
+      !currentUserId
+    ) {
+      setProfileAvatar(
+        ""
+      );
+
+      return;
+    }
+
+    let active =
+      true;
+
+    const profilePurpose =
+      `community-profile-${currentUserId}`;
+
+    const localAvatar =
+      listStoredLocalImages(
+        profilePurpose
+      )
+        .sort(
+          (a, b) =>
+            b.createdAt -
+            a.createdAt
+        )[0];
+
+    if (
+      localAvatar?.dataUrl
+    ) {
+      setProfileAvatar(
+        localAvatar.dataUrl
+      );
+    }
+
+    const loadProfileAvatar =
+      async () => {
+        try {
+          const profile =
+            await getMyCommunityProfile();
+
+          if (
+            active &&
+            !localAvatar?.dataUrl
+          ) {
+            setProfileAvatar(
+              profile.avatar ||
+                ""
+            );
+          }
+        } catch {
+          // Keep local avatar or initials.
+        }
+      };
+
+    void loadProfileAvatar();
+
+    const handleProfileUpdate =
+      (event: Event) => {
+        const customEvent =
+          event as CustomEvent<{
+            avatar?: string;
+          }>;
+
+        if (
+          customEvent.detail?.avatar
+        ) {
+          setProfileAvatar(
+            customEvent.detail.avatar
+          );
+        }
+      };
+
+    window.addEventListener(
+      "agrinova:profile-updated",
+      handleProfileUpdate
+    );
+
+    return () => {
+      active =
+        false;
+
+      window.removeEventListener(
+        "agrinova:profile-updated",
+        handleProfileUpdate
+      );
+    };
+  }, [
+    isFarmer,
+    currentUserId,
+  ]);
 
 
   useEffect(() => {
@@ -514,6 +632,7 @@ export default function CommunityPage() {
         );
       }
     };
+
   const uploadPendingLocalImages =
     async () => {
       if (
@@ -750,11 +869,14 @@ export default function CommunityPage() {
 
             {user ? (
               <div className="mb-3 flex items-center gap-3 rounded-xl p-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-800">
-                  {
-                    avatarText
+                <FarmerAvatar
+                  name={
+                    displayName
                   }
-                </div>
+                  src={
+                    profileAvatar
+                  }
+                />
 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-900">
@@ -874,11 +996,14 @@ export default function CommunityPage() {
               className="mb-4 rounded-xl border border-slate-200/70 bg-white p-4 shadow-sm"
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-800">
-                  {
-                    avatarText
+                <FarmerAvatar
+                  name={
+                    displayName
                   }
-                </div>
+                  src={
+                    profileAvatar
+                  }
+                />
 
                 <textarea
                   value={
