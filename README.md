@@ -39,7 +39,7 @@ AgriNova focuses on practical agricultural workflows, secure role-based access, 
 | Team Member | Role | GitHub |
 |---|---|---|
 | **Rasel Ahmed** | **Team Leader** | [raselahmed2023](https://github.com/raselahmed2023) |
-| **Md Rayhan ul Fardous** | Core Developer | [rayhan-fardous](https://github.com/Nabil593)|
+| **Md Rayhan ul Fardous** | Core Developer | [rayhan-fardous](https://github.com/rayhan-fardous)|
 | **Shariea Reza Nabil** | Core Developer | [Nabil593](https://github.com/Nabil593) |
 | **Abdul Korim** | Core Developer | [abdul-korim-web](https://github.com/abdul-korim-web) |
 | **Naymul Islam Antor** | Core Developer | [devnaymul247](https://github.com/devnaymul247) |
