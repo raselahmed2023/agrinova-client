@@ -593,11 +593,6 @@ http://localhost:3000
 
 # 🖼️ Application Screenshots
 
-
- Screenshots:
-
-```
-
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4021f37d-d220-4cc7-81c2-3389ee32e87a" alt="AgriNova Screenshot 1" width="900" />
 </p>
@@ -626,7 +621,7 @@ http://localhost:3000
   <img src="https://github.com/user-attachments/assets/feea8ec6-7456-4a38-907c-084776639ae5" alt="AgriNova Screenshot 7" width="900" />
 </p>
 
-```
+---
 
 ---
 
