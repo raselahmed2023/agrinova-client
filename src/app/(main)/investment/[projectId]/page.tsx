@@ -640,9 +640,7 @@ export default function InvestmentDetailsPage() {
   );
 }
 
-/* ============================================================
-   COMPONENTS
-============================================================ */
+
 
 function InfoStat({
   icon,
