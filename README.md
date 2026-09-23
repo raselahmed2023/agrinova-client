@@ -19,6 +19,9 @@
 
 ---
 
+<img width="1896" height="902" alt="image" src="https://github.com/user-attachments/assets/54a87b6a-b89b-4423-a883-6ab827617a76" />
+
+
 ## 🌾 About AgriNova
 
 **AgriNova** is an integrated **Smart Agriculture & Digital Farming Platform** designed for the agricultural ecosystem of Bangladesh.
