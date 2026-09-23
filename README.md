@@ -472,15 +472,15 @@ You will also need credentials for the external services enabled in your deploym
 ## Client
 
 ```bash
-git clone <YOUR_CLIENT_REPOSITORY_URL>
+git clone <https://github.com/raselahmed2023/agrinova-client>
 cd agrinova-client
 npm install
 ```
 
 ## Server
 
-```bash
-git clone <YOUR_SERVER_REPOSITORY_URL>
+```bashhttps://github.com/raselahmed2023/agrinova-server
+git clone <>
 cd agrinova-server
 npm install
 ```
