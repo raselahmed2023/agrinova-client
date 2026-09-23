@@ -1,3 +1,4 @@
+
 # 🌱 AgriNova — Smart Agriculture & Digital Farming Platform
 
 <p align="center">
@@ -499,11 +500,17 @@ Create:
 Example:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+IMGBB_API_KEY=
+NEXT_PUBLIC_SITE_URL=
+RESEND_API_KEY=
 
-IMGBB_API_KEY=your_imgbb_api_key
+AUTH_EMAIL_FROM=
+NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_APP_URL=
+
+BETTER_AUTH_URL=
+MONGODB_URL=
+BETTER_AUTH_SECRET=
 ```
 
 ---
@@ -519,17 +526,42 @@ Create:
 Example:
 
 ```env
-PORT=5000
-NODE_ENV=development
+AUTH_BASE_URL
+CLIENT_URL
+GEMINI_API_KEY
 
-AUTH_BASE_URL=http://localhost:3000
+GEMINI_API_KEY_1
+GEMINI_API_KEY_2
+GEMINI_API_KEY_3
 
-MONGODB_URI=your_mongodb_connection_string
+GEMINI_DISEASE_MODEL
+GROQ_API_KEY
+GROQ_API_KEY_1
+GROQ_API_KEY_3
+GROQ_API_KEY_4
+IMGBB_API_KEY
 
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+MARKETPLACE_COMMISSION_RATE
+MARKETPLACE_DELIVERY_FEE
+MONGODB_URL
 
-GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_INVESTMENT_BANK_ACCOUNT_NAME
+NEXT_PUBLIC_INVESTMENT_BANK_ACCOUNT_NUMBER
+NEXT_PUBLIC_INVESTMENT_BANK_BRANCH
+NEXT_PUBLIC_INVESTMENT_BANK_NAME
+NEXT_PUBLIC_SERVER_URL
+
+OPENROUTER_API_KEY
+OPENROUTER_API_KEY_1
+OPENROUTER_API_KEY_2
+OPENROUTER_API_KEY_3
+OPENROUTER_API_KEY_4
+
+PORT
+STRIPE_PUBLISHABLE_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+WEATHERAPI_KEY
 ```
 
 ---
@@ -556,54 +588,45 @@ Open:
 http://localhost:3000
 ```
 
----
-
-# 🧪 Production Build
-
-Before deployment, verify both projects.
-
-## Client
-
-```bash
-cd agrinova-client
-npm run build
-```
-
-## Server
-
-```bash
-cd agrinova-server
-npm run build
-```
-
-A production release should not be considered ready until both builds succeed.
-
----
-
-
 
 ---
 
 # 🖼️ Application Screenshots
 
 
-
-
-
  Screenshots:
 
-```text
-home.png
-farmer-dashboard.png
-marketplace.png
-product-details.png
-consultation.png
-community.png
-supply-chain.png
 ```
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/4021f37d-d220-4cc7-81c2-3389ee32e87a" alt="AgriNova Screenshot 1" width="900" />
+</p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/1a186c58-741e-4437-b69f-53236032e02a" alt="AgriNova Screenshot 2" width="900" />
+</p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/baa1a22f-cdc4-47a2-977e-c74efb9ae4cb" alt="AgriNova Screenshot 3" width="900" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/dfe8ea00-8a43-427e-8c26-2a1c9b837583" alt="AgriNova Screenshot 4" width="900" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/58b0ed91-8462-4e55-a65c-86f09da195ec" alt="AgriNova Screenshot 5" width="900" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/b6600cc8-2699-4ac7-b673-a6c36d2bdb40" alt="AgriNova Screenshot 6" width="900" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/feea8ec6-7456-4a38-907c-084776639ae5" alt="AgriNova Screenshot 7" width="900" />
+</p>
+
+```
 
 ---
 
