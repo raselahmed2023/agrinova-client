@@ -465,9 +465,7 @@ export async function getExpertAvailability(): Promise<ExpertAvailability> {
   return result.data;
 }
 
-/* =========================================================
-   UPDATE EXPERT AVAILABILITY
-========================================================= */
+
 
 export async function updateExpertAvailability(
   payload: {
@@ -515,9 +513,7 @@ export async function updateExpertAvailability(
   return result.data;
 }
 
-/* =========================================================
-   ALIASES
-========================================================= */
+
 
 export const getAvailability =
   getExpertAvailability;
@@ -525,9 +521,7 @@ export const getAvailability =
 export const updateAvailability =
   updateExpertAvailability;
 
-/* =========================================================
-   PUBLIC EXPERT LIST
-========================================================= */
+
 
 export async function getAllExperts(): Promise<
   ExpertProfile[]
@@ -591,23 +585,17 @@ export async function getAllExperts(): Promise<
 
 export async function getExpertById(
   expertId: string
-): Promise<
-  ExpertProfile | null
-> {
+): Promise<ExpertProfile | null> {
   const experts =
     await getAllExperts();
 
   return (
     experts.find(
-      (
-        expert
-      ) =>
-        expert._id ===
-          expertId ||
-        expert.id ===
-          expertId
-    ) ||
-    null
+      (expert) =>
+        expert._id === expertId ||
+        expert.id === expertId ||
+        expert.userId === expertId
+    ) || null
   );
 }
 
