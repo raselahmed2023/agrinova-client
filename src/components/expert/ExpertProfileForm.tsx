@@ -545,7 +545,7 @@ export default function ExpertProfileForm({
               </span>
               <input
                 type="number"
-                min={1}
+                min={50}
                 max={50000}
                 step={50}
                 required
